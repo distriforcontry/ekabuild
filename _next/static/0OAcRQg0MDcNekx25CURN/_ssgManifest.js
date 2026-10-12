@@ -1,0 +1,1 @@
+self.__SSG_MANIFEST=new Set(["\u002Fdevelopers\u002F[id]","\u002Fprojects\u002F[slug]","\u002Frules\u002F[slug]","\u002Fverify\u002F[code]"]);self.__SSG_MANIFEST_CB&&self.__SSG_MANIFEST_CB()
