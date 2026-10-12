@@ -1,6 +1,6 @@
 import type { Metadata, Viewport } from "next";
 import { Providers } from "@/components/providers/Providers";
-import { getLocale } from "@/i18n/server";
+import { getLocale, getScopeMessages } from "@/i18n/server";
 import { LOCALE_META } from "@/i18n/config";
 import "./globals.css";
 
@@ -24,11 +24,13 @@ export const viewport: Viewport = {
 };
 
 export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const locale = await getLocale();
+  const [locale, messages] = await Promise.all([getLocale(), getScopeMessages("root")]);
   return (
     <html lang={LOCALE_META[locale].htmlLang} data-theme="dark" suppressHydrationWarning>
       <body className="min-h-dvh">
-        <Providers locale={locale}>{children}</Providers>
+        <Providers locale={locale} messages={messages}>
+          {children}
+        </Providers>
       </body>
     </html>
   );

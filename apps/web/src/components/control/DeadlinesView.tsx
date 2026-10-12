@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n/client";
 import type { Deadline, DeadlineKind, DeadlineSeverity, DeadlinesResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { apiBase, type Area } from "./area";
-import { ControlHeader, DaysBadge, Segmented, useMonthShort, useTrSafe } from "./ui";
+import { ControlHeader, DaysBadge, Segmented, useMonthShort, useSeqLabel, useTrSafe } from "./ui";
 
 const KINDS: DeadlineKind[] = ["payment", "reservation", "contract", "certificate", "project", "document", "complaint"];
 const SEVERITIES: DeadlineSeverity[] = ["overdue", "critical", "soon"];
@@ -225,10 +225,55 @@ function KindChip({ icon: Icon, label, count, active, onClick }: { icon?: IconTy
   );
 }
 
-function DeadlineRow({ d, index }: { d: Deadline; index: number }) {
-  const { t } = useI18n();
+/** Title/subtitle in the viewer's language from the structured `ref`; falls back to the API's Uzbek text. */
+function useDeadlineText() {
+  const { t, label } = useI18n();
   const tr = useTrSafe();
   const f = useFormat();
+  const seqLabel = useSeqLabel();
+  return React.useCallback(
+    (d: Deadline): { title: string; subtitle: string } => {
+      const r = d.ref;
+      if (!r) return { title: tr(d.title), subtitle: tr(d.subtitle) };
+      const s = (k: string) => (r[k] == null ? "" : String(r[k]));
+      const name = (k: string) => tr(s(k));
+      const k = "admin.control.deadlines.text";
+      switch (d.kind) {
+        case "certificate":
+          return { title: t(`${k}.certificate`, { type: label("certificateType", s("certificateType")), number: s("number") }), subtitle: name("projectName") };
+        case "project":
+          return { title: name("projectName"), subtitle: t(`${k}.projectSub`, { progress: s("progress") }) };
+        case "reservation":
+          return {
+            title: r.unitNumber ? t(`${k}.reservationUnit`, { project: name("projectName"), unit: s("unitNumber") }) : t(`${k}.reservation`, { project: name("projectName") }),
+            subtitle: t(`${k}.reservationSub`, { number: s("purchaseNumber"), buyer: name("buyerName") }),
+          };
+        case "payment":
+          return {
+            title: t(`${k}.payment`, { seq: seqLabel(Number(r.seq ?? 0)), amount: f.money(Number(r.amount ?? 0)) }),
+            subtitle: t(`${k}.paymentSub`, { number: s("purchaseNumber"), project: name("projectName"), buyer: name("buyerName") }),
+          };
+        case "contract":
+          return { title: t(`${k}.contract`, { number: s("number") }), subtitle: name("projectName") };
+        case "complaint":
+          return {
+            title: t(`${k}.complaint`, { category: label("complaintCategory", s("category")), message: name("message") }),
+            subtitle: r.projectName ? name("projectName") : t(`${k}.complaintGeneral`),
+          };
+        case "document":
+          return { title: name("title"), subtitle: t(`${k}.documentSub`, { project: name("projectName") }) };
+        default:
+          return { title: tr(d.title), subtitle: tr(d.subtitle) };
+      }
+    },
+    [t, label, tr, f, seqLabel],
+  );
+}
+
+function DeadlineRow({ d, index }: { d: Deadline; index: number }) {
+  const { t } = useI18n();
+  const f = useFormat();
+  const text = useDeadlineText()(d);
   const monthShort = useMonthShort();
   const reduce = useReducedMotion();
   const S = SEV[d.severity];
@@ -264,13 +309,13 @@ function DeadlineRow({ d, index }: { d: Deadline; index: number }) {
         <div className="min-w-0 flex-1">
           <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-start">
             <span className={cn("shrink-0 rounded-md border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider", S.ring)}>{t(`admin.control.deadlines.kinds.${d.kind}`)}</span>
-            <span className="hidden min-w-0 truncate text-sm font-semibold text-stone-100 sm:block">{tr(d.title)}</span>
+            <span className="hidden min-w-0 truncate text-sm font-semibold text-stone-100 sm:block">{text.title}</span>
             <DaysBadge days={d.daysLeft} critical={7} className="sm:hidden" />
           </div>
-          <div className="mt-1 line-clamp-2 text-sm font-semibold text-stone-100 sm:hidden">{tr(d.title)}</div>
+          <div className="mt-1 line-clamp-2 text-sm font-semibold text-stone-100 sm:hidden">{text.title}</div>
           <div className="mt-0.5 truncate text-xs text-ink-400">
             <span className="sm:hidden">{f.date(d.dueDate)} · </span>
-            {tr(d.subtitle)}
+            {text.subtitle}
           </div>
         </div>
         <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">

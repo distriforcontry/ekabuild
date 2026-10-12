@@ -467,9 +467,12 @@ export interface Deadline {
   severity: DeadlineSeverity;
   dueDate: string;
   daysLeft: number;
+  /** Uzbek fallback text */
   title: string;
   subtitle: string;
   link: string;
+  /** structured facts for localized rendering (see DeadlinesView.useDeadlineText) */
+  ref?: Record<string, string | number | null>;
 }
 
 export interface DeadlinesResponse {

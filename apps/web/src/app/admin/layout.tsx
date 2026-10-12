@@ -2,7 +2,8 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { AdminShell } from "@/components/admin/AdminShell";
-import { getI18n } from "@/i18n/server";
+import { I18nScope } from "@/i18n/client";
+import { getI18n, getScopeMessages } from "@/i18n/server";
 import { getCurrentUser } from "@/lib/api-server";
 import { homeForRole, isAdmin } from "@/lib/roles";
 
@@ -24,19 +25,21 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   const { t } = await getI18n();
 
   return (
-    <AdminShell
-      area={t("admin.area")}
-      defaultCollapsed={defaultCollapsed}
-      user={{
-        id: user.id,
-        fullName: user.fullName,
-        phone: user.phone,
-        role: user.role,
-        avatarUrl: user.avatarUrl,
-        organization: user.organization ? { name: user.organization.name } : null,
-      }}
-    >
-      {children}
-    </AdminShell>
+    <I18nScope messages={await getScopeMessages("admin")}>
+      <AdminShell
+        area={t("admin.area")}
+        defaultCollapsed={defaultCollapsed}
+        user={{
+          id: user.id,
+          fullName: user.fullName,
+          phone: user.phone,
+          role: user.role,
+          avatarUrl: user.avatarUrl,
+          organization: user.organization ? { name: user.organization.name } : null,
+        }}
+      >
+        {children}
+      </AdminShell>
+    </I18nScope>
   );
 }

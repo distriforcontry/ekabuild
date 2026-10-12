@@ -4,6 +4,7 @@ import { ThemeProvider, useTheme } from "next-themes";
 import { Toaster } from "sonner";
 import { I18nProvider } from "@/i18n/client";
 import type { Locale } from "@/i18n/config";
+import type { PartialMessages } from "@/i18n/messages";
 
 function ThemedToaster() {
   const { resolvedTheme } = useTheme();
@@ -18,10 +19,10 @@ function ThemedToaster() {
   );
 }
 
-export function Providers({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+export function Providers({ locale, messages, children }: { locale: Locale; messages: PartialMessages; children: React.ReactNode }) {
   return (
     <ThemeProvider attribute="data-theme" defaultTheme="dark" themes={["dark", "light"]} enableSystem disableTransitionOnChange={false}>
-      <I18nProvider locale={locale}>
+      <I18nProvider locale={locale} messages={messages}>
         {children}
         <ThemedToaster />
       </I18nProvider>

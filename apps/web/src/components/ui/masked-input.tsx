@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
 
 /**
  * Masked inputs for Uzbek business data. Each control keeps a *raw* value (digits only or a number)
@@ -252,12 +253,19 @@ export function MoneyInput({
   className,
   ...rest
 }: Omit<NumberInputProps, "suffix" | "decimals"> & { currency?: string; hint?: boolean }) {
+  const { t, locale } = useI18n();
+  const unit = currency === "UZS" ? t("catalog.money.currency") : currency;
+  const dec = (n: number, digits: number) => n.toLocaleString(locale === "ru" ? "ru-RU" : "uz-UZ", { maximumFractionDigits: digits });
   const short =
-    value && value >= 1e9 ? `${(value / 1e9).toFixed(2).replace(/\.?0+$/, "")} mlrd` : value && value >= 1e6 ? `${(value / 1e6).toFixed(1).replace(/\.0$/, "")} mln` : null;
+    value && value >= 1e9 ? `${dec(value / 1e9, 2)} ${t("catalog.money.mlrd")}` : value && value >= 1e6 ? `${dec(value / 1e6, 1)} ${t("catalog.money.mln")}` : null;
   return (
     <div className={className}>
-      <NumberInput value={value} onChange={onChange} decimals={0} min={0} suffix={currency === "UZS" ? "so'm" : currency} {...rest} />
-      {hint && short && <div className="mt-1 text-[11px] text-ink-400">≈ {short} {currency === "UZS" ? "so'm" : currency}</div>}
+      <NumberInput value={value} onChange={onChange} decimals={0} min={0} suffix={unit} {...rest} />
+      {hint && short && (
+        <div className="mt-1 text-[11px] text-ink-400">
+          ≈ {short} {unit}
+        </div>
+      )}
     </div>
   );
 }

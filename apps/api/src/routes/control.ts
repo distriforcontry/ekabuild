@@ -497,9 +497,12 @@ type Deadline = {
   severity: "overdue" | "critical" | "soon";
   dueDate: string;
   daysLeft: number;
+  /** Uzbek fallback text (exports, notifications) */
   title: string;
   subtitle: string;
   link: string;
+  /** structured facts so clients can render the title in any language */
+  ref: Record<string, string | number | null>;
 };
 
 async function deadlines(s: Scope, horizonDays: number): Promise<{ items: Deadline[]; summary: Record<string, number> }> {
@@ -526,19 +529,55 @@ async function deadlines(s: Scope, horizonDays: number): Promise<{ items: Deadli
   };
 
   for (const c of certs)
-    push({ id: c.id, kind: "certificate", due: c.validUntil!, criticalDays: 30, title: `${label("certificateType", c.type)} № ${c.number}`, subtitle: c.project.name, link: s.admin ? `/admin/certificates?q=${encodeURIComponent(c.number)}` : `${base}/projects/${c.project.id}` });
+    push({
+      id: c.id, kind: "certificate", due: c.validUntil!, criticalDays: 30,
+      title: `${label("certificateType", c.type)} № ${c.number}`, subtitle: c.project.name,
+      link: s.admin ? `/admin/certificates?q=${encodeURIComponent(c.number)}` : `${base}/projects/${c.project.id}`,
+      ref: { certificateType: c.type, number: c.number, projectName: c.project.name },
+    });
   for (const p of projects)
-    push({ id: p.id, kind: "project", due: p.plannedEndDate!, criticalDays: 30, title: p.name, subtitle: `Reja bo'yicha topshirish · bajarilgan ${p.progress}%`, link: s.admin ? `/admin/projects?q=${encodeURIComponent(p.name)}` : `${base}/projects/${p.id}` });
+    push({
+      id: p.id, kind: "project", due: p.plannedEndDate!, criticalDays: 30,
+      title: p.name, subtitle: `Reja bo'yicha topshirish · bajarilgan ${p.progress}%`,
+      link: s.admin ? `/admin/projects?q=${encodeURIComponent(p.name)}` : `${base}/projects/${p.id}`,
+      ref: { projectName: p.name, progress: p.progress },
+    });
   for (const r of reservations)
-    push({ id: r.id, kind: "reservation", due: r.reservationUntil!, criticalDays: 2, title: `Bron · ${r.project.name}${r.unit ? ` · №${r.unit.number}` : ""}`, subtitle: `${r.number} · ${r.buyer.fullName}`, link: s.admin ? `/admin/purchases?q=${r.number}` : `${base}/sales` });
+    push({
+      id: r.id, kind: "reservation", due: r.reservationUntil!, criticalDays: 2,
+      title: `Bron · ${r.project.name}${r.unit ? ` · №${r.unit.number}` : ""}`, subtitle: `${r.number} · ${r.buyer.fullName}`,
+      link: s.admin ? `/admin/purchases?q=${r.number}` : `${base}/sales`,
+      ref: { projectName: r.project.name, unitNumber: r.unit?.number ?? null, purchaseNumber: r.number, buyerName: r.buyer.fullName },
+    });
   for (const p of payments)
-    push({ id: p.id, kind: "payment", due: p.dueDate, criticalDays: 3, title: `${p.seq === 0 ? "Boshlang'ich to'lov" : `${p.seq}-to'lov`} · ${Number(p.amount).toLocaleString("ru-RU")} so'm`, subtitle: `${p.purchase.number} · ${p.purchase.project.name} · ${p.purchase.buyer.fullName}`, link: s.admin ? `/admin/finance?q=${p.purchase.number}` : `${base}/finance` });
+    push({
+      id: p.id, kind: "payment", due: p.dueDate, criticalDays: 3,
+      title: `${p.seq === 0 ? "Boshlang'ich to'lov" : `${p.seq}-to'lov`} · ${Number(p.amount).toLocaleString("ru-RU")} so'm`,
+      subtitle: `${p.purchase.number} · ${p.purchase.project.name} · ${p.purchase.buyer.fullName}`,
+      link: s.admin ? `/admin/finance?q=${p.purchase.number}` : `${base}/finance`,
+      ref: { seq: p.seq, amount: Number(p.amount), purchaseNumber: p.purchase.number, projectName: p.purchase.project.name, buyerName: p.purchase.buyer.fullName },
+    });
   for (const c of contracts)
-    push({ id: c.id, kind: "contract", due: new Date(c.createdAt.getTime() + 5 * DAY), criticalDays: 2, title: `Shartnoma № ${c.number} imzolanmagan`, subtitle: c.purchase.project.name, link: s.admin ? `/admin/purchases?q=${c.purchase.number}` : `${base}/sales` });
+    push({
+      id: c.id, kind: "contract", due: new Date(c.createdAt.getTime() + 5 * DAY), criticalDays: 2,
+      title: `Shartnoma № ${c.number} imzolanmagan`, subtitle: c.purchase.project.name,
+      link: s.admin ? `/admin/purchases?q=${c.purchase.number}` : `${base}/sales`,
+      ref: { number: c.number, projectName: c.purchase.project.name },
+    });
   for (const c of complaints)
-    push({ id: c.id, kind: "complaint", due: new Date(c.createdAt.getTime() + 5 * DAY), criticalDays: 2, title: `${label("complaintCategory", c.category)}: ${c.message.slice(0, 60)}${c.message.length > 60 ? "…" : ""}`, subtitle: c.project?.name ?? "Umumiy murojaat", link: `/admin/complaints` });
+    push({
+      id: c.id, kind: "complaint", due: new Date(c.createdAt.getTime() + 5 * DAY), criticalDays: 2,
+      title: `${label("complaintCategory", c.category)}: ${c.message.slice(0, 60)}${c.message.length > 60 ? "…" : ""}`,
+      subtitle: c.project?.name ?? "Umumiy murojaat", link: `/admin/complaints`,
+      ref: { category: c.category, message: c.message.slice(0, 80), projectName: c.project?.name ?? null },
+    });
   for (const d of docs)
-    push({ id: d.id, kind: "document", due: new Date(d.createdAt.getTime() + 3 * DAY), criticalDays: 1, title: d.title, subtitle: `${d.project.name} · tekshiruv kutilmoqda`, link: s.admin ? `/admin/documents` : `${base}/projects/${d.project.id}` });
+    push({
+      id: d.id, kind: "document", due: new Date(d.createdAt.getTime() + 3 * DAY), criticalDays: 1,
+      title: d.title, subtitle: `${d.project.name} · tekshiruv kutilmoqda`,
+      link: s.admin ? `/admin/documents` : `${base}/projects/${d.project.id}`,
+      ref: { title: d.title, projectName: d.project.name },
+    });
 
   items.sort((a, b) => a.daysLeft - b.daysLeft);
   const summary: Record<string, number> = { overdue: 0, critical: 0, soon: 0 };
