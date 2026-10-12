@@ -14,9 +14,13 @@ import { ApiErrorState } from "@/components/marketing/ApiErrorState";
 import { ReportFraudDialog } from "@/components/marketing/ReportFraudDialog";
 import { DeveloperLogo } from "@/components/marketing/developers/DevelopersGrid";
 import { ProjectCard } from "@/components/landing/ProjectCard";
+import { staticDeveloperIds } from "@/lib/static-params";
 
 type Developer = Org & { projects?: ProjectCardData[]; projectsCount?: number; avgTrust?: number | null };
 type Params = { params: Promise<{ id: string }> };
+
+/** prerendered pages for the static demo export (empty in the server build) */
+export const generateStaticParams = staticDeveloperIds;
 
 const getDeveloper = cache((id: string) => fetchPublic<Developer>(`/developers/${encodeURIComponent(id)}`));
 

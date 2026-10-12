@@ -6,6 +6,8 @@ import { SCOPES, getMessages, pickMessages } from "./messages";
 import { createTranslator } from "./core";
 
 export const getLocale = cache(async (): Promise<Locale> => {
+  // static export: one build per locale (deploy/pages/build.sh)
+  if (process.env.STATIC_EXPORT === "1") return isLocale(process.env.STATIC_LOCALE) ? process.env.STATIC_LOCALE : DEFAULT_LOCALE;
   const v = (await cookies()).get(LOCALE_COOKIE)?.value;
   return isLocale(v) ? v : DEFAULT_LOCALE;
 });

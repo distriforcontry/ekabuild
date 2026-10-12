@@ -4,6 +4,7 @@ import { useRouter } from "next/navigation";
 import { LOCALE_COOKIE, type Locale } from "./config";
 import type { PartialMessages } from "./messages";
 import { createTranslator, type Translator } from "./core";
+import { BASE_PATH, DEMO_ROOT, IS_DEMO } from "@/lib/static";
 
 /**
  * Client i18n. The server sends only the messages a route segment needs, for the current locale only
@@ -30,6 +31,12 @@ export function I18nProvider({ locale, messages, children }: { locale: Locale; m
 
   const setLocale = React.useCallback(
     (l: Locale) => {
+      if (IS_DEMO) {
+        // static demo: one prerendered copy per locale (<root>, <root>/oz, <root>/ru)
+        const rest = window.location.pathname.slice(BASE_PATH.length) || "/";
+        window.location.assign(`${DEMO_ROOT}${l === "uz" ? "" : `/${l}`}${rest}${window.location.search}${window.location.hash}`);
+        return;
+      }
       document.cookie = `${LOCALE_COOKIE}=${l}; path=/; max-age=31536000; samesite=lax`;
       // server components (and the message subsets they pass down) re-render in the new locale
       startTransition(() => router.refresh());

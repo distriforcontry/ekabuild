@@ -13,8 +13,12 @@ import { ProjectProvider } from "@/components/project/ProjectProvider";
 import { ProjectHero } from "@/components/project/ProjectHero";
 import { ProjectTabs } from "@/components/project/ProjectTabs";
 import { TrustPanel } from "@/components/project/TrustPanel";
+import { staticProjectSlugs } from "@/lib/static-params";
 
 type Params = { params: Promise<{ slug: string }> };
+
+/** prerendered pages for the static demo export (empty in the server build) */
+export const generateStaticParams = staticProjectSlugs;
 type Result = { project: ProjectDetail | null; notFound: boolean };
 
 const getProject = cache(async (slug: string): Promise<Result> => {

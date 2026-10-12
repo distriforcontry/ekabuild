@@ -1,5 +1,11 @@
 // "landing" namespace — Uzbek (Latin) source of truth. The "oz" (Cyrillic) locale is generated automatically.
 const landing = {
+  demo: {
+    badge: "Demo",
+    title: "Statik demo versiya",
+    text: "GitHub Pages'da: katalog, 3D, tekshiruv va kalkulyator ishlaydi. Kabinet, xarid va E-IMZO — to'liq platformada.",
+    close: "Yopish",
+  },
   meta: {
     title: "EKA BUILD — qurilish obyektlarini tekshiring va ishonch bilan sotib oling",
     description:

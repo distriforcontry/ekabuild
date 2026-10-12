@@ -11,6 +11,7 @@ import { RENDERS } from "@/components/marketing/renders";
 import { ModelBanner } from "@/components/marketing/banners/ModelBanner";
 import { CatalogView } from "@/components/catalog/CatalogView";
 import { parseFilters, toApiQuery, type SearchParamsRecord } from "@/components/catalog/filters";
+import { IS_STATIC, staticSearchParams } from "@/lib/static";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -24,12 +25,13 @@ export async function generateMetadata(): Promise<Metadata> {
 
 export default async function ProjectsPage({ searchParams }: { searchParams: Promise<SearchParamsRecord> }) {
   const { t } = await getI18n();
-  const filters = parseFilters(await searchParams);
+  const filters = parseFilters(await staticSearchParams(searchParams));
 
   let data: Paginated<ProjectCard> | null = null;
   let failed = false;
   try {
-    data = await serverApiSafe<Paginated<ProjectCard>>("/projects", { query: toApiQuery(filters) });
+    // static demo: every project is prerendered once and filtered in the browser (CatalogView)
+    data = await serverApiSafe<Paginated<ProjectCard>>("/projects", { query: IS_STATIC ? { pageSize: 100 } : toApiQuery(filters) });
     if (data && !Array.isArray(data.items)) data = { items: [], total: 0, page: 1, pageSize: 12 };
   } catch {
     failed = true;

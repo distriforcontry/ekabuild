@@ -1,5 +1,7 @@
 "use client";
 // Browser API client. Same-origin `/api/v1` (nginx or Next rewrite → Fastify), cookies carry the session.
+import { IS_DEMO } from "./static";
+import { DemoError, demoRequest } from "./demo-api";
 
 export class ApiError extends Error {
   constructor(
@@ -37,6 +39,14 @@ async function refreshSession(): Promise<boolean> {
 async function request<T>(method: string, path: string, opts: Options = {}): Promise<T> {
   const { query, body, retry = true, headers, ...rest } = opts;
   const isForm = typeof FormData !== "undefined" && body instanceof FormData;
+  if (IS_DEMO) {
+    // static demo build: no API server (lib/demo-api answers read-only calls from a snapshot)
+    try {
+      return (await demoRequest(method, path, query, body)) as T;
+    } catch (e) {
+      throw new ApiError(e instanceof DemoError && e.message === "UNAUTHORIZED" ? 401 : 503, "DEMO", (e as Error).message);
+    }
+  }
   let res: Response;
   try {
     res = await fetch(`${API_BASE}${path}${buildQuery(query)}`, {

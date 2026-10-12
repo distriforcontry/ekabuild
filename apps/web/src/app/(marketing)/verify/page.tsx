@@ -6,6 +6,7 @@ import { getI18n } from "@/i18n/server";
 import { Container, PageHero } from "@/components/marketing/primitives";
 import { VerifyWidget } from "@/components/landing/VerifyWidget";
 import { ReportFraudDialog } from "@/components/marketing/ReportFraudDialog";
+import { staticSearchParams } from "@/lib/static";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -16,7 +17,7 @@ const STATUSES = ["VERIFIED", "PENDING", "EXPIRED", "REVOKED", "REJECTED"] as co
 const STEP_ICONS = [Mobile, ScanBarcode, TickSquare];
 
 export default async function VerifyPage({ searchParams }: { searchParams: Promise<{ number?: string | string[]; tab?: string | string[] }> }) {
-  const sp = await searchParams;
+  const sp = await staticSearchParams(searchParams);
   const { t, raw } = await getI18n();
   const number = typeof sp.number === "string" ? sp.number : "";
   const tab = typeof sp.tab === "string" ? sp.tab : "";

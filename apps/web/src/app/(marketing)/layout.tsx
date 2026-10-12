@@ -3,7 +3,9 @@ import { MarketingHeader } from "@/components/marketing/MarketingHeader";
 import { Footer } from "@/components/marketing/Footer";
 import { SupportWidget } from "@/components/support/SupportWidget";
 import { Splash } from "@/components/brand/Splash";
+import { DemoRibbon } from "@/components/marketing/DemoRibbon";
 import { I18nScope } from "@/i18n/client";
+import { IS_DEMO } from "@/lib/static";
 import { getScopeMessages } from "@/i18n/server";
 
 // Public marketing shell: splash (first visit per session), sticky glass header, footer and the support chat.
@@ -24,6 +26,7 @@ export default async function MarketingLayout({ children }: { children: React.Re
         </main>
         <Footer />
         <SupportWidget user={user ? { name: user.fullName } : null} />
+        {IS_DEMO && <DemoRibbon />}
       </div>
     </I18nScope>
   );

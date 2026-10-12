@@ -8,6 +8,7 @@ import { fetchPublic } from "@/components/marketing/server-data";
 import { asList } from "@/components/marketing/format";
 import { ApiErrorState } from "@/components/marketing/ApiErrorState";
 import { RulesBrowser } from "@/components/marketing/rules/RulesBrowser";
+import { staticSearchParams } from "@/lib/static";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -15,7 +16,7 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default async function RulesPage({ searchParams }: { searchParams: Promise<{ category?: string | string[] }> }) {
-  const sp = await searchParams;
+  const sp = await staticSearchParams(searchParams);
   const { t } = await getI18n();
   const res = await fetchPublic<unknown>("/rules");
   const rules = asList<RuleItem>(res.data);

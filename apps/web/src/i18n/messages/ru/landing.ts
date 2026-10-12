@@ -2,6 +2,12 @@ import type uz from "../uz/landing";
 import type { Shape } from "../../types";
 
 const landing: Shape<typeof uz> = {
+  demo: {
+    badge: "Демо",
+    title: "Статическая демо-версия",
+    text: "На GitHub Pages работают каталог, 3D, проверка и калькулятор. Кабинет, покупка и E-IMZO — на полной платформе.",
+    close: "Закрыть",
+  },
   meta: {
     title: "EKA BUILD — проверяйте объекты строительства и покупайте с уверенностью",
     description:

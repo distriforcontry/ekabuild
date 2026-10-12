@@ -1,5 +1,6 @@
 // Catalog filter state <-> URL search params <-> API query. Pure; used by the server page and the client view.
 import { PROJECT_STATUSES, PROJECT_TYPES, REGIONS, type ProjectStatus, type ProjectType } from "@eka/shared";
+import type { ProjectCard } from "@/lib/types";
 
 export const SORTS = ["trust", "new", "price_asc", "price_desc", "progress"] as const;
 export type SortKey = (typeof SORTS)[number];
@@ -102,3 +103,31 @@ export const EMPTY_FILTERS: Pick<CatalogFilters, "q" | "region" | "status" | "ty
   maxPrice: null,
   verified: false,
 };
+
+/**
+ * Static demo (no API): the whole catalog is prerendered once; filter, sort and paginate it in the browser
+ * exactly like GET /projects does.
+ */
+export function filterLocally(items: ProjectCard[], f: CatalogFilters): { items: ProjectCard[]; total: number } {
+  const q = f.q.toLowerCase();
+  const price = (p: ProjectCard) => (p.priceFrom == null ? null : Number(p.priceFrom));
+  let out = items.filter(
+    (p) =>
+      (!q || [p.name, p.address, p.district ?? "", p.developer.name].some((v) => v.toLowerCase().includes(q))) &&
+      (!f.region || p.region === f.region) &&
+      (!f.status || p.status === f.status) &&
+      (!f.type || p.type === f.type) &&
+      (!f.verified || p.verificationStatus === "VERIFIED") &&
+      (f.minPrice == null || (price(p) ?? 0) >= f.minPrice) &&
+      (f.maxPrice == null || (price(p) ?? Infinity) <= f.maxPrice),
+  );
+  const by = {
+    trust: (a: ProjectCard, b: ProjectCard) => Number(b.featured) - Number(a.featured) || b.trustScore - a.trustScore,
+    new: (a: ProjectCard, b: ProjectCard) => +new Date(b.createdAt ?? 0) - +new Date(a.createdAt ?? 0),
+    price_asc: (a: ProjectCard, b: ProjectCard) => (price(a) ?? Infinity) - (price(b) ?? Infinity),
+    price_desc: (a: ProjectCard, b: ProjectCard) => (price(b) ?? -1) - (price(a) ?? -1),
+    progress: (a: ProjectCard, b: ProjectCard) => b.progress - a.progress,
+  }[f.sort];
+  out = [...out].sort(by);
+  return { items: out.slice((f.page - 1) * PAGE_SIZE, f.page * PAGE_SIZE), total: out.length };
+}

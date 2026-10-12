@@ -16,7 +16,8 @@ import { ProjectsTable } from "./ProjectsTable";
 import { MapView } from "./MapView";
 import { Pagination } from "./Pagination";
 import { ErrorCard } from "./states";
-import { EMPTY_FILTERS, PAGE_SIZE, SORTS, hrefFor, type CatalogFilters } from "./filters";
+import { EMPTY_FILTERS, PAGE_SIZE, SORTS, filterLocally, hrefFor, parseFilters, type CatalogFilters } from "./filters";
+import { BASE_PATH, IS_DEMO } from "@/lib/static";
 
 /**
  * Client side of /projects: URL-driven filters (router.push in a transition so results dim while the
@@ -29,11 +30,21 @@ export function CatalogView({ data, filters, failed }: { data: Paginated<Project
   const [optimistic, setOptimistic] = React.useState(filters);
   React.useEffect(() => setOptimistic(filters), [filters]);
 
+  // static demo: filters live in the URL but are applied in the browser (there is no server to re-render)
+  React.useEffect(() => {
+    if (!IS_DEMO) return;
+    const sync = () => setOptimistic(parseFilters(Object.fromEntries(new URLSearchParams(window.location.search))));
+    sync();
+    window.addEventListener("popstate", sync);
+    return () => window.removeEventListener("popstate", sync);
+  }, []);
+
   const navigate = React.useCallback(
     (patch: Partial<CatalogFilters>) => {
       const next = { ...optimistic, ...("page" in patch ? {} : { page: 1 }), ...patch };
       setOptimistic(next);
-      startTransition(() => router.push(hrefFor(next, {}, false), { scroll: false }));
+      if (IS_DEMO) window.history.pushState(null, "", `${BASE_PATH}${hrefFor(next, {}, false).replace(/^\/projects/, "/projects/")}`);
+      else startTransition(() => router.push(hrefFor(next, {}, false), { scroll: false }));
     },
     [optimistic, router],
   );
@@ -43,9 +54,10 @@ export function CatalogView({ data, filters, failed }: { data: Paginated<Project
     document.getElementById("catalog-results")?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
-  const items = (data?.items ?? []).filter((p) => !optimistic.verified || (p.verificationStatus === "VERIFIED" && p.developer.status === "VERIFIED"));
-  const total = data?.total ?? 0;
-  const pages = Math.max(1, Math.ceil(total / (data?.pageSize || PAGE_SIZE)));
+  const local = IS_DEMO ? filterLocally(data?.items ?? [], optimistic) : null;
+  const items = (local?.items ?? data?.items ?? []).filter((p) => !optimistic.verified || (p.verificationStatus === "VERIFIED" && p.developer.status === "VERIFIED"));
+  const total = local?.total ?? data?.total ?? 0;
+  const pages = Math.max(1, Math.ceil(total / (local ? PAGE_SIZE : data?.pageSize || PAGE_SIZE)));
   const view = optimistic.view;
 
   const sortOptions = SORTS.map((s) => ({ value: s, label: t(`catalog.sort.${s}`) }));

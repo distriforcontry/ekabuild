@@ -13,8 +13,12 @@ import { Backdrop, Breadcrumbs, Container } from "@/components/marketing/primiti
 import { fetchPublic } from "@/components/marketing/server-data";
 import { ApiErrorState } from "@/components/marketing/ApiErrorState";
 import { OpenSupportButton } from "@/components/support/OpenSupportButton";
+import { staticRuleSlugs } from "@/lib/static-params";
 
 type Params = { params: Promise<{ slug: string }> };
+
+/** prerendered pages for the static demo export (empty in the server build) */
+export const generateStaticParams = staticRuleSlugs;
 
 const getRule = cache((slug: string) => fetchPublic<RuleItem>(`/rules/${encodeURIComponent(slug)}`));
 

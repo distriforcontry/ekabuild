@@ -18,6 +18,8 @@ import { ReportFraudDialog } from "@/components/marketing/ReportFraudDialog";
 import { CopyButton } from "@/components/marketing/CopyButton";
 import { VerifyWidget } from "@/components/landing/VerifyWidget";
 import { cn } from "@/lib/utils";
+import { staticCertificateCodes } from "@/lib/static-params";
+import { IS_STATIC } from "@/lib/static";
 
 type VerifyResponse = {
   certificate: CertificateItem;
@@ -26,6 +28,9 @@ type VerifyResponse = {
 };
 
 type Params = { params: Promise<{ code: string }> };
+
+/** prerendered pages for the static demo export (empty in the server build) */
+export const generateStaticParams = staticCertificateCodes;
 
 const safeDecode = (v: string) => {
   try {
@@ -48,6 +53,7 @@ export async function generateMetadata({ params }: Params): Promise<Metadata> {
 }
 
 async function pageUrl(code: string) {
+  if (IS_STATIC) return `${process.env.NEXT_PUBLIC_SITE_URL ?? "https://ekabuild.uz"}/verify/${encodeURIComponent(code)}/`;
   const h = await headers();
   const host = h.get("x-forwarded-host") ?? h.get("host");
   const proto = h.get("x-forwarded-proto") ?? (host?.startsWith("localhost") ? "http" : "https");

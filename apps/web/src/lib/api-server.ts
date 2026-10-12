@@ -2,6 +2,7 @@ import "server-only";
 import { cookies } from "next/headers";
 import { cache } from "react";
 import type { User } from "./types";
+import { IS_STATIC } from "./static";
 
 // Server-side API access (RSC, route handlers). Talks to the API pool over the internal network
 // and forwards the visitor's cookies.
@@ -20,7 +21,7 @@ export async function serverApi<T>(path: string, init: RequestInit & { query?: Q
   const qs = query
     ? "?" + new URLSearchParams(Object.entries(query).filter(([, v]) => v !== undefined && v !== null && v !== "").map(([k, v]) => [k, String(v)])).toString()
     : "";
-  const cookieHeader = (await cookies()).toString();
+  const cookieHeader = IS_STATIC ? "" : (await cookies()).toString();
   const res = await fetch(`${INTERNAL}/api/v1${path}${qs === "?" ? "" : qs}`, {
     cache: "no-store",
     ...rest,
@@ -51,6 +52,7 @@ export async function serverApiSafe<T>(path: string, init?: RequestInit & { quer
 
 /** Current user for this request (deduplicated per render). */
 export const getCurrentUser = cache(async (): Promise<User | null> => {
+  if (IS_STATIC) return null;
   const jar = await cookies();
   if (!jar.get("eka_at")) return null;
   try {
