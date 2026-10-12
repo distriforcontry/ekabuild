@@ -136,7 +136,7 @@ export function FlowPlayer({ flow }: { flow: FlowKey }) {
                 aria-current={state === "current" ? "step" : undefined}
                 className={cn(
                   "w-full cursor-pointer rounded-2xl border p-3.5 text-left transition duration-300 focus-visible:outline-2 focus-visible:outline-gold-400",
-                  state === "current" ? "border-gold-500/40 bg-gradient-to-br from-gold-500/[0.09] to-transparent shadow-card" : "border-transparent hover:bg-fg/[0.04]",
+                  state === "current" ? "border-gold-500/40 bg-gold-500/[0.07] shadow-card" : "border-transparent hover:bg-fg/[0.04]",
                 )}
               >
                 <span className="flex items-start gap-3">

@@ -43,7 +43,7 @@ export function Funnel({ data }: { data: Analytics["funnel"] }) {
         rows={steps.map((s) => [s.label, f.number(s.count), s.stepConv === null ? "—" : pct(s.stepConv)])}
       />
       <div ref={ref} aria-hidden>
-        {width === 0 ? <div className="h-[300px]" /> : width >= 640 ? (
+        {width === 0 ? <div className="h-[300px]" /> : width >= 760 ? (
           <HorizontalFunnel steps={steps} width={width} hover={hover} setHover={setHover} worst={worst} fmt={f.number} />
         ) : (
           <VerticalFunnel steps={steps} hover={hover} setHover={setHover} worst={worst} fmt={f.number} />

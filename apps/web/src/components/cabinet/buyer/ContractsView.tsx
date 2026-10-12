@@ -8,7 +8,6 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
 import type { PurchaseItem } from "@/lib/types";
-import type { SignerRole } from "@eka/shared";
 import { useCabinetUser } from "../CabinetContext";
 import { asList } from "../hooks";
 import { useFmt } from "../format";
@@ -16,9 +15,7 @@ import { AnimatedNumber, Kpi, PageHead, PanelEmpty } from "../kit";
 import { ErrorState } from "../states";
 
 type Side = "BUYER" | "SELLER";
-/** list DTOs carry the viewer's side and whether they can sign right now */
-export type ListContract = NonNullable<PurchaseItem["contract"]> & { signedRoles?: SignerRole[]; viewerRole?: SignerRole | null; canSign?: boolean };
-type Row = PurchaseItem & { contract: ListContract; side: Side };
+type Row = PurchaseItem & { contract: NonNullable<PurchaseItem["contract"]>; side: Side };
 
 /** Contracts I am a party to: as a buyer (/purchases) and — for developers — as the seller (/dev/purchases). */
 function useMyContracts(seller: boolean) {
@@ -33,7 +30,7 @@ function useMyContracts(seller: boolean) {
     const rows = new Map<string, Row>();
     const add = (list: PurchaseItem[], fallback: Side) => {
       for (const p of list) {
-        const c = p.contract as ListContract | null;
+        const c = p.contract;
         if (!c || rows.has(c.id)) continue;
         // the API tells us which side we sign for; the source list is only a fallback
         const side: Side = c.viewerRole === "SELLER" || c.viewerRole === "BUYER" ? c.viewerRole : fallback;

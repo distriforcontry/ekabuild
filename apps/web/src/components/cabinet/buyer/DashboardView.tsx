@@ -34,7 +34,6 @@ import { AnimatedNumber, Kpi, Panel, PanelEmpty, SeeAll } from "../kit";
 import { ProjectMiniCard } from "../ProjectMiniCard";
 import { CardGridSkeleton, ErrorState, ListSkeleton, StatCardsSkeleton } from "../states";
 import { ProjectCover } from "../ui";
-import type { ListContract } from "./ContractsView";
 import { JourneyStepper } from "./JourneyStepper";
 
 export type FeedItem = ProgressItem & { project: { slug: string; name: string } };
@@ -62,7 +61,7 @@ export function DashboardView() {
 
   // contracts waiting for *my* signature — the list DTO already says whether I can sign now
   const toSign = React.useMemo(
-    () => new Set((purchases.data ?? []).filter((p) => (p.contract as ListContract | null)?.canSign).map((p) => p.id)),
+    () => new Set((purchases.data ?? []).filter((p) => p.contract?.canSign).map((p) => p.id)),
     [purchases.data],
   );
 

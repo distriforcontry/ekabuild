@@ -3,7 +3,7 @@ import * as React from "react";
 import { flushSync } from "react-dom";
 import { usePathname, useSearchParams } from "next/navigation";
 import { Activity, Clock, Data, Hierarchy, Map1, PenTool, Printer, Ranking, Refresh, Building4, Messages2, Home2, ShieldTick } from "iconsax-reactjs";
-import { Logo } from "@/components/brand/Logo";
+import { Wordmark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { PageHeader } from "@/components/ui/misc";
 import { useI18n } from "@/i18n/client";
@@ -33,9 +33,11 @@ const PRINT_CSS = `
   @page { size: A4 portrait; margin: 12mm; }
   html, body, .min-h-dvh { background: #fff !important; }
   html { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-  header, aside, [data-sonner-toaster] { display: none !important; }
+  header, aside, .fixed.bottom-0, [data-sonner-toaster] { display: none !important; }
   main { padding: 0 !important; max-width: none !important; }
   #analytics-report { width: ${PRINT_WIDTH}px !important; margin: 0 auto !important; }
+  #analytics-report table { font-size: 11px; }
+  #analytics-report th, #analytics-report td { padding-left: 6px !important; padding-right: 6px !important; }
 }
 html.eka-printing *, html.eka-printing *::before, html.eka-printing *::after { transition: none !important; }
 `;
@@ -102,7 +104,11 @@ export function AnalyticsView() {
 
       {/* print-only report header */}
       <div className={cn("mb-6 items-center justify-between border-b border-line pb-4", printing ? "flex" : "hidden print:flex")}>
-        <Logo className="h-9" />
+        {/* static app icon: the live LogoMark's SVG masks rasterise as a black block in PDF output */}
+        <span className="flex items-center gap-3">
+          <img src="/icon.svg" alt="" className="size-10 rounded-xl" />
+          <Wordmark className="text-sm" />
+        </span>
         <div className="text-right">
           <div className="text-lg font-semibold text-stone-100">{t("admin.analytics.reportTitle")}</div>
           {data && (
@@ -201,7 +207,7 @@ export function AnalyticsView() {
           title={t("admin.analytics.regions.title")}
           hint={t("admin.analytics.regions.hint")}
           icon={Map1}
-          className={span("xl:col-span-5")}
+          className={cn("print:break-inside-auto", span("xl:col-span-5"))}
           contentClassName="px-0 pb-0 md:px-0 md:pb-0"
           actions={<RegionsMetricSwitch value={metric} onChange={setMetric} />}
         >
@@ -219,7 +225,7 @@ export function AnalyticsView() {
           title={t("admin.analytics.developers.title")}
           hint={t("admin.analytics.developers.hint")}
           icon={Ranking}
-          className={span("xl:col-span-5")}
+          className={cn("print:break-inside-auto", span("xl:col-span-5"))}
           contentClassName="px-0 pb-0 md:px-0 md:pb-0"
         >
           {!data ? (
@@ -235,7 +241,7 @@ export function AnalyticsView() {
           title={t("admin.analytics.projects.title")}
           hint={t("admin.analytics.projects.hint")}
           icon={Building4}
-          className={span("xl:col-span-3")}
+          className={cn("print:break-inside-auto", span("xl:col-span-3"))}
           contentClassName="px-0 pb-0 md:px-0 md:pb-0"
         >
           {!data ? (

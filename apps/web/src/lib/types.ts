@@ -235,7 +235,21 @@ export interface PurchaseItem {
   unit: UnitItem | null;
   buyer: { id: string; fullName: string; phone: string };
   buyerOrg: { id: string; name: string; tin: string } | null;
-  contract: { id: string; number: string; status: ContractStatus; signedAt: string | null } | null;
+  planType: "FULL" | "INSTALLMENT";
+  downPercent: number;
+  months: number;
+  reservationUntil: string | null;
+  contract: {
+    id: string;
+    number: string;
+    status: ContractStatus;
+    signedAt: string | null;
+    /** roles that already signed */
+    signedRoles: SignerRole[];
+    /** which side of the deal the current viewer is on */
+    viewerRole: SignerRole | null;
+    canSign: boolean;
+  } | null;
 }
 
 export interface SignatureItem {

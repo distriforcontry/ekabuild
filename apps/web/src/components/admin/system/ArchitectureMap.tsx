@@ -163,7 +163,7 @@ export function ArchitectureMap({
                 >
                   <span className="absolute left-4 top-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">{t(`admin.system.pools.${n.poolLabel!}`)}</span>
                   {n.info === "api" && answered && !nodes.some((m) => m.replica && m.replica === answered) && (
-                    <span className="absolute -bottom-3 left-1/2 -translate-x-1/2 whitespace-nowrap rounded-full border border-gold-500/40 bg-ink-900 px-2 py-0.5 font-mono text-[10px] text-gold-200 shadow-card">
+                    <span className="absolute right-2 top-[calc(100%+12px)] whitespace-nowrap rounded-full border border-gold-500/40 bg-ink-900 px-2 py-0.5 font-mono text-[10px] text-gold-200 shadow-card">
                       ↳ {t("admin.system.status.answered")}: {answered}
                     </span>
                   )}
@@ -347,7 +347,7 @@ function MapNodeCard({
           </span>
         )}
         <span className="min-w-0 flex-1">
-          <span className="block truncate text-[13px] font-semibold text-stone-100">{title}</span>
+          <span className={cn("block text-[13px] font-semibold leading-tight text-stone-100", n.h > 100 ? "line-clamp-2 break-words" : "truncate")}>{title}</span>
           <span className="block truncate font-mono text-[10px] text-ink-400">{subtitle}</span>
         </span>
         <StatusDot status={status} className="self-start" />

@@ -342,7 +342,12 @@ function NodePanel({
             </span>
             <div className="min-w-0 flex-1">
               <h3 className="text-lg font-semibold tracking-tight text-stone-100">{t(`admin.system.nodes.${info}.title`)}</h3>
-              <p className="truncate font-mono text-xs text-ink-400">{node.kind === "node" || !node.kind ? (node.title ?? t(`admin.system.nodes.${info}.subtitle`)) : t(`admin.system.nodes.${info}.subtitle`)}</p>
+              <p className="truncate font-mono text-xs text-ink-400">
+                {/* replicas / pods name themselves; everything else shows the translated subtitle */}
+                {(info === "web" || info === "api" || info === "worker") && node.title && node.kind !== "chip"
+                  ? `${node.title} · ${node.subtitle ?? ""}`
+                  : t(`admin.system.nodes.${info}.subtitle`)}
+              </p>
             </div>
           </div>
           <div className="mt-3 flex flex-wrap items-center gap-2">

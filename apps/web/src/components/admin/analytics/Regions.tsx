@@ -99,7 +99,7 @@ export function Regions({ rows, metric }: { rows: RegionRow[]; metric: RegionMet
                 style={{ background: has ? goldRamp(0.12 + tnorm * 0.88) : "transparent" }}
               >
                 <span className={cn("truncate font-mono text-[9px] font-bold tracking-wider sm:text-[11px]", has && strong ? "text-ink-950/70" : "text-ink-300")}>{tr(tile.code)}</span>
-                <span className={cn("truncate text-[10px] font-semibold tracking-tight sm:text-[13px]", has ? (strong ? "text-ink-950" : "text-stone-100") : "text-ink-500")}>
+                <span className={cn("hidden truncate text-[10px] font-semibold tracking-tight sm:block sm:text-[13px]", has ? (strong ? "text-ink-950" : "text-stone-100") : "text-ink-500")}>
                   {has ? short(metric, v) : "—"}
                 </span>
               </motion.div>

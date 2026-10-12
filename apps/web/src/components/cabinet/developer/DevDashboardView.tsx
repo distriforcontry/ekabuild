@@ -31,7 +31,6 @@ import { useFmt } from "../format";
 import { AnimatedNumber, Kpi, PageHead, Panel, PanelEmpty, SeeAll } from "../kit";
 import { ErrorState, ListSkeleton, StatCardsSkeleton } from "../states";
 import { ProjectCover } from "../ui";
-import type { ListContract } from "../buyer/ContractsView";
 import { SalesByMonthChart, TrustBars, UnitsDonut, useMonthlySales } from "./DevCharts";
 
 export type DevStats = {
@@ -60,7 +59,7 @@ export function DevDashboardView() {
 
   // contracts waiting for the seller's signature (canSign comes with the list DTO)
   const toSign = React.useMemo(
-    () => (sales.data ? sales.data.filter((p) => (p.contract as ListContract | null)?.canSign) : null),
+    () => (sales.data ? sales.data.filter((p) => p.contract?.canSign) : null),
     [sales.data],
   );
 

@@ -141,8 +141,8 @@ export async function Footer() {
       </Container>
 
       {/* oversized watermark: the lockup word only (the plate already says EKA) */}
-      <div aria-hidden className="pointer-events-none select-none overflow-hidden">
-        <InView className="eka-iv-up flex items-end justify-center gap-[3vw] opacity-[0.13] lg:gap-10" style={{ "--d": "100ms" } as CSSProperties}>
+      <div aria-hidden className="pointer-events-none select-none overflow-hidden opacity-[0.14]">
+        <InView className="eka-iv-up flex items-end justify-center gap-[3vw] lg:gap-10" style={{ "--d": "100ms" } as CSSProperties}>
           <LogoMark className="-mb-[1.6vw] h-[15vw] w-auto lg:-mb-5 lg:h-48" shimmer />
           <span className="text-gold-shimmer -mb-[0.16em] font-sans text-[12vw] font-bold uppercase leading-none tracking-[0.3em] lg:text-[10.5rem]">Build</span>
         </InView>

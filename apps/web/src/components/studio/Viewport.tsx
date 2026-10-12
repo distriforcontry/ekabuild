@@ -163,7 +163,13 @@ function CameraRig() {
   const invalidate = useThree((s) => s.invalidate);
   const { resolvedTheme } = useTheme();
   const version = useS((s) => s.version);
-  const goal = React.useRef<{ pos: THREE.Vector3; target: THREE.Vector3; zoom: number | null } | null>(null);
+  // time-based (not frame-based) so slow GPUs finish the move in the same wall-clock time
+  const goal = React.useRef<{
+    pos: THREE.Vector3;
+    target: THREE.Vector3;
+    zoom: number | null;
+    from?: { dir: THREE.Vector3; dist: number; target: THREE.Vector3; zoom: number; t0: number };
+  } | null>(null);
 
   React.useEffect(() => {
     const api = {
@@ -313,7 +319,7 @@ function CameraRig() {
     engine.cam?.fit(b, { view: "iso" });
   }, [version, engine, get]);
 
-  useFrame((_, dt) => {
+  useFrame(() => {
     const g = goal.current;
     if (!g) return;
     if (!engine.camAnimating) {
@@ -322,27 +328,44 @@ function CameraRig() {
     }
     const { camera, controls } = get();
     const ctl = controls as unknown as OrbitImpl | null;
-    const k = 1 - Math.exp(-7 * Math.min(dt, 0.05));
     const target = ctl?.target ?? engine.camView.target;
-    // interpolate around the target (avoids flying through the model on view switches)
-    const off = camera.position.clone().sub(target);
+    const oc = camera as THREE.OrthographicCamera;
+    if (!g.from) {
+      const off = camera.position.clone().sub(target);
+      g.from = { dir: off.clone().normalize(), dist: off.length(), target: target.clone(), zoom: oc.zoom ?? 1, t0: performance.now() };
+    }
+    const f = g.from;
+    const p = Math.min(1, (performance.now() - f.t0) / 650);
+    const e = 1 - Math.pow(1 - p, 3);
+    // orbit around the target (spherical interpolation) instead of flying through the model
     const goalOff = g.pos.clone().sub(g.target);
-    const d0 = off.length();
-    const d1 = goalOff.length();
-    const dirA = off.normalize();
-    const dirB = goalOff.normalize();
-    if (dirA.dot(dirB) < -0.98) dirA.add(new THREE.Vector3(0, 0.3, 0)).normalize();
-    const dir = dirA.lerp(dirB, k).normalize();
-    target.lerp(g.target, k);
-    camera.position.copy(target).addScaledVector(dir, THREE.MathUtils.lerp(d0, d1, k));
-    if (g.zoom && (camera as THREE.OrthographicCamera).isOrthographicCamera) {
-      const oc = camera as THREE.OrthographicCamera;
-      oc.zoom = THREE.MathUtils.lerp(oc.zoom, g.zoom, k);
+    const dirB = goalOff.clone().normalize();
+    const dot = THREE.MathUtils.clamp(f.dir.dot(dirB), -1, 1);
+    let dir: THREE.Vector3;
+    if (dot < -0.999) {
+      let axis = new THREE.Vector3(0, 1, 0).cross(f.dir);
+      if (axis.lengthSq() < 1e-6) axis = new THREE.Vector3(1, 0, 0);
+      dir = f.dir.clone().applyAxisAngle(axis.normalize(), e * Math.PI);
+    } else {
+      const th = Math.acos(dot);
+      dir =
+        th < 1e-4
+          ? f.dir.clone().lerp(dirB, e)
+          : f.dir
+              .clone()
+              .multiplyScalar(Math.sin((1 - e) * th) / Math.sin(th))
+              .addScaledVector(dirB, Math.sin(e * th) / Math.sin(th));
+      dir.normalize();
+    }
+    target.copy(f.target).lerp(g.target, e);
+    camera.position.copy(target).addScaledVector(dir, THREE.MathUtils.lerp(f.dist, goalOff.length(), e));
+    if (g.zoom && oc.isOrthographicCamera) {
+      oc.zoom = THREE.MathUtils.lerp(f.zoom, g.zoom, e);
       oc.updateProjectionMatrix();
     }
     camera.lookAt(target);
     ctl?.update();
-    if (camera.position.distanceTo(g.pos) < Math.max(0.01, d1 * 0.002) && target.distanceTo(g.target) < Math.max(0.01, d1 * 0.002)) {
+    if (p >= 1) {
       goal.current = null;
       engine.camAnimating = false;
     }
@@ -1135,6 +1158,8 @@ export default function Viewport({ labels, className }: { labels: ViewportLabels
       dpr={[1, 2]}
       frameloop="demand"
       gl={{ antialias: true, alpha: true, powerPreference: "high-performance", preserveDrawingBuffer: false }}
+      // panels animate their width — don't reallocate the drawing buffer on every animation frame
+      resize={{ debounce: { scroll: 50, resize: 180 }, scroll: false }}
       fallback={<div className="grid size-full place-items-center p-6 text-center text-sm text-ink-300">{labels.noWebgl}</div>}
       onCreated={({ gl }) => {
         gl.localClippingEnabled = true;

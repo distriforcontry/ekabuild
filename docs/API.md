@@ -180,6 +180,7 @@ projects disappear from the public catalog.
 | POST | `/cadastre/check` | `{ projectId }` → `CadastreCheckItem` (also allowed for project owner) |
 | PATCH | `/certificates/:id/verify` | `{ status: 'VERIFIED'\|'REJECTED'\|'REVOKED', note? }` |
 | PATCH | `/documents/:id/verify` | `{ status: 'VERIFIED'\|'REJECTED', rejectReason? }` |
+| GET | `/inspector/inspections` | inspector's own (admin: all, `mine=1` to narrow) `?result&projectId&page&pageSize` → `Paginated<{ id, type, result, date, summary, violations: number, files: number, inspector, project: { id, slug, name, region, coverUrl } }> & { byResult }` |
 
 ## Admin — `/admin` 🛡
 

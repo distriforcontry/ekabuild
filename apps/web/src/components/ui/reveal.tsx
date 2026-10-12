@@ -34,8 +34,19 @@ export function Reveal({
 /** Number that counts up when scrolled into view (re-animates from the previous value when `value` changes). */
 export function CountUp({ value, duration = 1.6, format }: { value: number; duration?: number; format?: (n: number) => string }) {
   const ref = React.useRef<HTMLSpanElement>(null);
-  const inView = useInView(ref, { once: true });
+  const seen = useInView(ref, { once: true, margin: "0px 0px 120px 0px" });
   const reduce = useReducedMotion();
+  // never stay at 0: if the tile was scrolled past (fast jump, anchor link) start anyway
+  const [passed, setPassed] = React.useState(false);
+  React.useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => el.getBoundingClientRect().bottom < 0 && setPassed(true);
+    check();
+    window.addEventListener("scroll", check, { passive: true });
+    return () => window.removeEventListener("scroll", check);
+  }, []);
+  const inView = seen || passed;
   const fmt = React.useCallback((n: number) => (format ? format(n) : new Intl.NumberFormat("uz-UZ").format(n).replace(/,/g, " ")), [format]);
   const from = React.useRef(0);
   const [display, setDisplay] = React.useState(() => fmt(0));

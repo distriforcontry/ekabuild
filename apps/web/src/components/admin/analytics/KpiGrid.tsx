@@ -129,7 +129,7 @@ export function KpiGrid({ data, loading, error }: { data: Analytics | null; load
         })}
       </div>
 
-      <div role="list" aria-label={t("admin.analytics.kpi.secondary")} className="grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-5">
+      <div role="list" aria-label={t("admin.analytics.kpi.secondary")} className="break-inside-avoid grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3 lg:grid-cols-5">
         {SECONDARY.map((k) => {
           const cur = data.totals[k.key];
           const prev = data.previous[k.key];

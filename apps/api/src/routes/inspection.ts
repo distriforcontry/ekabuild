@@ -109,6 +109,54 @@ export default async function inspectionRoutes(app: FastifyInstance) {
   });
 
   // inspectors' queue (admins use /admin/*)
+  // inspections written by the current inspector (admins: everyone's), newest first
+  app.get("/inspector/inspections", async (req) => {
+    const u = requireRole(req, "INSPECTOR", "ADMIN");
+    const q = z
+      .object({
+        page: z.coerce.number().int().min(1).default(1),
+        pageSize: z.coerce.number().int().min(1).max(100).default(20),
+        result: z.enum(["PASSED", "ISSUES", "FAILED"]).optional(),
+        projectId: z.string().optional(),
+        mine: z.enum(["0", "1"]).optional(),
+      })
+      .parse(req.query);
+    const where: Prisma.InspectionWhereInput = {
+      ...(u.role === "INSPECTOR" || q.mine === "1" ? { inspectorId: u.id } : {}),
+      ...(q.result ? { result: q.result } : {}),
+      ...(q.projectId ? { projectId: q.projectId } : {}),
+    };
+    const [rows, total, byResult] = await Promise.all([
+      prisma.inspection.findMany({
+        where,
+        orderBy: { date: "desc" },
+        skip: (q.page - 1) * q.pageSize,
+        take: q.pageSize,
+        include: { project: { select: { id: true, slug: true, name: true, region: true, coverUrl: true } }, inspector: { select: { fullName: true } }, _count: { select: { files: true } } },
+      }),
+      prisma.inspection.count({ where }),
+      prisma.inspection.groupBy({ by: ["result"], where, _count: true }),
+    ]);
+    return {
+      items: rows.map((i) => ({
+        id: i.id,
+        type: i.type,
+        result: i.result,
+        date: i.date,
+        summary: i.summary,
+        violations: Array.isArray(i.violations) ? i.violations.length : 0,
+        files: i._count.files,
+        inspector: i.inspector.fullName,
+        project: i.project,
+        createdAt: i.createdAt,
+      })),
+      total,
+      page: q.page,
+      pageSize: q.pageSize,
+      byResult: Object.fromEntries(byResult.map((r) => [r.result, r._count])),
+    };
+  });
+
   app.get("/inspector/queue", async (req) => {
     requireRole(req, "INSPECTOR", "ADMIN");
     const [certificates, documents] = await Promise.all([

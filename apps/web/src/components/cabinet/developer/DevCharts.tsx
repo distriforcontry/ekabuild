@@ -30,9 +30,11 @@ export function useChartPalette(): Palette {
     const read = () => {
       const s = getComputedStyle(document.documentElement);
       const v = (name: string, fb: string) => s.getPropertyValue(name).trim() || fb;
+      const dark = document.documentElement.getAttribute("data-theme") !== "light";
       setP({
         gold: v("--color-gold-400", FALLBACK.gold),
-        goldHi: v("--color-gold-200", FALLBACK.goldHi),
+        // light theme flips the gold scale (gold-200 becomes dark bronze) — use the brushed mid-gold there
+        goldHi: dark ? v("--color-gold-200", FALLBACK.goldHi) : v("--color-gold-500", "#b08a4e"),
         goldDeep: v("--color-gold-700", FALLBACK.goldDeep),
         info: v("--color-info", FALLBACK.info),
         track: v("--color-ink-600", FALLBACK.track),
@@ -142,11 +144,15 @@ export function UnitsDonut({ sold, reserved, available }: { sold: number; reserv
   const { t, label } = useI18n();
   const fmt = useFmt();
   const total = sold + reserved + available;
-  const rows = [
-    { key: "SOLD", value: sold, color: c.gold },
-    { key: "RESERVED", value: reserved, color: c.info },
-    { key: "AVAILABLE", value: available, color: c.track },
-  ];
+  const rows = React.useMemo(
+    () => [
+      { key: "SOLD", value: sold, color: c.gold },
+      { key: "RESERVED", value: reserved, color: c.info },
+      { key: "AVAILABLE", value: available, color: c.track },
+    ],
+    [sold, reserved, available, c.gold, c.info, c.track],
+  );
+  const empty = React.useMemo(() => [{ key: "EMPTY", value: 1, color: c.track }], [c.track]);
   const [hover, setHover] = React.useState<number | null>(null);
   const share = total ? Math.round((sold / total) * 100) : 0;
   return (
@@ -155,7 +161,7 @@ export function UnitsDonut({ sold, reserved, available }: { sold: number; reserv
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>
             <Pie
-              data={total ? rows : [{ key: "EMPTY", value: 1, color: c.track }]}
+              data={total ? rows : empty}
               dataKey="value"
               nameKey="key"
               innerRadius="72%"
@@ -170,7 +176,7 @@ export function UnitsDonut({ sold, reserved, available }: { sold: number; reserv
               onMouseEnter={(_: unknown, i: number) => setHover(i)}
               onMouseLeave={() => setHover(null)}
             >
-              {(total ? rows : [{ key: "EMPTY", value: 1, color: c.track }]).map((r, i) => (
+              {(total ? rows : empty).map((r, i) => (
                 <Cell key={r.key} fill={r.color} opacity={hover == null || hover === i ? 1 : 0.45} />
               ))}
             </Pie>

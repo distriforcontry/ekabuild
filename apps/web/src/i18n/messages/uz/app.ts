@@ -710,6 +710,7 @@ const app = {
       },
     },
     sales: {
+      stats: { total: "Jami sotuvlar", toSign: "Imzoingizni kutmoqda", amount: "Shartnomalar summasi" },
       title: "Sotuvlar",
       subtitle: "Obyektlaringiz bo'yicha xaridlar. Sotuvchi sifatida shartnomani imzolang.",
       search: "Raqam, obyekt yoki xaridor…",
@@ -741,10 +742,10 @@ const app = {
       queueSubtitle: "Tez qaror: tasdiqlash, rad etish yoki bekor qilish",
       recent: {
         title: "So'nggi tekshiruvlar",
-        subtitle: "Obyektlar bo'yicha e'lon qilingan dalolatnomalar",
+        subtitle: "Siz tuzgan so'nggi dalolatnomalar",
+        subtitleAll: "Platformadagi barcha dalolatnomalar",
         empty: "Tekshiruvlar hali yo'q",
         violations: "{n} ta ochiq qoidabuzarlik",
-        mine: "Sizning dalolatnomangiz",
       },
       tabs: { certificates: "Sertifikatlar", documents: "Hujjatlar" },
       emptyCertificates: "Navbatda sertifikat yo'q",
