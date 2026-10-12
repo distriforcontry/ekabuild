@@ -5,7 +5,8 @@ const nextConfig: NextConfig = {
   output: "export",
   basePath: process.env.NEXT_PUBLIC_BASE_PATH ?? "",
   trailingSlash: true,
-  distDir: ".next-pages",
+  // with output: "export" the distDir IS the exported site
+  distDir: "out",
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@eka/shared"],

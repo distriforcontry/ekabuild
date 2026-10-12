@@ -32,7 +32,7 @@ for locale in uz oz ru; do
   echo "→ next build ($locale → $base)"
   (
     cd "$WORK/web"
-    rm -rf out .next-pages
+    rm -rf out
     STATIC_EXPORT=1 STATIC_LOCALE=$locale NEXT_PUBLIC_DEMO=1 NEXT_PUBLIC_BASE_PATH=$base NEXT_PUBLIC_DEMO_ROOT=$SITE_ROOT \
       NEXT_PUBLIC_SITE_URL=$SITE_URL API_INTERNAL_URL=$API NEXT_TELEMETRY_DISABLED=1 npx next build >"$WORK/build-$locale.log" 2>&1 \
       || { tail -40 "$WORK/build-$locale.log"; exit 1; }
