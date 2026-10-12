@@ -36,11 +36,8 @@ import { Gallery } from "./Gallery";
 import { ReportDialog } from "./ReportDialog";
 import { copyText } from "./bits";
 
-const fade = (d: number) => ({
-  initial: { opacity: 0, y: 16 },
-  animate: { opacity: 1, y: 0 },
-  transition: { duration: 0.8, delay: d, ease: [0.16, 1, 0.3, 1] as const },
-});
+/** CSS entrance (plays from the first paint, no hydration wait) — see .eka-in in globals.css */
+const fade = (d: number) => ({ "--d": `${Math.round(d * 1000)}ms` }) as React.CSSProperties;
 
 export function ProjectHero() {
   const { project: p, setTab, buy, packagePurchase, loginHref } = useProject();
@@ -107,7 +104,7 @@ export function ProjectHero() {
 
   return (
     <section className="grid gap-8 lg:grid-cols-[minmax(0,1.2fr)_minmax(0,1fr)] lg:gap-12 xl:gap-16">
-      <motion.div {...fade(0)}>
+      <div style={fade(0)} className="eka-settle">
         {images.length ? (
           <Gallery images={images} name={tr(p.name)} seed={p.slug} floors={p.floors} />
         ) : (
@@ -127,10 +124,10 @@ export function ProjectHero() {
             </p>
           </div>
         )}
-      </motion.div>
+      </div>
 
       <div className="flex min-w-0 flex-col">
-        <motion.div {...fade(0.05)} className="flex flex-wrap items-center gap-2">
+        <div style={fade(0.05)} className="eka-in flex flex-wrap items-center gap-2">
           <StatusBadge kind="projectStatus" value={p.status} />
           {p.verificationStatus === "VERIFIED" && (
             <Badge tone="gold">
@@ -139,23 +136,23 @@ export function ProjectHero() {
             </Badge>
           )}
           <Badge tone="neutral">{label("projectType", p.type)}</Badge>
-        </motion.div>
+        </div>
 
-        <motion.h1 {...fade(0.1)} className="mt-4 font-display text-[2.6rem] font-medium leading-[1.02] text-stone-100 sm:text-5xl xl:text-6xl">
+        <h1 style={fade(0.1)} className="eka-in mt-4 font-display text-[2.6rem] font-medium leading-[1.02] text-stone-100 sm:text-5xl xl:text-6xl">
           {tr(p.name)}
-        </motion.h1>
+        </h1>
         {p.tagline && (
-          <motion.p {...fade(0.14)} className="mt-3 text-base leading-relaxed text-ink-300 md:text-lg">
+          <p style={fade(0.14)} className="eka-in mt-3 text-base leading-relaxed text-ink-300 md:text-lg">
             {tr(p.tagline)}
-          </motion.p>
+          </p>
         )}
 
-        <motion.div {...fade(0.18)} className="mt-4 flex items-start gap-2 text-sm text-ink-200">
+        <div style={fade(0.18)} className="eka-in mt-4 flex items-start gap-2 text-sm text-ink-200">
           <Location size={18} variant="Bulk" className="mt-px shrink-0 text-gold-300" />
           <span>{tr(location)}</span>
-        </motion.div>
+        </div>
 
-        <motion.div {...fade(0.22)}>
+        <div style={fade(0.22)} className="eka-in">
           <Link
             href={`/developers/${dev.id}`}
             className="group mt-5 flex items-center gap-3 rounded-2xl border border-line bg-ink-900/70 p-3 pr-4 transition hover:border-gold-500/30 hover:bg-ink-900"
@@ -180,9 +177,9 @@ export function ProjectHero() {
             )}
             <ArrowRight size={18} className="text-ink-400 transition group-hover:translate-x-0.5 group-hover:text-gold-300" />
           </Link>
-        </motion.div>
+        </div>
 
-        <motion.dl {...fade(0.26)} className="mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
+        <dl style={fade(0.26)} className="eka-in mt-5 grid grid-cols-2 gap-px overflow-hidden rounded-2xl border border-line bg-line sm:grid-cols-3">
           {facts.map((f) => (
             <div key={f.label} className="bg-ink-900 px-4 py-3.5">
               <dt className="flex items-center gap-1.5 text-[11px] text-ink-400">
@@ -192,17 +189,17 @@ export function ProjectHero() {
               <dd className={cn("mt-1 truncate text-[15px] font-semibold text-stone-100", f.mono && "font-mono tracking-tight")}>{f.value}</dd>
             </div>
           ))}
-        </motion.dl>
+        </dl>
 
-        <motion.div {...fade(0.3)} className="mt-5">
+        <div style={fade(0.3)} className="eka-in mt-5">
           <div className="mb-2 flex items-center justify-between text-xs">
             <span className="text-ink-400">{t("catalog.detail.facts.progress")}</span>
             <span className="font-mono font-semibold text-gold-200">{p.progress}%</span>
           </div>
           <Progress value={p.progress} className="h-2" />
-        </motion.div>
+        </div>
 
-        <motion.div {...fade(0.34)} className="mt-7 flex flex-wrap items-center gap-3">
+        <div style={fade(0.34)} className="eka-in mt-7 flex flex-wrap items-center gap-3">
           <Button variant="gold" size="lg" className="w-full sm:w-auto" onClick={() => setTab("units", { scroll: true })}>
             <Home2 size={18} variant="Bold" />
             {t("catalog.detail.actions.chooseUnit")}
@@ -254,7 +251,7 @@ export function ProjectHero() {
               </Button>
             </Tooltip>
           </div>
-        </motion.div>
+        </div>
       </div>
 
       <ReportDialog projectId={p.id} open={report} onOpenChange={setReport} />
