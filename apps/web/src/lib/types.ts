@@ -508,3 +508,29 @@ export interface ControlFlags {
   blockedAt?: string | null;
   blockReason?: string | null;
 }
+
+/** GET /admin/system/health — deep health of the replica that answered (admin only). */
+export interface SystemHealthCheck {
+  ok: boolean;
+  /** round-trip latency of the probe, ms */
+  ms?: number;
+  error?: string;
+}
+export interface SystemHealth {
+  instance: string;
+  uptimeSec: number;
+  /** Node.js version, e.g. "v22.22.0" */
+  node: string;
+  memory: { rssMb: number; heapMb: number };
+  checks: {
+    mysql: SystemHealthCheck;
+    redis: SystemHealthCheck;
+    rabbitmq: SystemHealthCheck & { status: string };
+    workers: SystemHealthCheck & { count: number };
+    storage: SystemHealthCheck & { driver: string; freeBytes?: number; totalBytes?: number };
+    sms: SystemHealthCheck & { provider: string; mock: boolean };
+    eimzo: SystemHealthCheck & { mode: string; mock: boolean };
+    cadastre: SystemHealthCheck & { provider: string; mock: boolean };
+  };
+  queues: { queue: string; messages: number; consumers: number; retry: number; dlq: number }[];
+}

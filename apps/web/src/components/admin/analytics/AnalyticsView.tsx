@@ -42,15 +42,26 @@ const PRINT_CSS = `
 html.eka-printing *, html.eka-printing *::before, html.eka-printing *::after { transition: none !important; }
 `;
 
+const parsePeriod = (v: string | null): Period => {
+  const n = Number(v);
+  return (PERIODS as readonly number[]).includes(n) ? (n as Period) : DEFAULT_PERIOD;
+};
+
 export function AnalyticsView() {
   const { t } = useI18n();
   const f = useFormat();
   const sp = useSearchParams();
   const pathname = usePathname();
-  const raw = Number(sp.get("days"));
-  const days: Period = (PERIODS as readonly number[]).includes(raw) ? (raw as Period) : DEFAULT_PERIOD;
+  // the period lives in state (initialised from ?days=) and is mirrored to the URL, so it survives router refreshes
+  const [days, setDaysState] = React.useState<Period>(() => parsePeriod(sp.get("days")));
+  React.useEffect(() => {
+    const onPop = () => setDaysState(parsePeriod(new URLSearchParams(window.location.search).get("days")));
+    window.addEventListener("popstate", onPop);
+    return () => window.removeEventListener("popstate", onPop);
+  }, []);
 
   const setDays = (d: Period) => {
+    setDaysState(d);
     const next = new URLSearchParams(window.location.search);
     if (d === DEFAULT_PERIOD) next.delete("days");
     else next.set("days", String(d));

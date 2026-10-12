@@ -266,7 +266,7 @@ const studio = {
     none: "Qavatlar aniqlanmadi",
     noneHint: "Qavatlar avtomatik aniqlanishi uchun guruhlarni floor-1, floor-2 … deb nomlang (shuningdek podium, roof, site).",
     count: "Qavatlar",
-    height: "Umumiy balandlik",
+    height: "Balandlik",
     typical: "Odatiy qavat",
     explode: "Qavatlarni ajratish",
     gap: "+{m} oraliq",

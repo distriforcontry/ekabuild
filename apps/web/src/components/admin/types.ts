@@ -3,6 +3,7 @@ import type { ProjectStatus, PurchaseKind, VerificationStatus } from "@eka/share
 import type {
   AuditItem,
   CertificateItem,
+  ControlFlags,
   ComplaintItem,
   DocumentItem,
   Org,
@@ -31,9 +32,9 @@ export interface AdminStats {
   recentAudit: AuditItem[];
 }
 
-export type OrgRow = Org & { membersCount?: number; projectsCount?: number; rejectReason?: string | null; createdAt?: string };
+export type OrgRow = Org & ControlFlags & { membersCount?: number; projectsCount?: number; rejectReason?: string | null; createdAt?: string };
 
-export type ProjectRow = ProjectCard & {
+export type ProjectRow = ProjectCard & ControlFlags & {
   published: boolean;
   featured: boolean;
   verificationStatus: VerificationStatus;
@@ -41,8 +42,8 @@ export type ProjectRow = ProjectCard & {
 };
 
 export type CertRow = CertificateItem & { project: { slug: string; name: string } | null };
-export type DocRow = DocumentItem & { project: { slug: string; name: string } | null; rejectReason?: string | null };
-export type ComplaintRow = ComplaintItem;
+export type DocRow = DocumentItem & ControlFlags & { project: { slug: string; name: string } | null; rejectReason?: string | null };
+export type ComplaintRow = ComplaintItem & ControlFlags;
 
 export interface TemplateItem {
   id: string;

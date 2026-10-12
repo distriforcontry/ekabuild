@@ -755,6 +755,24 @@ export class Engine {
     this.invalidate();
   }
 
+  /** run `fn` with exploded floors temporarily back in place (stats/dimensions describe the real building) */
+  withoutExplode<T>(fn: () => T): T {
+    const moved: [THREE.Object3D, number][] = [];
+    this.root?.traverse((o) => {
+      const xo = o.userData.__xo as number | undefined;
+      if (xo) moved.push([o, xo]);
+    });
+    if (!moved.length) return fn();
+    for (const [o, xo] of moved) o.position.y -= xo;
+    this.root!.updateMatrixWorld(true);
+    try {
+      return fn();
+    } finally {
+      for (const [o, xo] of moved) o.position.y += xo;
+      this.root!.updateMatrixWorld(true);
+    }
+  }
+
   explodeGap() {
     return Math.max(1, this.floorGap) * 1.6;
   }
@@ -797,7 +815,10 @@ export class Engine {
 
   stats(): SceneStats | null {
     if (!this.root) return null;
-    if (!this.statsCache) this.statsCache = computeStats(this.root, this.parts.site, this.floors());
+    if (!this.statsCache) {
+      const floors = this.floors();
+      this.statsCache = this.withoutExplode(() => computeStats(this.root!, this.parts.site, floors));
+    }
     return this.statsCache;
   }
 

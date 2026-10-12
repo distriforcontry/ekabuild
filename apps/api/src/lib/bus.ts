@@ -124,3 +124,20 @@ export async function closeBus() {
 }
 
 export const busStatus = () => (channel ? "up" : env.RABBITMQ_URL ? "down" : "disabled");
+
+/** Queue depth + consumer count per work queue (and its dead-letter queue) — for the admin system page. */
+export async function queueStats(): Promise<{ queue: string; messages: number; consumers: number; retry: number; dlq: number }[] | null> {
+  if (!conn) return null;
+  const ch = await conn.createChannel();
+  ch.on("error", () => {});
+  try {
+    const out = [];
+    for (const queue of Object.keys(QUEUES)) {
+      const [q, r, d] = await Promise.all([ch.checkQueue(queue), ch.checkQueue(`${queue}.retry`), ch.checkQueue(`${queue}.dlq`)]);
+      out.push({ queue, messages: q.messageCount, consumers: q.consumerCount, retry: r.messageCount, dlq: d.messageCount });
+    }
+    return out;
+  } finally {
+    await ch.close().catch(() => {});
+  }
+}

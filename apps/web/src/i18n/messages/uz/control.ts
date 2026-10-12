@@ -108,7 +108,7 @@ const control = {
       status: "Holat",
       paidAt: "To'langan",
     },
-    filters: { status: "Holat", from: "Muddat: dan", to: "Muddat: gacha" },
+    filters: { status: "Holat", from: "Sanadan", to: "Sanagacha" },
     total: "Filtr bo'yicha jami",
     totalCount: "{n} ta to'lov",
     empty: "To'lovlar topilmadi",
@@ -153,6 +153,8 @@ const control = {
     emptyHint: "Tanlangan ufqda muddati yaqin yoki o'tgan vazifa yo'q",
     emptyFiltered: "Filtrga mos vazifa yo'q",
     due: "Muddat: {date}",
+    showMore: "Yana {n} tasini ko'rsatish",
+    showLess: "Qisqartirish",
   },
   archive: {
     tabs: { active: "Faol", archived: "Arxiv", all: "Hammasi", blocked: "Bloklangan" },

@@ -9,13 +9,15 @@ import { InfoRow, PageHeader } from "@/components/ui/misc";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
+import { ExcelButton } from "@/components/control/ExportButton";
 import { useAdmin } from "./context";
+import { ArchiveTabs, archiveViewOf, archiveViewPatch, ControlBadges, useControlActions } from "./control";
 import { useFormat } from "./format";
 import { settle, useApiList, useLatest, useListState } from "./hooks";
 import { Avatar, CopyChip, DetailSection, Dim, ErrorNotice, FilterSelect, ResetFilters, RowActions, SearchBox, Sheet, useConfirm } from "./primitives";
 import type { OrgRow } from "./types";
 
-const FILTERS = ["status", "type"] as const;
+const FILTERS = ["status", "type", "archived", "blocked"] as const;
 
 export function OrganizationsView() {
   const { t, label, tr } = useI18n();
@@ -27,6 +29,12 @@ export function OrganizationsView() {
   const [openId, setOpenId] = React.useState<string | null>(null);
   const current = data.items.find((o) => o.id === openId) ?? null;
   const open = useLatest(current);
+  const control = useControlActions(confirm);
+  const view = archiveViewOf(list.filters);
+  const patchRow = (id: string, p: Partial<OrgRow>) => {
+    data.mutate((items) => items.map((o) => (o.id === id ? { ...o, ...p } : o)));
+    if ("archivedAt" in p || ("blockedAt" in p && view === "blocked")) data.reload();
+  };
 
   const setStatus = async (org: OrgRow, status: "VERIFIED" | "REJECTED", rejectReason?: string) => {
     await api.patch(`/admin/organizations/${org.id}`, { status, rejectReason: rejectReason || undefined });
@@ -76,6 +84,7 @@ export function OrganizationsView() {
           <div className="min-w-0">
             <div className="truncate font-semibold text-stone-100">{tr(o.name)}</div>
             <div className="truncate text-xs text-ink-400">{o.legalName ? tr(o.legalName) : (o.director ?? "—")}</div>
+            <ControlBadges row={o} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
           </div>
         </div>
       ),
@@ -119,6 +128,10 @@ export function OrganizationsView() {
             { label: t("admin.common.details"), icon: Eye, onSelect: () => setOpenId(o.id) },
             { label: t("common.actions.approve"), icon: TickCircle, tone: "success", onSelect: () => approve(o), hidden: o.status === "VERIFIED", separatorBefore: true },
             { label: t("common.actions.reject"), icon: CloseCircle, tone: "danger", onSelect: () => reject(o), hidden: o.status === "REJECTED" },
+            ...control.rowActions({
+              block: { kind: "org", row: o, name: tr(o.name), onDone: (p) => patchRow(o.id, p) },
+              archive: { entity: "organizations", row: o, name: tr(o.name), onDone: (p) => patchRow(o.id, p) },
+            }),
           ]}
         />
       ),
@@ -129,6 +142,9 @@ export function OrganizationsView() {
     <div>
       <PageHeader eyebrow={t("admin.nav.moderation")} title={t("admin.orgs.title")} description={t("admin.orgs.description")} />
       <ErrorNotice error={data.error} onRetry={data.reload} />
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <ArchiveTabs value={view} onChange={(v) => list.update(archiveViewPatch(v))} withBlocked />
+      </div>
       <Dim active={data.refreshing}>
         <DataTable
           columns={columns}
@@ -157,7 +173,8 @@ export function OrganizationsView() {
                 placeholder={t("admin.orgs.columns.type")}
                 options={ORG_TYPES.map((v) => ({ value: v, label: label("orgType", v) }))}
               />
-              <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />
+              <ResetFilters count={list.activeFilters - (list.filters.archived ? 1 : 0) - (list.filters.blocked ? 1 : 0)} onReset={() => list.update({ q: null, status: null, type: null })} />
+              <ExcelButton area="admin" entity="organizations" filters={{ q: list.q, status: list.filters.status, archived: list.filters.archived }} className="sm:ml-auto" />
             </>
           }
           bulkActions={(rows, clear) => {
@@ -220,10 +237,20 @@ export function OrganizationsView() {
                 <div className="truncate text-base font-semibold text-stone-100">{tr(open.legalName ?? open.name)}</div>
                 <div className="mt-1 flex flex-wrap items-center gap-2">
                   <StatusBadge kind="verification" value={open.status} />
+                  <ControlBadges row={open} />
                   <CopyChip value={open.tin} display={`${t("admin.orgs.columns.tin")} ${open.tin}`} />
                 </div>
               </div>
             </div>
+            {open.blockedAt && (
+              <div className="mb-6 rounded-xl border border-danger/25 bg-danger/[0.06] p-3.5 text-sm">
+                <div className="mb-1 flex items-center justify-between gap-2 text-xs font-semibold text-danger">
+                  {t("admin.control.block.badge")}
+                  <span className="font-normal text-ink-400">{t("admin.control.block.since", { date: f.date(open.blockedAt) })}</span>
+                </div>
+                <div className="text-ink-200">{open.blockReason ?? t("admin.control.block.noReason")}</div>
+              </div>
+            )}
             {open.status === "REJECTED" && open.rejectReason && (
               <div className="mb-6 rounded-xl border border-danger/25 bg-danger/[0.06] p-3.5 text-sm">
                 <div className="mb-1 text-xs font-semibold text-danger">{t("admin.orgs.fields.rejectReason")}</div>

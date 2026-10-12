@@ -78,7 +78,7 @@ const N = (n: MapNode) => n;
 
 const shared = {
   // map cards carry short literal subtitles; the side panel shows the full translated ones
-  internet: N({ id: "internet", info: "internet", x: 8, y: 252, w: 180, h: 116, icon: Global, subtitle: "ekabuild.uz" }),
+  internet: N({ id: "internet", info: "internet", x: 4, y: 252, w: 200, h: 116, icon: Global, subtitle: "ekabuild.uz" }),
   redis: N({ id: "redis", info: "redis", x: 736, y: 250, w: 192, h: 62, icon: Flash, health: "redis", subtitle: "cache · pub/sub" }),
   mysql: N({ id: "mysql", info: "mysql", x: 736, y: 330, w: 192, h: 62, icon: Data, health: "db", subtitle: "Prisma · InnoDB" }),
   rabbitmq: N({ id: "rabbitmq", info: "rabbitmq", x: 736, y: 410, w: 192, h: 62, icon: Layer, health: "rabbitmq", subtitle: "eka.events · DLQ" }),
@@ -91,7 +91,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
   compose: {
     nodes: [
       shared.internet,
-      N({ id: "nginx", info: "nginx", x: 222, y: 236, w: 184, h: 148, icon: Routing2, health: "edge", subtitle: "LB · :443" }),
+      N({ id: "nginx", info: "nginx", x: 236, y: 236, w: 178, h: 148, icon: Routing2, health: "edge", subtitle: "LB · :443" }),
       N({ id: "webPool", info: "web", kind: "pool", poolLabel: "web", x: 462, y: 34, w: 204, h: 196 }),
       N({ id: "web1", info: "web", x: 474, y: 76, w: 178, h: 62, icon: Monitor, title: "web-1", subtitle: "Next.js :3000", health: "web", replica: "web-1" }),
       N({ id: "web2", info: "web", x: 474, y: 150, w: 178, h: 62, icon: Monitor, title: "web-2", subtitle: "Next.js :3000", health: "web", replica: "web-2" }),
@@ -126,7 +126,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
   k8s: {
     nodes: [
       shared.internet,
-      N({ id: "ingress", info: "ingress", x: 222, y: 236, w: 184, h: 148, icon: Routing2, health: "edge", subtitle: "ingress-nginx" }),
+      N({ id: "ingress", info: "ingress", x: 236, y: 236, w: 178, h: 148, icon: Routing2, health: "edge", subtitle: "ingress-nginx" }),
       N({ id: "webPool", info: "web", kind: "pool", poolLabel: "webK8s", x: 462, y: 34, w: 204, h: 196 }),
       N({ id: "web1", info: "web", x: 474, y: 76, w: 178, h: 62, icon: Monitor, title: "web-q4x", subtitle: "Pod · Ready", health: "web" }),
       N({ id: "web2", info: "web", x: 474, y: 150, w: 178, h: 62, icon: Monitor, title: "web-m2z", subtitle: "Pod · Ready", health: "web" }),
@@ -142,7 +142,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       N({ ...shared.storage, subtitle: "PVC RWX · S3" }),
       shared.eimzo,
       shared.sms,
-      N({ id: "monitoring", info: "monitoring", x: 736, y: 70, w: 192, h: 120, icon: Chart2, subtitle: "namespace monitoring" }),
+      N({ id: "monitoring", info: "monitoring", x: 736, y: 70, w: 192, h: 120, icon: Chart2, subtitle: "ns: monitoring" }),
       N({ id: "workerPool", info: "worker", kind: "pool", poolLabel: "workerK8s", x: 976, y: 352, w: 210, h: 196 }),
       N({ id: "worker1", info: "worker", x: 994, y: 394, w: 176, h: 62, icon: Cpu, title: "worker-t2p", subtitle: "Pod · Ready" }),
       N({ id: "worker2", info: "worker", x: 994, y: 468, w: 176, h: 62, icon: Cpu, title: "worker-v8n", subtitle: "Pod · Ready" }),

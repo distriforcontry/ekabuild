@@ -408,7 +408,9 @@ export function ColorField({
 export function MiniStat({ label, value, sub }: { label: string; value: React.ReactNode; sub?: React.ReactNode }) {
   return (
     <div className="min-w-0 rounded-xl border border-line bg-ink-850/60 px-3 py-2.5">
-      <div className="truncate text-[10.5px] font-semibold uppercase tracking-[0.1em] text-ink-400">{label}</div>
+      <div className="truncate text-[10px] font-semibold uppercase tracking-[0.05em] text-ink-400" title={label}>
+        {label}
+      </div>
       <div className="mt-0.5 truncate font-mono text-[15px] font-semibold text-stone-100">{value}</div>
       {sub && <div className="truncate text-[10.5px] text-ink-400">{sub}</div>}
     </div>

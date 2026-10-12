@@ -3,11 +3,13 @@ import type { Prisma } from "@prisma/client";
 import { z } from "zod";
 import { prisma } from "../db";
 import { audit, verifyAuditChain } from "../lib/audit";
-import { publish } from "../lib/bus";
+import fs from "node:fs/promises";
+import { busStatus, publish, queueStats } from "../lib/bus";
+import { env } from "../env";
 import { slugify } from "../lib/codes";
 import { badRequest, forbidden, notFound } from "../lib/errors";
 import { notifyOrgMembers, notify } from "../lib/notify";
-import { invalidate } from "../lib/redis";
+import { invalidate, redis } from "../lib/redis";
 import { certificateDto, documentDto, orgDto, paginate, projectCard, projectCardInclude, purchaseDto, purchaseInclude, userDto, userSelect } from "../lib/serializers";
 import { recalculateTrust } from "../lib/trust";
 import { requireRole } from "../plugins/auth";
@@ -35,6 +37,54 @@ export default async function adminRoutes(app: FastifyInstance) {
   // every /admin route requires ADMIN (SUPERADMIN passes automatically)
   app.addHook("preHandler", async (req) => {
     if (req.url.includes("/admin/")) requireRole(req, "ADMIN");
+  });
+
+  // ── deep health for the admin "system map": every dependency with latency, queues, workers, integration modes
+  app.get("/admin/system/health", async () => {
+    const timed = async <T>(fn: () => Promise<T>) => {
+      const t = performance.now();
+      try {
+        const value = await fn();
+        return { ok: true, ms: Math.round((performance.now() - t) * 10) / 10, value };
+      } catch (e) {
+        return { ok: false, ms: Math.round((performance.now() - t) * 10) / 10, error: (e as Error).message.slice(0, 160) };
+      }
+    };
+    const [db, cache, queues, storage] = await Promise.all([
+      timed(() => prisma.$queryRaw`SELECT 1`),
+      timed(async () => {
+        if (!redis) throw new Error("REDIS_URL not set");
+        return redis.ping();
+      }),
+      timed(async () => queueStats()),
+      timed(async () => {
+        if (env.STORAGE_DRIVER !== "local") return { driver: env.STORAGE_DRIVER };
+        await fs.access(env.STORAGE_DIR, fs.constants.W_OK);
+        const st = await fs.statfs(env.STORAGE_DIR);
+        return { driver: "local", freeBytes: st.bavail * st.bsize, totalBytes: st.blocks * st.bsize };
+      }),
+    ]);
+    const q = queues.ok ? (queues as { value: Awaited<ReturnType<typeof queueStats>> }).value : null;
+    // every worker replica consumes every queue → the smallest consumer count is the number of live workers
+    const workers = q && q.length ? Math.min(...q.map((x) => x.consumers)) : 0;
+    const mem = process.memoryUsage();
+    return {
+      instance: env.INSTANCE_ID,
+      uptimeSec: Math.round(process.uptime()),
+      node: process.version,
+      memory: { rssMb: Math.round(mem.rss / 1048576), heapMb: Math.round(mem.heapUsed / 1048576) },
+      checks: {
+        mysql: { ok: db.ok, ms: db.ms, error: "error" in db ? db.error : undefined },
+        redis: { ok: cache.ok, ms: cache.ms, error: "error" in cache ? cache.error : undefined },
+        rabbitmq: { ok: busStatus() === "up", status: busStatus(), ms: queues.ms },
+        workers: { ok: workers > 0, count: workers },
+        storage: { ok: storage.ok, ...(storage.ok ? (storage as { value: object }).value : { error: (storage as { error: string }).error }) },
+        sms: { ok: true, provider: env.SMS_PROVIDER, mock: env.SMS_PROVIDER === "mock" },
+        eimzo: { ok: true, mode: env.EIMZO_MODE, mock: env.EIMZO_MODE === "mock" },
+        cadastre: { ok: true, provider: env.CADASTRE_PROVIDER, mock: env.CADASTRE_PROVIDER === "mock" },
+      },
+      queues: q ?? [],
+    };
   });
 
   app.get("/admin/stats", async () => {

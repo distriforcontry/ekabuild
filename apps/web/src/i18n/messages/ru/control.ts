@@ -109,7 +109,7 @@ const control: Shape<typeof uz> = {
       status: "Статус",
       paidAt: "Оплачен",
     },
-    filters: { status: "Статус", from: "Срок: с", to: "Срок: по" },
+    filters: { status: "Статус", from: "С даты", to: "По дату" },
     total: "Итого по фильтру",
     totalCount: "{n} платежей",
     empty: "Платежи не найдены",
@@ -154,6 +154,8 @@ const control: Shape<typeof uz> = {
     emptyHint: "В выбранном горизонте нет приближающихся или просроченных задач",
     emptyFiltered: "Нет задач по фильтру",
     due: "Срок: {date}",
+    showMore: "Показать ещё {n}",
+    showLess: "Свернуть",
   },
   archive: {
     tabs: { active: "Активные", archived: "Архив", all: "Все", blocked: "Заблокированные" },

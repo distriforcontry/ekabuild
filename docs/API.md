@@ -204,6 +204,7 @@ projects disappear from the public catalog.
 | POST | `/admin/rules` · PATCH/DELETE `/admin/rules/:id` | rules CRUD |
 | GET | `/admin/audit` | `?entity&actorId&page` → `Paginated<AuditItem>` `{ id, action, entity, entityId, meta, ip, hash, prevHash, createdAt, actor: { fullName, email }|null }` |
 | GET | `/admin/audit/verify` | `{ ok: boolean, checked: number, brokenAt: string|null }` |
+| GET | `/admin/system/health` | deep health: `{ instance, uptimeSec, node, memory, checks: { mysql, redis, rabbitmq, workers: { count }, storage: { driver, freeBytes, totalBytes }, sms/eimzo/cadastre: { provider\|mode, mock } }, queues: { queue, messages, consumers, retry, dlq }[] }` |
 
 List endpoints for organizations, projects, documents and complaints accept `archived` (absent → active only, `1` → archived
 only, `all` → both); organizations also `blocked=1`.

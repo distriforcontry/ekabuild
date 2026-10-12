@@ -293,7 +293,8 @@ function MapNodeCard({
 }) {
   const { t } = useI18n();
   const reduce = useReducedMotion();
-  const title = n.title ?? t(`admin.system.nodes.${n.info}.title`);
+  // the internet card is narrow: use the short singular label there (the side panel keeps the full title)
+  const title = n.title ?? (n.info === "internet" ? t("admin.system.flows.actors.user") : t(`admin.system.nodes.${n.info}.title`));
   const subtitle = n.subtitle ?? t(`admin.system.nodes.${n.info}.subtitle`);
   const Icon = n.icon;
   const common = {
@@ -347,7 +348,7 @@ function MapNodeCard({
           </span>
         )}
         <span className="min-w-0 flex-1">
-          <span className={cn("block text-[13px] font-semibold leading-tight text-stone-100", n.h > 100 ? "line-clamp-2 break-words" : "truncate")}>{title}</span>
+          <span className={cn("block text-[13px] font-semibold leading-tight text-stone-100", n.h > 100 ? "line-clamp-2" : "truncate")}>{title}</span>
           <span className="block truncate font-mono text-[10px] text-ink-400">{subtitle}</span>
         </span>
         <StatusDot status={status} className="self-start" />

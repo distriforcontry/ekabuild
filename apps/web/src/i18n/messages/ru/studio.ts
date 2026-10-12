@@ -268,7 +268,7 @@ const studio: Shape<typeof uz> = {
     none: "Этажи не обнаружены",
     noneHint: "Чтобы этажи определялись автоматически, назовите группы floor-1, floor-2 … (а также podium, roof, site).",
     count: "Этажей",
-    height: "Общая высота",
+    height: "Высота",
     typical: "Типовой этаж",
     explode: "Разнести этажи",
     gap: "+{m} зазор",

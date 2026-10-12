@@ -54,7 +54,10 @@ export function useSupportSocket({
       setStatus("connecting");
       const proto = location.protocol === "https:" ? "wss" : "ws";
       const qs = guestToken ? `?guestToken=${encodeURIComponent(guestToken)}` : "";
-      const ws = new WebSocket(`${proto}://${location.host}/api/v1/support/ws${qs}`);
+      // production: same origin (nginx / ingress proxy the upgrade). Local dev: Next rewrites don't proxy
+      // WebSocket upgrades, so NEXT_PUBLIC_WS_URL can point straight at the API (cookies are port-agnostic).
+      const base = process.env.NEXT_PUBLIC_WS_URL || `${proto}://${location.host}/api/v1/support/ws`;
+      const ws = new WebSocket(`${base}${qs}`);
       wsRef.current = ws;
 
       ws.onopen = () => {

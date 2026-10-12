@@ -44,6 +44,12 @@ export function useMonthLabel() {
   );
 }
 
+/** Short month name for a date: "okt" / "окт" (own tables — Chromium has no uz month data). */
+export function useMonthShort() {
+  const { locale, tr } = useI18n();
+  return React.useCallback((d: Date) => (locale === "ru" ? RU_MONTHS[d.getMonth()]! : tr(UZ_MONTHS[d.getMonth()]!)), [locale, tr]);
+}
+
 /** "Boshlang'ich to'lov" / "3-to'lov" / "To'liq to'lov" */
 export function useSeqLabel() {
   const { t } = useI18n();
