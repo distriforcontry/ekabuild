@@ -65,7 +65,8 @@ for (const id of ids) {
 }
 
 // 2 + 3b. rewrite URLs
-const entries = publicEntries.map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
+// + files Next serves from the app dir at the site root (metadata icons are not basePath-prefixed)
+const entries = [...publicEntries, "icon.svg"].map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
 const PUBLIC_RE = new RegExp(`(["'\`(]|, )/(${entries})(?=[/"'\`)?])`, "g");
 const ORIGIN_RE = new RegExp(`${ORIGIN.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}/(${entries})(?=[/"'\`)?])`, "g");
 let rewritten = 0;
