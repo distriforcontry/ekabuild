@@ -225,6 +225,11 @@ const control = {
       cell: "{date}: {n} ta harakat",
       none: "{date}: faollik yo'q",
       weekdays: "Du,Se,Ch,Pa,Ju,Sh,Ya",
+      peak: "Eng faol kun",
+      avg: "Faol kunda o'rtacha",
+      streak: "Eng uzun seriya",
+      streakDays: "{n} kun",
+      actions: "{n} ta harakat",
     },
     types: {
       title: "Hodisa turlari",

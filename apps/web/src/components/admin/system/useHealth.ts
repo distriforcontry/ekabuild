@@ -138,7 +138,12 @@ export function useHealth(intervalMs = 10_000) {
     [],
   );
 
-  const overall: "ok" | "degraded" | "down" | null = reachable === null ? null : !reachable || !health ? "down" : health.status === "ok" ? "ok" : "degraded";
+  // a failing deep core check (db, cache, bus, workers, disk) also degrades the overall state
+  const deepDegraded = deep
+    ? !deep.checks.mysql?.ok || !deep.checks.redis?.ok || !deep.checks.rabbitmq?.ok || !((deep.checks.workers?.count ?? 0) > 0) || deep.checks.storage?.ok === false
+    : false;
+  const overall: "ok" | "degraded" | "down" | null =
+    reachable === null ? null : !reachable || !health ? "down" : health.status === "ok" && !deepDegraded ? "ok" : "degraded";
 
   return { health, reachable, checking, history, lastAt, check, statusOf, latencyOf, labelOf, overall, deep, deepFailed };
 }

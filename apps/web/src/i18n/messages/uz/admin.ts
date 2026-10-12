@@ -761,6 +761,7 @@ const admin = {
       redis: "Redis",
       rabbitmq: "RabbitMQ",
       checkNow: "Hozir tekshirish",
+      workersActive: "{n} faol",
       seconds: "{n} s",
     },
     panel: {

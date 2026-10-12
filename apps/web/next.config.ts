@@ -11,7 +11,7 @@ const nextConfig: NextConfig = {
   transpilePackages: ["@eka/shared"],
   outputFileTracingRoot: new URL("../../", import.meta.url).pathname,
   experimental: {
-    optimizePackageImports: ["lucide-react", "recharts", "@react-three/drei"],
+    optimizePackageImports: ["iconsax-reactjs", "lucide-react", "recharts", "@react-three/drei", "motion"],
   },
   // In production nginx routes /api/* straight to the API pool; this rewrite covers local dev
   // and any request that reaches Next directly.

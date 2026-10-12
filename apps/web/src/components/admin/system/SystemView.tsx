@@ -1,7 +1,8 @@
 "use client";
 import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
-import { ArrowRight, Chart2, CloudCross, Cpu, Danger, Flash, Health, InfoCircle, Layer, Refresh, Setting2, TickCircle, Timer1, TrendUp } from "iconsax-reactjs";
+import { ArrowRight, Box1, Chart2, CloudCross, Cpu, Danger, Driver, Flash, Health, InfoCircle, Layer, Ram, Refresh, Setting2, TickCircle, Timer1, TrendUp, Warning2 } from "iconsax-reactjs";
+import { formatBytes } from "@eka/shared";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { PageHeader } from "@/components/ui/misc";
@@ -11,7 +12,7 @@ import { cn } from "@/lib/utils";
 import { ChartPaletteStyle, chartVar } from "../charts";
 import { useFormat } from "../format";
 import { Segmented } from "../analytics/ui";
-import { ArchitectureMap, EDGE_COLORS, StatusDot } from "./ArchitectureMap";
+import { ArchitectureMap, EDGE_COLORS, StatusDot, fmtMs } from "./ArchitectureMap";
 import { FACTS, FLOW_KEYS, FLOWS, VIEWS, type EdgeKind, type FlowKey, type MapNode, type ViewKey } from "./data";
 import { FlowPlayer } from "./FlowPlayer";
 import { useHealth, type HealthSample, type NodeStatus } from "./useHealth";
@@ -33,6 +34,8 @@ export function SystemView() {
   }, [view]);
 
   const statusOf = React.useCallback((n: MapNode): NodeStatus => hc.statusOf(n.health), [hc]);
+  const latencyOf = React.useCallback((n: MapNode) => hc.latencyOf(n.health), [hc]);
+  const labelOf = React.useCallback((n: MapNode, st: NodeStatus) => t(`admin.system.status.${hc.labelOf(n.health, st)}`), [hc, t]);
   const panelRef = React.useRef<HTMLDivElement>(null);
   // on click, bring the explanation into view when it sits below the map (< 2xl)
   const select = React.useCallback((id: string) => {
@@ -68,6 +71,11 @@ export function SystemView() {
 
       <HealthStrip hc={hc} />
 
+      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(0,1.35fr)]">
+        <ResourcesCard hc={hc} />
+        <QueuesCard hc={hc} />
+      </div>
+
       {/* map full-width; the explanation sits beside it only where the map can stay legible (2xl) */}
       <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="min-w-0 overflow-hidden">
@@ -83,11 +91,14 @@ export function SystemView() {
               onSelect={select}
               onHover={setHovered}
               statusOf={statusOf}
+              latencyOf={latencyOf}
+              labelOf={labelOf}
               answered={hc.health?.instance ?? null}
+              workers={hc.deep ? (hc.deep.checks.workers?.count ?? 0) : null}
             />
           </div>
           <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-t border-line px-5 py-3 text-xs text-ink-300 md:px-6">
-            {(["up", "down", "unknown"] as const).map((s) => (
+            {(["up", "down", "mock", "unknown"] as const).map((s) => (
               <span key={s} className="inline-flex items-center gap-2">
                 <StatusDot status={s} /> {t(`admin.system.status.${s}`)}
               </span>
@@ -97,7 +108,15 @@ export function SystemView() {
         </Card>
 
         <div ref={panelRef} className="scroll-mt-24">
-          <NodePanel node={activeNode} view={view} status={activeNode ? statusOf(activeNode) : "unknown"} answered={hc.health?.instance ?? null} onSelect={setSelected} />
+          <NodePanel
+          node={activeNode}
+          view={view}
+          status={activeNode ? statusOf(activeNode) : "unknown"}
+          statusLabel={activeNode ? labelOf(activeNode, statusOf(activeNode)) : ""}
+          latency={activeNode ? latencyOf(activeNode) : null}
+          answered={hc.health?.instance ?? null}
+          onSelect={setSelected}
+        />
         </div>
       </div>
 
@@ -177,10 +196,14 @@ function HealthStrip({ hc }: { hc: ReturnType<typeof useHealth> }) {
   const last = history[history.length - 1];
   const tone = overall === "ok" ? "success" : overall === "degraded" ? "warning" : overall === "down" ? "danger" : null;
   const OverallIcon = overall === "ok" ? TickCircle : overall === "degraded" ? Danger : overall === "down" ? CloudCross : Health;
+  const deep = hc.deep?.checks;
+  // deep probe latency when available, else the basic /health state string
+  const depValue = (c: { ok: boolean; ms?: number; error?: string } | undefined, basic: string | null) =>
+    c ? (c.ok ? (typeof c.ms === "number" ? fmtMs(c.ms) : "ok") : (c.error ?? "down")) : basic;
   const deps: { key: "db" | "redis" | "rabbitmq"; icon: typeof Flash; value: string | null }[] = [
-    { key: "db", icon: Setting2, value: health?.db ?? null },
-    { key: "redis", icon: Flash, value: health?.redis ?? null },
-    { key: "rabbitmq", icon: Layer, value: health?.rabbitmq ?? null },
+    { key: "db", icon: Setting2, value: depValue(deep?.mysql, health?.db ?? null) },
+    { key: "redis", icon: Flash, value: depValue(deep?.redis, health?.redis ?? null) },
+    { key: "rabbitmq", icon: Layer, value: depValue(deep?.rabbitmq, health?.rabbitmq ?? null) },
   ];
   const depStatus = (k: "db" | "redis" | "rabbitmq"): NodeStatus => hc.statusOf(k);
   const instances = [...new Set(history.map((h) => h.instance).filter(Boolean) as string[])];
@@ -296,18 +319,152 @@ function HistoryBars({ history }: { history: HealthSample[] }) {
   );
 }
 
+/* ───────────────────────────── Resources ───────────────────────────── */
+
+function ResourcesCard({ hc }: { hc: ReturnType<typeof useHealth> }) {
+  const { t } = useI18n();
+  const d = hc.deep;
+  const storage = d?.checks.storage;
+  const total = storage?.totalBytes ?? 0;
+  const free = storage?.freeBytes ?? 0;
+  const usedPct = total ? Math.round(((total - free) / total) * 100) : null;
+  const items = [
+    { key: "instance", icon: Driver, value: d?.instance ?? hc.health?.instance ?? "—", sub: d?.node ? `${t("admin.system.resources.node")} ${d.node}` : null },
+    { key: "uptime", icon: Timer1, value: uptimeText(d?.uptimeSec ?? hc.health?.uptime ?? null), sub: null },
+    { key: "memory", icon: Ram, value: d ? `${d.memory.rssMb} MB` : "—", sub: d ? `heap ${d.memory.heapMb} MB` : null },
+  ] as const;
+  return (
+    <Card className="p-5">
+      <div className="mb-4 flex items-center justify-between gap-3">
+        <h3 className="text-[15px] font-semibold text-stone-100">{t("admin.system.resources.title")}</h3>
+        {hc.deepFailed && !d && (
+          <span className="inline-flex items-center gap-1.5 text-[11px] text-warning">
+            <Warning2 size={14} variant="Bulk" /> {t("admin.system.resources.unavailable")}
+          </span>
+        )}
+      </div>
+      <dl className="grid grid-cols-2 gap-3 sm:grid-cols-4 xl:grid-cols-2">
+        {items.map((it) => (
+          <div key={it.key} className="min-w-0 rounded-xl border border-line bg-ink-850/60 p-3">
+            <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-400">
+              <it.icon size={13} /> {t(`admin.system.resources.${it.key}`)}
+            </dt>
+            <dd className="mt-1 truncate font-mono text-sm font-semibold text-stone-100">{it.value}</dd>
+            {it.sub && <dd className="truncate font-mono text-[10.5px] text-ink-400">{it.sub}</dd>}
+          </div>
+        ))}
+        <div className="min-w-0 rounded-xl border border-line bg-ink-850/60 p-3">
+          <dt className="flex items-center gap-1.5 text-[11px] uppercase tracking-wider text-ink-400">
+            <Box1 size={13} /> {t("admin.system.resources.storage")}
+          </dt>
+          <dd className="mt-1 truncate font-mono text-sm font-semibold text-stone-100">{usedPct === null ? (storage ? (storage.ok ? "ok" : "down") : "—") : `${usedPct}%`}</dd>
+          {usedPct !== null && (
+            <dd className="mt-1.5">
+              <span className="block h-1.5 overflow-hidden rounded-full bg-ink-700" role="img" aria-label={`${usedPct}%`}>
+                <span className={cn("block h-full rounded-full", usedPct >= 90 ? "bg-danger" : usedPct >= 75 ? "bg-warning" : "bg-gold-400")} style={{ width: `${usedPct}%` }} />
+              </span>
+              <span className="mt-1 block truncate font-mono text-[10.5px] text-ink-400">
+                {t("admin.system.resources.free", { free: formatBytes(free), total: formatBytes(total) })}
+              </span>
+            </dd>
+          )}
+          {storage && <dd className="truncate font-mono text-[10.5px] text-ink-500">{t("admin.system.resources.driver", { driver: storage.driver })}</dd>}
+        </div>
+      </dl>
+    </Card>
+  );
+}
+
+/* ───────────────────────────── Queues ───────────────────────────── */
+
+function QueuesCard({ hc }: { hc: ReturnType<typeof useHealth> }) {
+  const { t } = useI18n();
+  const f = useFormat();
+  const queues = hc.deep?.queues ?? [];
+  const bad = queues.filter((q) => q.dlq > 0 || q.retry > 0 || q.consumers === 0).length;
+  const pill = (v: number, tone: "danger" | "warning") =>
+    v > 0 ? (
+      <span className={cn("inline-flex min-w-7 justify-center rounded-full px-1.5 py-0.5 font-mono text-xs font-semibold", tone === "danger" ? "bg-danger/15 text-danger" : "bg-warning/15 text-warning")}>
+        {f.number(v)}
+      </span>
+    ) : (
+      <span className="font-mono text-xs text-ink-500">0</span>
+    );
+  return (
+    <Card className="overflow-hidden">
+      <div className="flex flex-wrap items-start justify-between gap-3 px-5 pb-3 pt-5">
+        <div>
+          <h3 className="text-[15px] font-semibold text-stone-100">{t("admin.system.queues.title")}</h3>
+          <p className="mt-0.5 text-xs text-ink-400">{t("admin.system.queues.hint")}</p>
+        </div>
+        {queues.length > 0 && (
+          <span
+            className={cn(
+              "inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-xs font-semibold",
+              bad ? "border-warning/40 bg-warning/10 text-warning" : "border-success/30 bg-success/10 text-success",
+            )}
+          >
+            {bad ? <Warning2 size={14} variant="Bulk" /> : <TickCircle size={14} variant="Bulk" />}
+            {bad ? t("admin.system.queues.attention", { n: bad }) : t("admin.system.queues.clean")}
+          </span>
+        )}
+      </div>
+      {queues.length === 0 ? (
+        <p className="px-5 pb-5 text-sm text-ink-400">{hc.deep ? t("admin.system.queues.empty") : hc.deepFailed ? t("admin.system.resources.unavailable") : t("admin.system.health.checking")}</p>
+      ) : (
+        <div className="overflow-x-auto">
+          <table className="w-full min-w-[440px] text-sm">
+            <caption className="sr-only">{t("admin.system.queues.title")}</caption>
+            <thead>
+              <tr className="border-y border-line text-[10.5px] uppercase tracking-wider text-ink-400">
+                <th scope="col" className="px-5 py-2 text-left font-semibold">{t("admin.system.queues.queue")}</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">{t("admin.system.queues.messages")}</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">{t("admin.system.queues.consumers")}</th>
+                <th scope="col" className="px-3 py-2 text-right font-semibold">{t("admin.system.queues.retry")}</th>
+                <th scope="col" className="px-5 py-2 text-right font-semibold">{t("admin.system.queues.dlq")}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {queues.map((q) => (
+                <tr key={q.queue} className={cn("border-b border-line last:border-0 transition hover:bg-fg/[0.03]", q.dlq > 0 && "bg-danger/[0.04]")}>
+                  <th scope="row" className="px-5 py-2.5 text-left font-mono text-[12.5px] font-medium text-stone-100">
+                    <span className="inline-flex items-center gap-2">
+                      <span className={cn("size-1.5 rounded-full", q.dlq > 0 || q.consumers === 0 ? "bg-danger" : q.retry > 0 ? "bg-warning" : "bg-success")} aria-hidden />
+                      {q.queue}
+                    </span>
+                  </th>
+                  <td className="px-3 py-2.5 text-right font-mono text-xs text-stone-100">{f.number(q.messages)}</td>
+                  <td className="px-3 py-2.5 text-right font-mono text-xs">
+                    {q.consumers > 0 ? <span className="text-stone-100">{q.consumers}</span> : <span className="text-danger" title={t("admin.system.queues.noConsumers")}>0</span>}
+                  </td>
+                  <td className="px-3 py-2.5 text-right">{pill(q.retry, "warning")}</td>
+                  <td className="px-5 py-2.5 text-right">{pill(q.dlq, "danger")}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </Card>
+  );
+}
+
 /* ───────────────────────────── Side panel ───────────────────────────── */
 
 function NodePanel({
   node,
   view,
   status,
+  statusLabel,
+  latency,
   answered,
   onSelect,
 }: {
   node: MapNode | null;
   view: ViewKey;
   status: NodeStatus;
+  statusLabel: string;
+  latency: number | null;
   answered: string | null;
   onSelect: (id: string) => void;
 }) {
@@ -354,10 +511,17 @@ function NodePanel({
             <span
               className={cn(
                 "inline-flex items-center gap-2 rounded-full border px-2.5 py-1 text-xs font-semibold",
-                status === "up" ? "border-success/30 bg-success/10 text-success" : status === "down" ? "border-danger/30 bg-danger/10 text-danger" : "border-line bg-fg/5 text-ink-300",
+                status === "up"
+                  ? "border-success/30 bg-success/10 text-success"
+                  : status === "down"
+                    ? "border-danger/30 bg-danger/10 text-danger"
+                    : status === "mock"
+                      ? "border-warning/40 bg-warning/10 text-warning"
+                      : "border-line bg-fg/5 text-ink-300",
               )}
             >
-              <StatusDot status={status} /> {t(`admin.system.status.${status}`)}
+              <StatusDot status={status} /> {statusLabel}
+              {latency !== null && <span className="font-mono font-medium opacity-80">· {fmtMs(latency)}</span>}
             </span>
             {node.replica && answered === node.replica && (
               <span className="inline-flex items-center rounded-full bg-gold-gradient px-2 py-1 text-[11px] font-bold text-onyx">{t("admin.system.status.answered")}</span>

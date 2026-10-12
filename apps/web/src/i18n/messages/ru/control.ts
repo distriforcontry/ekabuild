@@ -226,6 +226,11 @@ const control: Shape<typeof uz> = {
       cell: "{date}: {n} действий",
       none: "{date}: нет активности",
       weekdays: "Пн,Вт,Ср,Чт,Пт,Сб,Вс",
+      peak: "Самый активный день",
+      avg: "В среднем за активный день",
+      streak: "Самая длинная серия",
+      streakDays: "{n} дн.",
+      actions: "{n} действий",
     },
     types: {
       title: "Типы событий",

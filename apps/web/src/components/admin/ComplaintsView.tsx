@@ -17,10 +17,12 @@ import { cn } from "@/lib/utils";
 import { useAdmin } from "./context";
 import { useFormat } from "./format";
 import { useApiList, useLatest, useListState } from "./hooks";
-import { DetailSection, Dim, ErrorNotice, FilterSelect, ResetFilters, RowActions, SearchBox, Sheet } from "./primitives";
+import { DetailSection, Dim, ErrorNotice, FilterSelect, ResetFilters, RowActions, SearchBox, Sheet, useConfirm } from "./primitives";
+import { ExcelButton } from "@/components/control/ExportButton";
+import { ArchiveTabs, archiveViewOf, archiveViewPatch, ControlBadges, useControlActions } from "./control";
 import type { ComplaintRow } from "./types";
 
-const FILTERS = ["status", "category"] as const;
+const FILTERS = ["status", "category", "archived"] as const;
 
 const CATEGORY_META: Record<string, { icon: IconType; tone: "danger" | "warning" | "info" | "neutral" }> = {
   FRAUD: { icon: Warning2, tone: "danger" },
@@ -52,6 +54,9 @@ export function ComplaintsView() {
   const [openId, setOpenId] = React.useState<string | null>(null);
   const open = data.items.find((c) => c.id === openId) ?? null;
   const shown = useLatest(open);
+  const [confirm, confirmNode] = useConfirm();
+  const control = useControlActions(confirm);
+  const view = archiveViewOf(list.filters);
 
   const update = async (c: ComplaintRow, status: ComplaintStatus, resolution?: string) => {
     await api.patch(`/admin/complaints/${c.id}`, { status, resolution: resolution || undefined });
@@ -80,7 +85,12 @@ export function ComplaintsView() {
       header: t("admin.complaints.columns.message"),
       alwaysVisible: true,
       exportValue: (c) => c.message,
-      cell: (c) => <p className="line-clamp-2 min-w-60 max-w-md text-sm text-ink-100">{c.message}</p>,
+      cell: (c) => (
+        <div className="min-w-60 max-w-md">
+          <p className="line-clamp-2 text-sm text-ink-100">{c.message}</p>
+          <ControlBadges row={c} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
+        </div>
+      ),
     },
     {
       key: "project",
@@ -135,6 +145,18 @@ export function ComplaintsView() {
             { label: t("admin.complaints.take"), icon: Clock, tone: "gold", onSelect: () => quick(c, "IN_REVIEW"), hidden: c.status !== "OPEN", separatorBefore: true },
             { label: t("admin.complaints.resolve"), icon: TickCircle, tone: "success", onSelect: () => setOpenId(c.id), hidden: c.status === "RESOLVED" || c.status === "DISMISSED" },
             { label: t("admin.complaints.reopen"), icon: Refresh, onSelect: () => quick(c, "OPEN"), hidden: c.status === "OPEN" || c.status === "IN_REVIEW" },
+            ...control.rowActions({
+              archive: {
+                entity: "complaints",
+                row: c,
+                name: label("complaintCategory", c.category),
+                onDone: (patch) => {
+                  data.mutate((items) => items.map((x) => (x.id === c.id ? { ...x, ...patch } : x)));
+                  data.reload();
+                  refreshCounts();
+                },
+              },
+            }),
           ]}
         />
       ),
@@ -145,6 +167,9 @@ export function ComplaintsView() {
     <div>
       <PageHeader eyebrow={t("admin.nav.moderation")} title={t("admin.complaints.title")} description={t("admin.complaints.description")} />
       <ErrorNotice error={data.error} onRetry={data.reload} />
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <ArchiveTabs value={view} onChange={(v) => list.update(archiveViewPatch(v))} />
+      </div>
       <Dim active={data.refreshing}>
         <DataTable
           columns={columns}
@@ -171,13 +196,15 @@ export function ComplaintsView() {
                 placeholder={t("admin.complaints.filters.category")}
                 options={COMPLAINT_CATEGORIES.map((v) => ({ value: v, label: label("complaintCategory", v) }))}
               />
-              <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />
+              <ResetFilters count={list.activeFilters - (list.filters.archived ? 1 : 0)} onReset={() => list.update({ q: null, status: null, category: null })} />
+              <ExcelButton area="admin" entity="complaints" filters={{ q: list.q, status: list.filters.status, archived: list.filters.archived }} className="sm:ml-auto" />
             </>
           }
         />
       </Dim>
 
       <ComplaintSheet complaint={shown} open={Boolean(open)} onClose={() => setOpenId(null)} onUpdate={update} />
+      {confirmNode}
     </div>
   );
 }

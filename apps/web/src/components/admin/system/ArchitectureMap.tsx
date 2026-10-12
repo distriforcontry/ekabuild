@@ -81,7 +81,10 @@ export function ArchitectureMap({
   onSelect,
   onHover,
   statusOf,
+  latencyOf,
+  labelOf,
   answered,
+  workers,
 }: {
   view: ViewKey;
   active: string | null;
@@ -89,7 +92,11 @@ export function ArchitectureMap({
   onSelect: (id: string) => void;
   onHover: (id: string | null) => void;
   statusOf: (n: MapNode) => NodeStatus;
+  latencyOf: (n: MapNode) => number | null;
+  labelOf: (n: MapNode, s: NodeStatus) => string;
   answered: string | null;
+  /** active worker processes from the deep check (null = unknown) */
+  workers: number | null;
 }) {
   const { t } = useI18n();
   const reduce = useReducedMotion();
@@ -161,7 +168,17 @@ export function ArchitectureMap({
                   )}
                   style={{ left: n.x, top: n.y, width: n.w, height: n.h }}
                 >
-                  <span className="absolute left-4 top-2.5 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">{t(`admin.system.pools.${n.poolLabel!}`)}</span>
+                  <span className={cn("absolute left-4 font-mono text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400", n.info === "worker" && workers !== null ? "top-4" : "top-2.5")}>{t(`admin.system.pools.${n.poolLabel!}`)}</span>
+                  {n.info === "worker" && workers !== null && (
+                    <span
+                      className={cn(
+                        "absolute -top-3 left-4 inline-flex items-center gap-1 whitespace-nowrap rounded-full border bg-ink-900 px-2 py-0.5 font-mono text-[10px] shadow-card",
+                        workers > 0 ? "border-success/40 text-success" : "border-danger/50 text-danger",
+                      )}
+                    >
+                      {t("admin.system.health.workersActive", { n: workers })}
+                    </span>
+                  )}
                   {n.info === "api" && answered && !nodes.some((m) => m.replica && m.replica === answered) && (
                     <span className="absolute right-2 top-[calc(100%+12px)] whitespace-nowrap rounded-full border border-gold-500/40 bg-ink-900 px-2 py-0.5 font-mono text-[10px] text-gold-200 shadow-card">
                       ↳ {t("admin.system.status.answered")}: {answered}
@@ -239,6 +256,8 @@ export function ArchitectureMap({
                   node={n}
                   index={i}
                   status={statusOfId(n.id)}
+                  label={labelOf(n, statusOfId(n.id))}
+                  latency={latencyOf(n)}
                   selected={selected === n.id}
                   lit={nodeLit(n)}
                   answered={Boolean(answered && n.replica === answered)}
@@ -254,6 +273,9 @@ export function ArchitectureMap({
   );
 }
 
+/** "2 ms", "16 ms", "0.4 ms" */
+export const fmtMs = (ms: number) => `${ms < 1 ? ms.toFixed(1) : Math.round(ms)} ms`;
+
 function inside(n: MapNode, pool: MapNode) {
   return n.x >= pool.x && n.y >= pool.y && n.x + n.w <= pool.x + pool.w && n.y + n.h <= pool.y + pool.h;
 }
@@ -265,7 +287,13 @@ export function StatusDot({ status, className }: { status: NodeStatus; className
       <span
         className={cn(
           "relative size-2.5 rounded-full",
-          status === "up" ? "bg-success" : status === "down" ? "bg-danger shadow-[0_0_10px_rgb(229_72_77/0.7)]" : "border-[1.5px] border-ink-400 bg-transparent",
+          status === "up"
+            ? "bg-success"
+            : status === "down"
+              ? "bg-danger shadow-[0_0_10px_rgb(229_72_77/0.7)]"
+              : status === "mock"
+                ? "border-2 border-warning bg-warning/30"
+                : "border-[1.5px] border-ink-400 bg-transparent",
         )}
       />
     </span>
@@ -276,6 +304,8 @@ function MapNodeCard({
   node: n,
   index,
   status,
+  label,
+  latency,
   selected,
   lit,
   answered,
@@ -285,6 +315,8 @@ function MapNodeCard({
   node: MapNode;
   index: number;
   status: NodeStatus;
+  label: string;
+  latency: number | null;
   selected: boolean;
   lit: boolean;
   answered: boolean;
@@ -304,7 +336,7 @@ function MapNodeCard({
     onFocus: () => onHover(n.id),
     onBlur: () => onHover(null),
     "aria-pressed": selected,
-    "aria-label": `${title} — ${subtitle} — ${t(`admin.system.status.${status}`)}`,
+    "aria-label": `${title} — ${subtitle} — ${label}${latency !== null ? ` · ${fmtMs(latency)}` : ""}`,
     initial: { opacity: 0, scale: 0.92 },
     animate: { opacity: lit ? 1 : 0.4, scale: 1 },
     transition: { duration: reduce ? 0 : 0.45, delay: reduce ? 0 : Math.min(0.6, (n.x / 1200) * 0.5 + index * 0.01), ease: [0.16, 1, 0.3, 1] as const },
@@ -351,7 +383,11 @@ function MapNodeCard({
           <span className={cn("block text-[13px] font-semibold leading-tight text-stone-100", n.h > 100 ? "line-clamp-2" : "truncate")}>{title}</span>
           <span className="block truncate font-mono text-[10px] text-ink-400">{subtitle}</span>
         </span>
-        <StatusDot status={status} className="self-start" />
+        <span className="flex flex-col items-end gap-1 self-start" title={label}>
+          <StatusDot status={status} />
+          {latency !== null && <span className="font-mono text-[9.5px] leading-none text-ink-400">{fmtMs(latency)}</span>}
+          {status === "mock" && <span className="rounded bg-warning/15 px-1 py-px font-mono text-[8.5px] font-bold uppercase leading-none text-warning">mock</span>}
+        </span>
       </div>
       {(n.info === "nginx" || n.info === "ingress") && (
         <span className="mt-2.5 flex flex-wrap gap-1">

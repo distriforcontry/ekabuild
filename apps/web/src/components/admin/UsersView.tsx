@@ -1,7 +1,9 @@
 "use client";
 import * as React from "react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { ROLES, type Role } from "@eka/shared";
-import { Lock1, ProfileTick, Unlock, UserEdit, Verify } from "iconsax-reactjs";
+import { Activity, ProfileTick, UserEdit, Verify } from "iconsax-reactjs";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -12,7 +14,10 @@ import { Field } from "@/components/ui/input";
 import { PageHeader } from "@/components/ui/misc";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage } from "@/lib/api";
-import type { User } from "@/lib/types";
+import type { ControlFlags, User } from "@/lib/types";
+import { ExcelButton } from "@/components/control/ExportButton";
+import { Segmented } from "@/components/control/ui";
+import { ControlBadges, useControlActions } from "./control";
 import { useAdmin } from "./context";
 import { useFormat } from "./format";
 import { useApiList, useListState } from "./hooks";
@@ -27,13 +32,17 @@ const ROLE_TONE: Record<Role, "neutral" | "gold" | "info" | "success" | "danger"
   SUPERADMIN: "gold",
 };
 
+type UserRow = User & ControlFlags & { lastLoginAt?: string | null };
+
 export function UsersView() {
   const { t, label, tr } = useI18n();
   const f = useFormat();
   const { user: me } = useAdmin();
   const list = useListState(FILTERS, { sort: { key: "createdAt", dir: "desc" } });
-  const data = useApiList<User>("/admin/users", list.apiQuery);
+  const data = useApiList<UserRow>("/admin/users", list.apiQuery);
   const [confirm, confirmNode] = useConfirm();
+  const control = useControlActions(confirm);
+  const router = useRouter();
   const [roleFor, setRoleFor] = React.useState<User | null>(null);
 
   const patch = async (u: User, body: Partial<Pick<User, "role" | "status">>) => {
@@ -41,25 +50,10 @@ export function UsersView() {
     data.mutate((items) => items.map((x) => (x.id === u.id ? { ...x, ...body } : x)));
   };
 
-  const toggleBlock = (u: User) => {
-    const blocking = u.status !== "BLOCKED";
-    confirm({
-      title: blocking ? t("admin.users.blockTitle") : t("admin.users.unblockTitle"),
-      description: blocking ? t("admin.users.blockDesc", { name: u.fullName }) : t("admin.users.unblockDesc", { name: u.fullName }),
-      tone: blocking ? "danger" : "success",
-      icon: blocking ? Lock1 : Unlock,
-      confirmLabel: blocking ? t("admin.users.block") : t("admin.users.unblock"),
-      onConfirm: async () => {
-        await patch(u, { status: blocking ? "BLOCKED" : "ACTIVE" });
-        toast.success(blocking ? t("admin.users.blocked") : t("admin.users.unblocked"));
-      },
-    });
-  };
-
   const isSuper = me.role === "SUPERADMIN";
   const canEdit = (u: User) => u.id !== me.id && (isSuper || (u.role !== "SUPERADMIN" && u.role !== "ADMIN"));
 
-  const columns: Column<User>[] = [
+  const columns: Column<UserRow>[] = [
     {
       key: "fullName",
       header: t("admin.users.columns.user"),
@@ -71,10 +65,13 @@ export function UsersView() {
           <Avatar name={u.fullName} src={u.avatarUrl} size={36} />
           <div className="min-w-0">
             <div className="flex items-center gap-1.5 truncate font-semibold text-stone-100">
-              {u.fullName}
+              <Link href={`/admin/users/${u.id}`} onClick={(e) => e.stopPropagation()} className="truncate transition hover:text-gold-300">
+                {u.fullName}
+              </Link>
               {u.id === me.id && <Badge tone="gold" className="px-1.5 py-0 text-[9px]">{t("admin.support.you")}</Badge>}
             </div>
             <div className="truncate text-xs text-ink-400">{u.email ?? u.pinfl ?? "—"}</div>
+            <ControlBadges row={u} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
           </div>
         </div>
       ),
@@ -124,6 +121,14 @@ export function UsersView() {
       ),
     },
     {
+      key: "lastLoginAt",
+      header: t("admin.control.activity.profile.lastLogin"),
+      sortable: true,
+      hideOnMobile: true,
+      exportValue: (u) => u.lastLoginAt ?? "",
+      cell: (u) => <span className="whitespace-nowrap text-xs text-ink-300" title={u.lastLoginAt ? f.dateTime(u.lastLoginAt) : undefined}>{u.lastLoginAt ? f.relative(u.lastLoginAt) : "—"}</span>,
+    },
+    {
       key: "createdAt",
       header: t("admin.users.columns.created"),
       sortable: true,
@@ -141,15 +146,29 @@ export function UsersView() {
         canEdit(u) ? (
           <RowActions
             actions={[
+              { label: t("admin.control.activity.open"), icon: Activity, onSelect: () => router.push(`/admin/users/${u.id}`) },
               { label: t("admin.users.changeRole"), icon: UserEdit, onSelect: () => setRoleFor(u) },
-              u.status === "BLOCKED"
-                ? { label: t("admin.users.unblock"), icon: Unlock, tone: "success", onSelect: () => toggleBlock(u), separatorBefore: true }
-                : { label: t("admin.users.block"), icon: Lock1, tone: "danger", onSelect: () => toggleBlock(u), separatorBefore: true },
+              ...control.rowActions({
+                block: {
+                  kind: "user",
+                  row: u,
+                  name: u.fullName,
+                  onDone: (p) => {
+                    data.mutate((items) => items.map((x) => (x.id === u.id ? { ...x, ...p } : x)));
+                    if (list.filters.status) data.reload();
+                  },
+                },
+              }),
             ]}
           />
         ) : (
-          <span className="inline-grid size-8 place-items-center text-ink-500" title={t("admin.users.self")}>
-            <ProfileTick size={16} />
+          <span className="inline-flex items-center">
+            <Link href={`/admin/users/${u.id}`} onClick={(e) => e.stopPropagation()} aria-label={t("admin.control.activity.open")} className="grid size-8 place-items-center rounded-lg text-ink-400 transition hover:bg-fg/6 hover:text-gold-300">
+              <Activity size={16} />
+            </Link>
+            <span className="inline-grid size-8 place-items-center text-ink-500" title={t("admin.users.self")}>
+              <ProfileTick size={16} />
+            </span>
           </span>
         ),
     },
@@ -159,11 +178,25 @@ export function UsersView() {
     <div>
       <PageHeader eyebrow={t("admin.nav.system")} title={t("admin.users.title")} description={t("admin.users.description")} />
       <ErrorNotice error={data.error} onRetry={data.reload} />
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <Segmented
+          size="md"
+          label={t("admin.control.archive.tabsLabel")}
+          value={(list.filters.status ?? "ALL") as "ALL" | "ACTIVE" | "BLOCKED"}
+          onChange={(v) => list.update({ status: v === "ALL" ? null : v })}
+          options={[
+            { value: "ALL", label: t("admin.control.archive.tabs.all") },
+            { value: "ACTIVE", label: t("admin.users.status.ACTIVE") },
+            { value: "BLOCKED", label: t("admin.control.archive.tabs.blocked") },
+          ]}
+        />
+      </div>
       <Dim active={data.refreshing}>
         <DataTable
           columns={columns}
           data={data.items}
           rowKey={(u) => u.id}
+          onRowClick={(u) => router.push(`/admin/users/${u.id}`)}
           loading={data.initialLoading}
           server={list.server(data.total)}
           initialSort={list.sort}
@@ -178,13 +211,8 @@ export function UsersView() {
                 placeholder={t("admin.users.filters.role")}
                 options={ROLES.map((v) => ({ value: v, label: label("role", v) }))}
               />
-              <FilterSelect
-                value={list.filters.status}
-                onChange={(v) => list.update({ status: v })}
-                placeholder={t("admin.users.filters.status")}
-                options={(["ACTIVE", "BLOCKED"] as const).map((v) => ({ value: v, label: t(`admin.users.status.${v}`) }))}
-              />
               <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />
+              <ExcelButton area="admin" entity="users" filters={{ q: list.q, status: list.filters.status }} className="sm:ml-auto" />
             </>
           }
         />

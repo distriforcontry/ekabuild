@@ -107,26 +107,17 @@ export function PaymentsTable({ area, onChanged }: { area: Area; onChanged?: () 
       header: t("admin.control.payments.columns.status"),
       sortable: true,
       exportValue: (p) => label("paymentStatus", p.status),
-      cell: (p) => <StatusBadge kind="paymentStatus" value={p.status} />,
-    },
-    {
-      key: "paidAt",
-      header: t("admin.control.payments.columns.paidAt"),
-      sortable: true,
-      hideOnMobile: true,
-      exportValue: (p) => p.paidAt ?? "",
-      cell: (p) =>
-        p.paidAt ? (
-          <div className="whitespace-nowrap">
-            <div className="text-xs text-ink-200">{f.date(p.paidAt)}</div>
-            <div className="max-w-36 truncate font-mono text-[10.5px] text-ink-400" title={p.reference ?? undefined}>
-              {p.method ? methodLabel(t, p.method) : ""}
-              {p.reference ? ` · ${p.reference}` : ""}
+      cell: (p) => (
+        <div className="min-w-28">
+          <StatusBadge kind="paymentStatus" value={p.status} />
+          {p.paidAt && (
+            <div className="mt-1 max-w-40 truncate text-[10.5px] text-ink-400" title={[p.method ? methodLabel(t, p.method) : null, p.reference].filter(Boolean).join(" · ")}>
+              {f.date(p.paidAt)}
+              {p.reference ? <span className="font-mono"> · {p.reference}</span> : null}
             </div>
-          </div>
-        ) : (
-          <span className="text-ink-500">—</span>
-        ),
+          )}
+        </div>
+      ),
     },
     {
       key: "actions",
@@ -177,7 +168,7 @@ export function PaymentsTable({ area, onChanged }: { area: Area; onChanged?: () 
                   max={list.filters.to ?? undefined}
                   placeholder={t("admin.control.payments.filters.from")}
                   aria-label={t("admin.control.payments.filters.from")}
-                  className="sm:w-40 [&_input]:h-9"
+                  className="sm:w-44 [&_input]:h-9"
                 />
                 <DatePicker
                   value={list.filters.to}
@@ -185,7 +176,7 @@ export function PaymentsTable({ area, onChanged }: { area: Area; onChanged?: () 
                   min={list.filters.from ?? undefined}
                   placeholder={t("admin.control.payments.filters.to")}
                   aria-label={t("admin.control.payments.filters.to")}
-                  className="sm:w-40 [&_input]:h-9"
+                  className="sm:w-44 [&_input]:h-9"
                 />
               </div>
               <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />

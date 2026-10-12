@@ -10,14 +10,16 @@ import { PageHeader } from "@/components/ui/misc";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
+import { ExcelButton } from "@/components/control/ExportButton";
 import { useAdmin } from "./context";
+import { ArchiveTabs, archiveViewOf, archiveViewPatch, ControlBadges, useControlActions } from "./control";
 import { FilePreview } from "./FilePreview";
 import { useFormat } from "./format";
 import { settle, useApiList, useListState } from "./hooks";
 import { Dim, ErrorNotice, FilterSelect, ResetFilters, RowActions, SearchBox, useConfirm } from "./primitives";
 import type { DocRow } from "./types";
 
-const FILTERS = ["status", "type"] as const;
+const FILTERS = ["status", "type", "archived"] as const;
 
 export function DocumentsView() {
   const { t, label, tr } = useI18n();
@@ -27,6 +29,8 @@ export function DocumentsView() {
   const data = useApiList<DocRow>("/admin/documents", list.apiQuery);
   const [confirm, confirmNode] = useConfirm();
   const [previewId, setPreviewId] = React.useState<string | null>(null);
+  const control = useControlActions(confirm);
+  const view = archiveViewOf(list.filters);
   const preview = data.items.find((d) => d.id === previewId) ?? null;
 
   const apply = async (d: DocRow, status: "VERIFIED" | "REJECTED", rejectReason?: string) => {
@@ -82,6 +86,7 @@ export function DocumentsView() {
               {label("documentType", d.type)}
               {d.version > 1 && <span className="font-mono text-[10px] text-ink-500">· {t("admin.docs.version", { n: d.version })}</span>}
             </div>
+            <ControlBadges row={d} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
           </div>
         </div>
       ),
@@ -178,6 +183,17 @@ export function DocumentsView() {
             { label: t("admin.docs.download"), icon: DocumentDownload, onSelect: () => d.file && window.open(`${d.file.url}?download=1`, "_blank"), disabled: !d.file },
             { label: t("admin.docs.verify"), icon: TickCircle, tone: "success", onSelect: () => verify(d), hidden: d.status === "VERIFIED", separatorBefore: true },
             { label: t("admin.docs.reject"), icon: CloseCircle, tone: "danger", onSelect: () => reject(d), hidden: d.status === "REJECTED" },
+            ...control.rowActions({
+              archive: {
+                entity: "documents",
+                row: d,
+                name: tr(d.title),
+                onDone: (patch) => {
+                  data.mutate((items) => items.map((x) => (x.id === d.id ? { ...x, ...patch } : x)));
+                  data.reload();
+                },
+              },
+            }),
           ]}
         />
       ),
@@ -188,6 +204,9 @@ export function DocumentsView() {
     <div>
       <PageHeader eyebrow={t("admin.nav.moderation")} title={t("admin.docs.title")} description={t("admin.docs.description")} />
       <ErrorNotice error={data.error} onRetry={data.reload} />
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <ArchiveTabs value={view} onChange={(v) => list.update(archiveViewPatch(v))} />
+      </div>
       <Dim active={data.refreshing}>
         <DataTable
           columns={columns}
@@ -215,7 +234,8 @@ export function DocumentsView() {
                 placeholder={t("admin.common.type")}
                 options={DOCUMENT_TYPES.map((v) => ({ value: v, label: label("documentType", v) }))}
               />
-              <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />
+              <ResetFilters count={list.activeFilters - (list.filters.archived ? 1 : 0)} onReset={() => list.update({ q: null, status: null, type: null })} />
+              <ExcelButton area="admin" entity="documents" filters={{ q: list.q, status: list.filters.status, archived: list.filters.archived }} className="sm:ml-auto" />
             </>
           }
           bulkActions={(rows, clear) => {

@@ -763,6 +763,7 @@ const admin: Shape<typeof uz> = {
       redis: "Redis",
       rabbitmq: "RabbitMQ",
       checkNow: "Проверить сейчас",
+      workersActive: "{n} активн.",
       seconds: "{n} с",
     },
     panel: {

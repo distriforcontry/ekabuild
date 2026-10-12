@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { AnimatePresence, motion } from "motion/react";
 import { PURCHASE_KINDS, type PurchaseKind } from "@eka/shared";
-import { ArrowLeft, Danger, DocumentText, Save2, TickCircle } from "iconsax-reactjs";
+import { ArrowLeft, Book1, Copy, Danger, DocumentCopy, DocumentText, InfoCircle, Save2, SearchNormal1, TickCircle } from "iconsax-reactjs";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -20,11 +20,11 @@ import { cn } from "@/lib/utils";
 import { slugify } from "./format";
 import { useApiList } from "./hooks";
 import { MarkdownEditor, type MarkdownEditorHandle } from "./MarkdownEditor";
-import { ErrorNotice, Switch } from "./primitives";
+import { ErrorNotice, Sheet, Switch } from "./primitives";
 import type { TemplateItem } from "./types";
 
 /** Placeholders the API substitutes when a contract is generated, with demo values for the preview. */
-const PLACEHOLDERS: { group: "contract" | "buyer" | "seller" | "project" | "unit" | "money"; items: { key: string; sample: string }[] }[] = [
+const PLACEHOLDERS: { group: "contract" | "buyer" | "seller" | "project" | "unit" | "money" | "payment" | "reservation"; items: { key: string; sample: string }[] }[] = [
   {
     group: "contract",
     items: [
@@ -48,6 +48,7 @@ const PLACEHOLDERS: { group: "contract" | "buyer" | "seller" | "project" | "unit
       { key: "seller.name", sample: "«EKA Construction» MChJ" },
       { key: "seller.tin", sample: "307654321" },
       { key: "seller.director", sample: "Karimov Bekzod Anvarovich" },
+      { key: "seller.address", sample: "Toshkent sh., Mirzo Ulug'bek tumani, Buyuk Ipak yo'li ko'chasi, 51" },
     ],
   },
   {
@@ -65,6 +66,7 @@ const PLACEHOLDERS: { group: "contract" | "buyer" | "seller" | "project" | "unit
       { key: "unit.floor", sample: "9" },
       { key: "unit.area", sample: "78.4" },
       { key: "unit.rooms", sample: "3" },
+      { key: "unit.section", sample: "2" },
     ],
   },
   {
@@ -74,6 +76,26 @@ const PLACEHOLDERS: { group: "contract" | "buyer" | "seller" | "project" | "unit
       { key: "amountWords", sample: "sakkiz yuz qirq besh million" },
       { key: "currency", sample: "UZS" },
     ],
+  },
+  {
+    group: "payment",
+    items: [
+      { key: "payment.plan", sample: "bo'lib to'lash: boshlang'ich to'lov 30% (253 500 000 so'm), qolgan qismi 12 oy davomida har oy teng ulushlarda" },
+      { key: "payment.down", sample: "253 500 000 so'm" },
+      { key: "payment.monthly", sample: "49 291 667 so'm" },
+      { key: "payment.months", sample: "12" },
+      { key: "payment.count", sample: "13" },
+      { key: "payment.lastDate", sample: "12.10.2027" },
+      {
+        key: "payment.table",
+        sample:
+          "\n\n| № | To'lov | Muddati | Summa |\n|---|---|---|---|\n| 1 | Boshlang'ich to'lov (30%) | 17.10.2026 | 253 500 000 so'm |\n| 2 | 1-oy | 12.11.2026 | 49 291 667 so'm |\n| 3 | 2-oy | 12.12.2026 | 49 291 667 so'm |\n| … | … | … | … |\n\n",
+      },
+    ],
+  },
+  {
+    group: "reservation",
+    items: [{ key: "reservation.until", sample: "19.10.2026" }],
   },
 ];
 
@@ -98,6 +120,7 @@ export function TemplateEditor({ id }: { id: string }) {
   const [touched, setTouched] = React.useState(false);
   const [keyEdited, setKeyEdited] = React.useState(!isNew);
   const editor = React.useRef<MarkdownEditorHandle>(null);
+  const [cheatOpen, setCheatOpen] = React.useState(false);
 
   // hydrate once the template arrives
   React.useEffect(() => {
@@ -220,7 +243,9 @@ export function TemplateEditor({ id }: { id: string }) {
           <h1 className="flex flex-wrap items-center gap-3 text-2xl font-bold tracking-tight text-stone-100 md:text-3xl">
             {isNew ? t("admin.templates.editor.newTitle") : loading ? <Skeleton className="h-8 w-72" /> : form.name || t("admin.templates.editor.editTitle")}
             {version != null && <Badge tone="gold">{t("admin.templates.editor.version", { n: version })}</Badge>}
+            {form.key.startsWith("annex-") && <Badge tone="info">{t("admin.control.templates.annex")}</Badge>}
           </h1>
+          {!isNew && <p className="mt-2 max-w-2xl text-xs text-ink-400">{t("admin.control.templates.versionNote")}</p>}
         </div>
         <div className="flex items-center gap-3">
           <AnimatePresence mode="wait" initial={false}>
@@ -299,15 +324,25 @@ export function TemplateEditor({ id }: { id: string }) {
           {/* placeholder chips */}
           <Card className="mb-4">
             <CardContent className="py-4 md:py-5">
-              <div className="mb-3 flex flex-wrap items-baseline justify-between gap-2">
+              <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
                 <span className="text-xs font-semibold tracking-wide text-ink-200">{t("admin.templates.editor.placeholders")}</span>
-                <span className="text-[11px] text-ink-400">{t("admin.templates.editor.placeholdersHint")}</span>
+                <span className="flex items-center gap-3">
+                  <span className="hidden text-[11px] text-ink-400 sm:inline">{t("admin.templates.editor.placeholdersHint")}</span>
+                  <Button type="button" size="sm" variant="secondary" onClick={() => setCheatOpen(true)}>
+                    <Book1 variant="Bulk" className="text-gold-300" /> {t("admin.control.templates.cheat.button")}
+                  </Button>
+                </span>
               </div>
+              {form.key.startsWith("annex-") && (
+                <div className="mb-3 flex items-start gap-2 rounded-xl border border-info/25 bg-info/[0.06] px-3 py-2 text-xs text-ink-200">
+                  <DocumentCopy size={14} variant="Bulk" className="mt-px shrink-0 text-info" /> {t("admin.control.templates.annexHint")}
+                </div>
+              )}
               <div className="flex flex-col gap-3 lg:flex-row lg:flex-wrap lg:gap-x-6">
                 {PLACEHOLDERS.map((g) => (
                   <div key={g.group} className="flex flex-wrap items-center gap-1.5">
                     <span className="mr-1 w-full text-[10px] font-bold uppercase tracking-[0.18em] text-ink-500 lg:w-auto">
-                      {t(`admin.templates.editor.groups.${g.group}` as MessageKey)}
+                      {t(`admin.control.templates.groups.${g.group}` as MessageKey)}
                     </span>
                     {g.items.map((p) => {
                       const isUsed = used.has(p.key);
@@ -317,7 +352,7 @@ export function TemplateEditor({ id }: { id: string }) {
                           type="button"
                           onMouseDown={(e) => e.preventDefault()}
                           onClick={() => editor.current?.insert(`{{${p.key}}}`)}
-                          title={p.sample}
+                          title={`${t(`admin.control.templates.ph.${p.key.replace(/\./g, "_")}` as MessageKey)} — ${p.sample.trim().split("\n")[0]}`}
                           className={cn(
                             "inline-flex h-7 cursor-pointer items-center gap-1 rounded-lg border px-2 font-mono text-[11px] transition hover:-translate-y-px active:scale-95",
                             isUsed
@@ -368,6 +403,15 @@ export function TemplateEditor({ id }: { id: string }) {
           />
         </>
       )}
+      <CheatSheet
+        open={cheatOpen}
+        onOpenChange={setCheatOpen}
+        used={used}
+        onInsert={(key) => {
+          editor.current?.insert(`{{${key}}}`);
+          setCheatOpen(false);
+        }}
+      />
     </div>
   );
 }
@@ -382,3 +426,82 @@ function BackLink() {
 }
 
 const slugKey = (s: string) => slugify(s).slice(0, 48);
+
+/** Every placeholder the API substitutes, with its meaning and a sample value; copy or insert at the cursor. */
+function CheatSheet({ open, onOpenChange, used, onInsert }: { open: boolean; onOpenChange: (o: boolean) => void; used: Set<string>; onInsert: (key: string) => void }) {
+  const { t } = useI18n();
+  const [q, setQ] = React.useState("");
+  const [copied, setCopied] = React.useState<string | null>(null);
+  const meaning = (key: string) => t(`admin.control.templates.ph.${key.replace(/\./g, "_")}` as MessageKey);
+  const needle = q.trim().toLowerCase();
+  const groups = PLACEHOLDERS.map((g) => ({
+    ...g,
+    items: g.items.filter((i) => !needle || i.key.toLowerCase().includes(needle) || meaning(i.key).toLowerCase().includes(needle)),
+  })).filter((g) => g.items.length);
+
+  const copy = async (key: string) => {
+    try {
+      await navigator.clipboard.writeText(`{{${key}}}`);
+      setCopied(key);
+      setTimeout(() => setCopied((c) => (c === key ? null : c)), 1400);
+    } catch {}
+  };
+
+  return (
+    <Sheet open={open} onOpenChange={onOpenChange} title={t("admin.control.templates.cheat.title")} description={t("admin.control.templates.cheat.description")} width="max-w-2xl">
+      <div className="relative mb-4">
+        <SearchNormal1 size={16} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
+        <input
+          type="search"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          placeholder={t("admin.control.templates.cheat.search")}
+          aria-label={t("admin.control.templates.cheat.search")}
+          className="h-10 w-full rounded-xl border border-line bg-ink-850 pl-9 pr-3 text-sm text-stone-100 placeholder:text-ink-400 focus:border-gold-500/60 focus:outline-none focus:ring-4 focus:ring-gold-500/10"
+        />
+      </div>
+      <div className="space-y-5">
+        {groups.map((g) => (
+          <section key={g.group}>
+            <h4 className="mb-2 text-[11px] font-bold uppercase tracking-[0.18em] text-ink-400">{t(`admin.control.templates.groups.${g.group}` as MessageKey)}</h4>
+            <ul className="overflow-hidden rounded-2xl border border-line">
+              {g.items.map((i) => (
+                <li key={i.key} className="group flex items-start gap-3 border-b border-line bg-ink-900 px-3.5 py-3 last:border-0 hover:bg-fg/[0.025]">
+                  <div className="min-w-0 flex-1">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <code className={cn("rounded-md border px-1.5 py-0.5 font-mono text-[11.5px]", used.has(i.key) ? "border-gold-500/40 bg-gold-500/10 text-gold-200" : "border-line bg-ink-850 text-ink-100")}>{`{{${i.key}}}`}</code>
+                      <span className="text-sm text-ink-200">{meaning(i.key)}</span>
+                    </div>
+                    <div className="mt-1 line-clamp-2 whitespace-pre-line text-xs text-ink-400">
+                      <span className="text-ink-500">{t("admin.control.templates.cheat.sample")}: </span>
+                      {i.sample.trim()}
+                    </div>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      onClick={() => copy(i.key)}
+                      aria-label={t("admin.control.templates.cheat.copy")}
+                      title={copied === i.key ? t("admin.control.templates.cheat.copied") : t("admin.control.templates.cheat.copy")}
+                      className={cn("grid size-8 cursor-pointer place-items-center rounded-lg text-ink-400 transition hover:bg-fg/6 hover:text-stone-100", copied === i.key && "text-success hover:text-success")}
+                    >
+                      {copied === i.key ? <TickCircle size={16} variant="Bold" /> : <Copy size={16} />}
+                    </button>
+                    <Button type="button" size="sm" variant="outline" onClick={() => onInsert(i.key)}>
+                      {t("admin.control.templates.cheat.insert")}
+                    </Button>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+        {!groups.length && (
+          <p className="flex items-center justify-center gap-2 py-10 text-sm text-ink-400">
+            <InfoCircle size={16} /> —
+          </p>
+        )}
+      </div>
+    </Sheet>
+  );
+}
