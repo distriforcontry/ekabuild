@@ -483,6 +483,7 @@ const app = {
         revenue: "Tushum",
         pendingSignatures: "Imzo kutilmoqda",
         avgTrust: "O'rtacha ishonch",
+        contractedHint: "shartnomalar: {v}",
       },
       salesShare: "Sotilgan ulush",
       charts: {
@@ -500,6 +501,7 @@ const app = {
         trustAria: "Obyektlar bo'yicha ishonch bali, gorizontal diagramma",
       },
       signatures: {
+        more: "Yana {n} ta shartnoma imzo kutmoqda",
         title: "Imzoingizni kutayotgan shartnomalar",
         subtitle: "Sotuvchi sifatida E-IMZO bilan imzolang",
         empty: "Imzo kutilayotgan shartnoma yo'q",

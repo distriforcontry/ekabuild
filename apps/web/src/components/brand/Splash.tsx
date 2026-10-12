@@ -5,12 +5,14 @@ import { TOWER_POINTS } from "./Logo";
 import { useI18n } from "@/i18n/client";
 
 /**
- * Cinematic brand intro on every full page load of "/" (~2.4 s, then the curtain splits).
+ * Cinematic brand intro on the first full page load of "/" in a browser session (~2.1 s, then the curtain
+ * splits). Repeat visits in the same session render the hero immediately with no gate.
  *
  * The whole timeline is CSS (globals.css → "Splash"), so it starts with the first paint and never waits for
  * hydration; the overlay is `display:none` unless the inline script below — which runs before the overlay is
- * parsed — sets `<html data-eka-splash="play">`. So deep links (/verify/<code>, /projects, "/#faq"), client-side
- * navigations, reduced-motion visitors and no-JS visitors never see it (and never see a flash of it).
+ * parsed — sets `<html data-eka-splash="play">`. So repeat visits (sessionStorage), deep links (/verify/<code>,
+ * /projects, "/#faq"), client-side navigations, reduced-motion visitors and no-JS visitors never see it (and
+ * never see a flash of it). The script also flags `<html data-js>` so images only fade in when JS exists.
  *
  * <html> states: play → leaving (curtain opening, hero starts) → done · or "off".
  * `data-eka-intro` + `--gate` hold the CSS-driven hero entrance until the curtain opens (see .eka-in / .eka-word).
@@ -39,7 +41,7 @@ export function useSplashSettled() {
     }
     const go = () => setSettled(true);
     window.addEventListener(SPLASH_DONE_EVENT, go);
-    const fallback = setTimeout(go, 3200);
+    const fallback = setTimeout(go, 2800);
     return () => {
       window.removeEventListener(SPLASH_DONE_EVENT, go);
       clearTimeout(fallback);
@@ -48,22 +50,26 @@ export function useSplashSettled() {
   return settled;
 }
 
+const KEY = "eka_splash_seen";
 const SCRIPT = `(function(){var d=document.documentElement,A="${SPLASH_ATTR}",E="${SPLASH_DONE_EVENT}";
+d.setAttribute("data-js","");
 function fire(){try{window.dispatchEvent(new Event(E))}catch(e){}}
 try{
 if(d.getAttribute(A)){return}
-var show=location.pathname==="/"&&!location.hash&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+var seen=false;try{seen=!!sessionStorage.getItem("${KEY}")}catch(e){}
+var show=!seen&&location.pathname==="/"&&!location.hash&&!window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 if(!show){d.setAttribute(A,"off");return}
+try{sessionStorage.setItem("${KEY}","1")}catch(e){}
 d.setAttribute(A,"play");d.setAttribute("data-eka-intro","");
 var t0=performance.now(),st="play";
 function done(){if(st==="done")return;st="done";d.setAttribute(A,"done");d.removeAttribute("data-eka-skip");removeEventListener("keydown",key,true);removeEventListener("click",click,true)}
 function leave(skip){if(st!=="play")return;st="leaving";if(skip){d.setAttribute("data-eka-skip","");d.style.setProperty("--gate",Math.round(performance.now()-t0)+"ms")}d.setAttribute(A,"leaving");fire();setTimeout(done,skip?800:900)}
-function early(){return performance.now()-t0<2250}
+function early(){return performance.now()-t0<1950}
 function key(e){if((e.key==="Escape"||e.key==="Enter"||e.key===" ")&&st==="play"&&early()){e.preventDefault();leave(true)}}
 function click(e){var s=document.getElementById("eka-splash");if(st==="play"&&s&&s.contains(e.target)&&early()){leave(true)}}
 addEventListener("keydown",key,true);addEventListener("click",click,true);
-setTimeout(function(){leave(false)},2400);
-setTimeout(function(){d.removeAttribute("data-eka-intro");d.style.removeProperty("--gate")},7000);
+setTimeout(function(){leave(false)},2100);
+setTimeout(function(){d.removeAttribute("data-eka-intro");d.style.removeProperty("--gate")},6000);
 addEventListener("pageshow",function(e){if(e.persisted)done()});
 }catch(e){d.setAttribute(A,"off")}})();`;
 

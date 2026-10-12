@@ -49,28 +49,27 @@ export function Funnel({ data }: { data: Analytics["funnel"] }) {
           <VerticalFunnel steps={steps} hover={hover} setHover={setHover} worst={worst} fmt={f.number} />
         )}
       </div>
-      <div className="mt-5 grid gap-3 border-t border-line pt-4 sm:grid-cols-3">
+      <div className="mt-5 grid gap-4 border-t border-line pt-4 sm:grid-cols-[auto_minmax(0,1fr)] lg:grid-cols-[auto_minmax(0,1fr)_minmax(0,1fr)] lg:gap-8">
         <div>
           <div className="text-[11px] font-medium uppercase tracking-wider text-ink-400">{t("admin.analytics.funnel.overall")}</div>
           <div className="mt-1 text-2xl font-semibold tracking-tight text-stone-100">{pct(overall)}</div>
         </div>
         <div>
           <div className="text-[11px] font-medium uppercase tracking-wider text-ink-400">{t("admin.analytics.funnel.dropoff")}</div>
-          <div className="mt-1 flex items-center gap-2 text-sm text-stone-100">
+          <div className="mt-1.5 flex items-start gap-2 text-sm text-stone-100">
             {worst !== null ? (
               <>
-                <Warning2 size={16} variant="Bulk" className="shrink-0 text-warning" />
-                <span className="truncate">
-                  {steps[worst - 1]!.label} → {steps[worst]!.label}
+                <Warning2 size={16} variant="Bulk" className="mt-0.5 shrink-0 text-warning" />
+                <span>
+                  {steps[worst - 1]!.label} → {steps[worst]!.label} <span className="ml-1 font-mono text-xs text-ink-300">{pct(steps[worst]!.stepConv!)}</span>
                 </span>
-                <span className="font-mono text-xs text-ink-300">{pct(steps[worst]!.stepConv!)}</span>
               </>
             ) : (
               "—"
             )}
           </div>
         </div>
-        <p className="text-xs leading-relaxed text-ink-400 sm:text-right">{t("admin.analytics.funnel.scale")}</p>
+        <p className="text-xs leading-relaxed text-ink-400 sm:col-span-2 lg:col-span-1 lg:text-right">{t("admin.analytics.funnel.scale")}</p>
       </div>
     </div>
   );

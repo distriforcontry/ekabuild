@@ -138,21 +138,21 @@ function DocumentsTable({ docs }: { docs: DocumentItem[] }) {
       {!p.viewer.authenticated ? (
         <Button variant="outline" size="sm" asChild>
           <Link href={loginHref("documents")}>
-            <Unlock size={14} /> {t("catalog.documents.unlock")}
+            <Unlock size={14} variant="Bulk" /> {t("catalog.documents.unlock")}
           </Link>
         </Button>
       ) : packagePurchase ? (
         <Button variant="outline" size="sm" asChild>
           <Link href={`/app/purchases/${packagePurchase.id}`}>
-            <Unlock size={14} /> {t("catalog.documents.unlock")}
+            <Unlock size={14} variant="Bulk" /> {t("catalog.documents.unlock")}
           </Link>
         </Button>
       ) : p.packagePrice ? (
         <Button variant="outline" size="sm" onClick={() => buy({ kind: "DOCUMENT_PACKAGE" })}>
-          <Unlock size={14} /> {t("catalog.documents.unlock")}
+          <Unlock size={14} variant="Bulk" /> {t("catalog.documents.unlock")}
         </Button>
       ) : (
-        <Lock size={16} className="text-ink-400" />
+        <Lock size={16} variant="Bulk" className="text-gold-400" />
       )}
     </>
   );
@@ -174,7 +174,7 @@ function DocumentsTable({ docs }: { docs: DocumentItem[] }) {
       cell: (d) => (
         <div className="min-w-48 max-w-72">
           <div className="flex items-center gap-1.5 font-medium text-stone-100">
-            {d.locked && <Lock size={14} className="shrink-0 text-ink-400" />}
+            {d.locked && <Lock size={14} variant="Bulk" className="shrink-0 text-gold-500" />}
             <span className="truncate">{tr(d.title)}</span>
           </div>
           {d.description && <div className="truncate text-xs text-ink-400">{tr(d.description)}</div>}

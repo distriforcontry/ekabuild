@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { ProjectCover } from "./ProjectCover";
 import { useFormat } from "./use-format";
+import { Tilt } from "@/components/marketing/motion";
 
 /** Luxury catalog card: cover with zoom, status, trust ring, progress, price, availability. */
 export function ProjectCard({ project: p, className }: { project: ProjectCardType; className?: string }) {
@@ -20,21 +21,19 @@ export function ProjectCard({ project: p, className }: { project: ProjectCardTyp
   const location = [fmt.region(p.region), p.district ? tr(p.district) : null].filter(Boolean).join(", ");
 
   return (
-    <article
-      className={cn(
-        "group relative flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ink-900 shadow-card transition-[transform,box-shadow,border-color] duration-500 ease-[var(--ease-out-expo)] hover:-translate-y-1.5 hover:border-gold-500/30 hover:shadow-lift focus-within:border-gold-500/40 motion-reduce:hover:translate-y-0",
-        className,
-      )}
+    <Tilt as="article" max={4} className={cn("eka-glow h-full rounded-3xl", className)}>
+    <div
+      className="group relative flex h-full flex-col overflow-hidden rounded-3xl border border-line bg-ink-900 shadow-card transition-[box-shadow,border-color] duration-500 ease-[var(--ease-out-expo)] hover:border-gold-500/30 hover:shadow-lift focus-within:border-gold-500/40"
     >
-      <div className="relative aspect-[4/3] overflow-hidden">
+      <div className="eka-dark relative aspect-[4/3] overflow-hidden">
         <ProjectCover
           src={p.coverUrl}
           name={tr(p.name)}
           seed={p.slug}
           floors={p.floors}
-          className="transition-transform duration-[1400ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.06] motion-reduce:group-hover:scale-100"
+          className="absolute inset-0 duration-[1400ms] group-hover:scale-[1.07] motion-reduce:group-hover:scale-100"
         />
-        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/10 to-ink-950/20" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-ink-950/85 via-ink-950/10 to-ink-950/35" />
 
         <div className="absolute left-4 top-4 flex flex-wrap items-center gap-2">
           <StatusBadge kind="projectStatus" value={p.status} className="bg-ink-950/60 backdrop-blur-md" />
@@ -98,7 +97,7 @@ export function ProjectCard({ project: p, className }: { project: ProjectCardTyp
           <Progress value={p.progress} />
           {p.plannedEndDate && (
             <div className="mt-2 flex items-center gap-1.5 text-xs text-ink-400">
-              <Calendar size={13} />
+              <Calendar size={13} variant="Bulk" className="text-gold-400" />
               {t("catalog.card.completion")}: <span className="text-ink-200">{fmt.monthYear(p.plannedEndDate)}</span>
             </div>
           )}
@@ -123,7 +122,8 @@ export function ProjectCard({ project: p, className }: { project: ProjectCardTyp
         </div>
         </div>
       </div>
-    </article>
+    </div>
+    </Tilt>
   );
 }
 

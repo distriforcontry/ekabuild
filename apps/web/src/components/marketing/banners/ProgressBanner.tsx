@@ -102,7 +102,7 @@ export function ProgressBanner({ className }: { className?: string }) {
             ref={frameRef}
             onPointerEnter={() => setHover(true)}
             onPointerLeave={() => setHover(false)}
-            className="group relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border border-gold-500/25 bg-ink-850 shadow-lift sm:aspect-[16/9] lg:aspect-[16/8]"
+            className="eka-dark group relative aspect-[4/3] overflow-hidden rounded-[1.75rem] border border-gold-500/25 bg-ink-850 shadow-lift sm:aspect-[16/9] lg:aspect-[16/8]"
           >
             {/* before */}
             {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -163,7 +163,7 @@ export function ProgressBanner({ className }: { className?: string }) {
 
             {/* handle */}
             {!reduce && (
-              <motion.div aria-hidden className="pointer-events-none absolute inset-y-0 left-0 w-0" style={{ x: handleX }}>
+              <motion.div aria-hidden className="pointer-events-none absolute inset-0 will-change-transform" style={{ x: handleX }}>
                 <div className="absolute inset-y-0 -left-px w-0.5 bg-gradient-to-b from-[#f1dfb2]/0 via-[#f1dfb2] to-[#f1dfb2]/0 shadow-[0_0_18px_rgb(233_213_168/0.8)]" />
                 <div className="absolute left-0 top-1/2 grid size-12 -translate-x-1/2 -translate-y-1/2 place-items-center rounded-full border border-[#fff1cc]/70 bg-gradient-to-br from-[#e9d5a8] via-[#c9a464] to-[#8e6e3c] text-[#1f1a12] shadow-[0_10px_40px_-8px_rgb(201_164_100/0.8)] transition-transform duration-300 group-hover:scale-110">
                   <ArrowSwapHorizontal size={20} variant="Bold" />

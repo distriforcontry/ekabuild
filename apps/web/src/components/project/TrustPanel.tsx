@@ -69,7 +69,9 @@ export function TrustPanel() {
 
   return (
     <div className="space-y-4">
-      <div className="relative overflow-hidden rounded-3xl border border-line bg-ink-900/80 p-5 shadow-card backdrop-blur-sm md:p-6">
+      <div className="eka-border rounded-3xl shadow-card">
+      <div aria-hidden className="eka-border-spin opacity-70" />
+      <div className="relative overflow-hidden rounded-[calc(1.5rem-1px)] bg-ink-900 p-5 md:p-6">
         <div className="pointer-events-none absolute -right-16 -top-16 size-48 rounded-full bg-gold-500/10 blur-3xl" />
         <div className="relative flex items-center gap-5">
           <TrustRing score={p.trustScore} size={112} stroke={9} />
@@ -78,7 +80,7 @@ export function TrustPanel() {
               {t("catalog.trust.title")}
               <Tooltip content={t("catalog.trust.howText")}>
                 <button type="button" className="cursor-help text-ink-400 transition hover:text-gold-300" aria-label={t("catalog.trust.howTitle")}>
-                  <InfoCircle size={14} />
+                  <InfoCircle size={14} variant="Bulk" />
                 </button>
               </Tooltip>
             </div>
@@ -106,9 +108,9 @@ export function TrustPanel() {
                     </div>
                     <div className="h-1.5 overflow-hidden rounded-full bg-fg/8">
                       <motion.div
-                        className={cn("h-full rounded-full", BAR[tone])}
-                        initial={{ width: 0 }}
-                        whileInView={{ width: `${ratio * 100}%` }}
+                        className={cn("h-full origin-left rounded-full", BAR[tone])}
+                        initial={{ scaleX: 0 }}
+                        whileInView={{ scaleX: ratio }}
                         viewport={{ once: true }}
                         transition={{ duration: 1, delay: 0.1 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
                       />
@@ -120,6 +122,7 @@ export function TrustPanel() {
             </ul>
           )}
         </div>
+      </div>
       </div>
 
       <div className="rounded-3xl border border-line bg-ink-900/80 p-5 shadow-card backdrop-blur-sm md:p-6">
@@ -153,7 +156,7 @@ export function TrustPanel() {
           <ArrowRight size={16} className="transition group-hover:translate-x-0.5" />
         </Link>
         <div className="mt-4 flex items-center gap-1.5 text-xs text-ink-400">
-          <Eye size={14} />
+          <Eye size={14} variant="Bulk" className="text-gold-400" />
           {t("catalog.trust.views", { count: fmt.num(p.views ?? 0) })}
         </div>
       </div>

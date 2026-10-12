@@ -22,7 +22,6 @@ export function UnitMix({ rows }: { rows: UnitMixRow[] }) {
   const roomLabel = (n: number) => (n <= 0 ? t("admin.analytics.units.studio") : t("admin.analytics.units.rooms", { n }));
   const totals = rows.map((r) => r.sold + r.reserved + r.available);
   const max = Math.max(1, ...totals);
-  const maxPrice = Math.max(1, ...rows.map((r) => r.avgPrice));
 
   return (
     <div>
@@ -36,68 +35,57 @@ export function UnitMix({ rows }: { rows: UnitMixRow[] }) {
           <LegendKey key={p.key} color={p.color} label={t(`admin.analytics.units.${p.key}`)} shape="square" />
         ))}
       </div>
-      <div aria-hidden>
-        <div className="mb-2 hidden grid-cols-[88px_1fr_76px_92px] gap-3 text-[10px] font-semibold uppercase tracking-wider text-ink-500 sm:grid">
-          <span />
-          <span />
-          <span className="text-right">{t("admin.analytics.units.avgArea")}</span>
-          <span className="text-right">{t("admin.analytics.units.avgPrice")}</span>
-        </div>
-        <ul className="space-y-2">
-          {rows.map((r, i) => {
-            const total = totals[i]!;
-            const soldPct = total ? Math.round((r.sold / total) * 100) : 0;
-            return (
-              <li
-                key={r.rooms}
-                onMouseEnter={() => setHover(i)}
-                onMouseLeave={() => setHover(null)}
-                className={cn("grid grid-cols-[72px_1fr] items-center gap-x-3 gap-y-1 rounded-lg px-1 py-1.5 transition sm:grid-cols-[88px_1fr_76px_92px]", hover === i && "bg-fg/5")}
-              >
-                <span className="text-sm font-medium text-ink-200">{roomLabel(r.rooms)}</span>
-                <div className="min-w-0">
-                  <div className="flex h-5 items-center" style={{ width: `${Math.max(8, (total / max) * 100)}%` }}>
-                    {PARTS.map((p, j) => {
-                      const v = r[p.key];
-                      if (!v) return null;
-                      return (
-                        <motion.span
-                          key={p.key}
-                          className={cn("h-full first:rounded-l-[4px] last:rounded-r-[4px]", j > 0 && "ml-[2px]")}
-                          style={{ background: p.color }}
-                          initial={reduce ? false : { width: 0 }}
-                          animate={{ width: `${(v / total) * 100}%` }}
-                          transition={{ duration: 0.9, delay: 0.1 + i * 0.07 + j * 0.05, ease: [0.16, 1, 0.3, 1] }}
-                          title={`${t(`admin.analytics.units.${p.key}`)}: ${v}`}
-                        />
-                      );
-                    })}
-                  </div>
-                  <div className="mt-1 flex gap-3 font-mono text-[11px] text-ink-400">
-                    <span>
-                      <span className="font-semibold text-stone-100">{total}</span> · {t("admin.analytics.units.soldShare", { pct: `${soldPct}%` })}
-                    </span>
-                    {hover === i && (
-                      <span className="hidden text-ink-300 md:inline">
-                        {r.sold} / {r.reserved} / {r.available}
-                      </span>
-                    )}
-                  </div>
-                </div>
-                <span className="col-start-2 font-mono text-xs text-ink-300 sm:col-start-auto sm:text-right">
-                  <span className="sm:hidden">{t("admin.analytics.units.avgArea")}: </span>
-                  {r.avgArea ? `${r.avgArea.toFixed(1)} m²` : "—"}
-                </span>
-                <span className="col-start-2 sm:col-start-auto sm:text-right">
-                  <span className="font-mono text-xs font-semibold text-stone-100">{r.avgPrice ? f.compactMoney(r.avgPrice) : "—"}</span>
-                  <span className="mt-1 hidden h-1 overflow-hidden rounded-full bg-fg/6 sm:ml-auto sm:block sm:w-16">
-                    <span className="block h-full rounded-full bg-gold-400/70" style={{ width: `${(r.avgPrice / maxPrice) * 100}%` }} />
+      <ul className="space-y-4" aria-hidden>
+        {rows.map((r, i) => {
+          const total = totals[i]!;
+          const soldPct = total ? Math.round((r.sold / total) * 100) : 0;
+          return (
+            <li key={r.rooms} onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(null)} className={cn("rounded-xl px-2 py-1.5 transition", hover === i && "bg-fg/5")}>
+              <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                <span className="text-sm font-semibold text-stone-100">{roomLabel(r.rooms)}</span>
+                <span className="flex items-baseline gap-3 font-mono text-xs text-ink-300">
+                  <span title={t("admin.analytics.units.avgArea")}>{r.avgArea ? `${r.avgArea.toFixed(1)} m²` : "—"}</span>
+                  <span className="text-ink-500">·</span>
+                  <span className="font-semibold text-stone-100" title={t("admin.analytics.units.avgPrice")}>
+                    {r.avgPrice ? f.compactMoney(r.avgPrice) : "—"}
                   </span>
                 </span>
-              </li>
-            );
-          })}
-        </ul>
+              </div>
+              <div className="mt-2 flex h-3 items-center" style={{ width: `${Math.max(8, (total / max) * 100)}%` }}>
+                {PARTS.map((p, j) => {
+                  const v = r[p.key];
+                  if (!v) return null;
+                  return (
+                    <motion.span
+                      key={p.key}
+                      className={cn("h-full first:rounded-l-[4px] last:rounded-r-[4px]", j > 0 && "ml-[2px]")}
+                      style={{ background: p.color }}
+                      initial={reduce ? false : { width: 0 }}
+                      animate={{ width: `${(v / total) * 100}%` }}
+                      transition={{ duration: 0.9, delay: 0.1 + i * 0.07 + j * 0.05, ease: [0.16, 1, 0.3, 1] }}
+                    />
+                  );
+                })}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-x-3 gap-y-0.5 font-mono text-[11px] text-ink-400">
+                <span>
+                  <span className="font-semibold text-stone-100">{f.number(total)}</span> · {t("admin.analytics.units.soldShare", { pct: `${soldPct}%` })}
+                </span>
+                <span className="ml-auto">
+                  {PARTS.map((p) => r[p.key]).join(" / ")}
+                </span>
+              </div>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="mt-4 flex items-center justify-between border-t border-line pt-3 text-[11px] text-ink-400">
+        <span>
+          {t("admin.analytics.units.avgArea")} · {t("admin.analytics.units.avgPrice")}
+        </span>
+        <span className="font-mono">
+          {PARTS.map((p) => t(`admin.analytics.units.${p.key}`)).join(" / ")}
+        </span>
       </div>
     </div>
   );

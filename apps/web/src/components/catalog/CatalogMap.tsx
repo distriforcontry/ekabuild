@@ -63,7 +63,7 @@ export default function CatalogMap({ items }: { items: MapItem[] }) {
           <Popup minWidth={240} maxWidth={260} closeButton={false}>
             <div className="w-[236px] font-sans">
               <div className="relative h-28 overflow-hidden rounded-xl">
-                <ProjectCover src={p.coverUrl} name={tr(p.name)} seed={p.slug} showInitial={false} />
+                <ProjectCover src={p.coverUrl} name={tr(p.name)} seed={p.slug} showInitial={false} width={480} sizes="236px" />
                 <div className="absolute left-2 top-2">
                   <StatusBadge kind="projectStatus" value={p.status} className="bg-ink-950/70 backdrop-blur" />
                 </div>

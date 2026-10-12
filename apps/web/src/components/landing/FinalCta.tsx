@@ -6,6 +6,8 @@ import { Reveal } from "@/components/ui/reveal";
 import { getI18n } from "@/i18n/server";
 import { Container } from "@/components/marketing/primitives";
 import { OpenSupportButton } from "@/components/support/OpenSupportButton";
+import { InView, Magnetic } from "@/components/marketing/motion";
+import { SplitWords } from "@/components/marketing/text";
 
 export async function FinalCta({ cabinetHref }: { cabinetHref: string | null }) {
   const { t } = await getI18n();
@@ -13,28 +15,35 @@ export async function FinalCta({ cabinetHref }: { cabinetHref: string | null }) 
     <section className="relative py-24 md:py-32">
       <Container>
         <Reveal>
-          <div className="relative isolate overflow-hidden rounded-[2rem] border border-gold-500/25 bg-ink-900 px-6 py-16 text-center shadow-lift sm:px-12 md:py-24">
+          <div className="eka-border rounded-[2rem] shadow-lift">
+          <div aria-hidden className="eka-border-spin" />
+          <div className="relative isolate overflow-hidden rounded-[calc(2rem-1px)] bg-ink-900 px-6 py-16 text-center sm:px-12 md:py-24">
             <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
               <div className="bg-blueprint absolute inset-0 opacity-80 [mask-image:radial-gradient(ellipse_at_center,black_10%,transparent_70%)]" />
               <div className="absolute left-1/2 top-0 h-[420px] w-[720px] -translate-x-1/2 -translate-y-1/3 rounded-full bg-gold-500 opacity-25 blur-[120px]" />
               <div className="absolute -bottom-32 left-1/2 h-64 w-[520px] -translate-x-1/2 rounded-full bg-gold-300 opacity-10 blur-[100px]" />
               <div className="bg-noise absolute inset-0" />
             </div>
-            <LogoMark className="mx-auto h-20 drop-shadow-[0_10px_40px_rgb(201_164_100/0.45)]" />
+            <LogoMark shimmer className="eka-float mx-auto h-20 drop-shadow-[0_10px_40px_rgb(201_164_100/0.45)]" />
             <div className="mt-8 text-xs font-semibold uppercase tracking-[0.28em] text-gold-400">{t("landing.cta.eyebrow")}</div>
-            <h2 className="mx-auto mt-4 max-w-3xl font-display text-4xl leading-[1.05] text-stone-100 sm:text-5xl md:text-6xl">{t("landing.cta.title")}</h2>
+            <InView as="h2" className="eka-words-iv mx-auto mt-4 max-w-3xl font-display text-4xl leading-[1.05] text-stone-100 sm:text-5xl md:text-6xl">
+              <SplitWords text={t("landing.cta.title")} />
+            </InView>
             <p className="mx-auto mt-5 max-w-xl text-base text-ink-300 md:text-lg">{t("landing.cta.text")}</p>
-            <div className="mt-10 flex flex-col justify-center gap-3 sm:flex-row">
-              <Button asChild variant="gold" size="xl" className="group">
-                <Link href={cabinetHref ?? "/register"}>
-                  {cabinetHref ? t("common.nav.cabinet") : t("landing.cta.primary")}
-                  <ArrowRight className="transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
-              <Button asChild variant="secondary" size="xl">
+            <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
+              <Magnetic className="w-full sm:w-auto">
+                <Button asChild variant="gold" size="xl" className="eka-shine group w-full sm:w-auto">
+                  <Link href={cabinetHref ?? "/register"}>
+                    {cabinetHref ? t("common.nav.cabinet") : t("landing.cta.primary")}
+                    <ArrowRight className="transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </Magnetic>
+              <Button asChild variant="outline" size="xl" className="w-full sm:w-auto">
                 <Link href="/projects">{t("landing.cta.secondary")}</Link>
               </Button>
             </div>
+          </div>
           </div>
         </Reveal>
       </Container>
@@ -63,7 +72,7 @@ export async function ContactStrip() {
             </span>
             <span>
               <span className="flex items-center gap-1.5 text-[11px] text-ink-400">
-                <Clock size={12} />
+                <Clock size={12} variant="Bulk" className="text-gold-400" />
                 {t("common.contact.hours")}
               </span>
               <span className="block font-mono text-lg font-semibold tracking-wide text-stone-100 transition group-hover:text-gold-300">{t("common.contact.phone")}</span>

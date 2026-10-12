@@ -1,6 +1,7 @@
 "use client";
 import * as React from "react";
 import { cn } from "@/lib/utils";
+import { apiImg, apiSrcSet, type ApiWidth } from "@/components/marketing/img";
 
 function hash(s: string) {
   let h = 2166136261;
@@ -18,7 +19,12 @@ export function ProjectCover({
   imgClassName,
   eager,
   showInitial = true,
+  width = 768,
+  sizes = "(min-width: 1280px) 400px, (min-width: 640px) 50vw, 100vw",
 }: {
+  /** requested API width (resized WebP) */
+  width?: ApiWidth;
+  sizes?: string;
   src?: string | null;
   name: string;
   seed?: string;
@@ -29,17 +35,32 @@ export function ProjectCover({
   showInitial?: boolean;
 }) {
   const [failed, setFailed] = React.useState(false);
+  const [loaded, setLoaded] = React.useState(false);
+  const ref = React.useRef<HTMLImageElement>(null);
+  React.useEffect(() => {
+    const img = ref.current;
+    if (img?.complete && img.naturalWidth > 0) setLoaded(true);
+  }, [src]);
   if (src && !failed) {
+    // API images are served resized as WebP (?w=…); a shimmering skeleton holds the space until decoded
     return (
-      // eslint-disable-next-line @next/next/no-img-element
-      <img
-        src={src}
-        alt={name}
-        loading={eager ? "eager" : "lazy"}
-        decoding="async"
-        onError={() => setFailed(true)}
-        className={cn("size-full object-cover", className, imgClassName)}
-      />
+      <>
+        {!loaded && !eager && <span aria-hidden className="skeleton absolute inset-0" />}
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          ref={ref}
+          src={apiImg(src, width)}
+          srcSet={apiSrcSet(src, width >= 1024 ? [768, 1024, 1600] : [480, 768, 1024])}
+          sizes={sizes}
+          alt={name}
+          loading={eager ? "eager" : "lazy"}
+          decoding="async"
+          onLoad={() => setLoaded(true)}
+          onError={() => setFailed(true)}
+          data-loaded={loaded ? "" : undefined}
+          className={cn(!eager && "eka-img", "size-full object-cover", className, imgClassName)}
+        />
+      </>
     );
   }
   return <CoverPlaceholder name={name} seed={seed ?? name} floors={floors} className={className} showInitial={showInitial} />;

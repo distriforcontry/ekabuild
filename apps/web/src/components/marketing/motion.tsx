@@ -12,7 +12,7 @@ const finePointer = () => typeof window !== "undefined" && window.matchMedia("(h
 
 /* ───────────── InView: flags itself with [data-in] once visible (drives the CSS .eka-iv-* / .eka-words-iv) ───────────── */
 type InViewProps = {
-  as?: "div" | "section" | "header" | "li" | "ul" | "ol" | "span" | "article";
+  as?: "div" | "section" | "header" | "li" | "ul" | "ol" | "span" | "article" | "h2" | "h3" | "p";
   className?: string;
   style?: React.CSSProperties;
   children: React.ReactNode;

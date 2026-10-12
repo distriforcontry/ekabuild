@@ -470,6 +470,7 @@ const studio: Shape<typeof uz> = {
     screenshot: "Скриншот сохранён",
     opened: "{name} открыт · {time}",
     nothingSelected: "Сначала выделите объект",
+    locked: "Объект заблокирован — сначала разблокируйте его",
   },
   status: {
     triangles: "{n} треуг.",

@@ -120,7 +120,7 @@ export function FileChip({ file, className }: { file: FileRef; className?: strin
       <I size={16} variant="Bulk" className="shrink-0 text-gold-300" />
       <span className="min-w-0 truncate text-ink-100">{file.originalName}</span>
       <span className="shrink-0 font-mono text-ink-400">{fmt.bytes(file.size)}</span>
-      <DocumentDownload size={15} className="shrink-0 text-ink-400 transition group-hover:text-gold-300" />
+      <DocumentDownload size={15} variant="Bulk" className="shrink-0 text-gold-500 transition group-hover:text-gold-300" />
     </a>
   );
 }

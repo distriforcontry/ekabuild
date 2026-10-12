@@ -485,6 +485,7 @@ const app: Shape<typeof uz> = {
         revenue: "Выручка",
         pendingSignatures: "Ждут подписи",
         avgTrust: "Средний индекс доверия",
+        contractedHint: "по договорам: {v}",
       },
       salesShare: "Доля проданного",
       charts: {
@@ -502,6 +503,7 @@ const app: Shape<typeof uz> = {
         trustAria: "Индекс доверия по объектам, горизонтальная диаграмма",
       },
       signatures: {
+        more: "Ещё {n} договоров ждут подписи",
         title: "Договоры, ожидающие вашей подписи",
         subtitle: "Подпишите как продавец через E-IMZO",
         empty: "Нет договоров на подпись",

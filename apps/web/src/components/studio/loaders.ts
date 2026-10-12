@@ -292,7 +292,8 @@ export async function loadModel(src: ModelSource, onProgress: (p: LoadProgress) 
         throw new LoadError("PARSE", (e as Error)?.message || "Parse error");
       }
       const hasColor = Boolean(geo.getAttribute("color"));
-      const pointCloud = !geo.index && geo.getAttribute("position").count % 3 !== 0;
+      // PLYLoader only creates an index when the file has faces
+      const pointCloud = !geo.index;
       const g = new THREE.Group();
       g.name = name.replace(/\.[^.]+$/, "");
       if (pointCloud) {

@@ -116,7 +116,7 @@ export function FeedView() {
                       </div>
                     )}
                     {media.length > 0 && (
-                      <div className={cn("mt-4 grid gap-2", media.length === 1 ? "grid-cols-1" : media.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
+                      <div className={cn("mt-4 grid max-w-3xl gap-2", media.length === 1 ? "grid-cols-1" : media.length === 2 ? "grid-cols-2" : "grid-cols-3")}>
                         {media.slice(0, 6).map((m, mi) => {
                           const kind = fileKind(m.mime, m.originalName);
                           const more = mi === 5 && media.length > 6;

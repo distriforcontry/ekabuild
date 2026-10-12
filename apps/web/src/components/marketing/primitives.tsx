@@ -1,8 +1,8 @@
 import * as React from "react";
 import Link from "next/link";
 import { ArrowRight2 } from "iconsax-reactjs";
-import { Reveal } from "@/components/ui/reveal";
 import { cn } from "@/lib/utils";
+import { SplitWords, wordCount } from "./text";
 
 /** Centered page container used by every marketing section. */
 export function Container({ className, children }: { className?: string; children: React.ReactNode }) {
@@ -53,7 +53,11 @@ export function Breadcrumbs({ items, className }: { items: Crumb[]; className?: 
   );
 }
 
-/** Inner-page hero: sits under the transparent header (-mt-20) with blueprint + glow backdrop. */
+/**
+ * Inner-page hero: sits under the transparent header (-mt-20) with blueprint + glow backdrop.
+ * The entrance is CSS-driven (plays from the first paint, no hydration wait): eyebrow rule draws,
+ * a string title reveals word by word through a mask, description and children rise after it.
+ */
 export function PageHero({
   eyebrow,
   title,
@@ -71,35 +75,44 @@ export function PageHero({
   className?: string;
   align?: "left" | "center";
 }) {
+  const words = typeof title === "string" ? wordCount(title) : 4;
+  const after = (ms: number) => ({ "--d": `${Math.min(words, 10) * 60 + ms}ms` }) as React.CSSProperties;
   return (
     <section className={cn("relative isolate -mt-20 overflow-hidden pt-32 pb-12 md:pt-40 md:pb-16", className)}>
       <Backdrop />
       <Container className={cn(align === "center" && "text-center")}>
-        {crumbs && <Breadcrumbs items={crumbs} className={cn(align === "center" && "flex justify-center")} />}
+        {crumbs && (
+          <div className="eka-in-fade">
+            <Breadcrumbs items={crumbs} className={cn(align === "center" && "flex justify-center")} />
+          </div>
+        )}
         {eyebrow && (
-          <Reveal>
-            <div className={cn("mb-5 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-gold-400")}>
-              <span className="h-px w-8 bg-gold-500/60" />
+          <div className="mb-5 inline-flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.28em] text-gold-400">
+            <span className="eka-draw-x h-px w-8 bg-gold-500/70" />
+            <span className="eka-in" style={{ "--d": "80ms" } as React.CSSProperties}>
               {eyebrow}
-            </div>
-          </Reveal>
+            </span>
+          </div>
         )}
-        <Reveal delay={0.05}>
-          <h1
-            className={cn(
-              "max-w-4xl font-display text-[42px] font-medium leading-[1.02] tracking-[-0.01em] text-stone-100 sm:text-6xl md:text-7xl",
-              align === "center" && "mx-auto",
-            )}
-          >
-            {title}
-          </h1>
-        </Reveal>
+        <h1
+          className={cn(
+            "max-w-4xl font-display text-[42px] font-medium leading-[1.02] tracking-[-0.01em] text-stone-100 sm:text-6xl md:text-7xl",
+            align === "center" && "mx-auto",
+          )}
+          style={{ "--d": "120ms" } as React.CSSProperties}
+        >
+          {typeof title === "string" ? <SplitWords text={title} /> : <span className="eka-in block">{title}</span>}
+        </h1>
         {description && (
-          <Reveal delay={0.12}>
-            <p className={cn("mt-6 max-w-2xl text-base leading-relaxed text-ink-300 md:text-lg", align === "center" && "mx-auto")}>{description}</p>
-          </Reveal>
+          <p className={cn("eka-in mt-6 max-w-2xl text-base leading-relaxed text-ink-300 md:text-lg", align === "center" && "mx-auto")} style={after(200)}>
+            {description}
+          </p>
         )}
-        {children}
+        {children && (
+          <div className="eka-in" style={after(320)}>
+            {children}
+          </div>
+        )}
       </Container>
     </section>
   );

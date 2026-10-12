@@ -66,7 +66,7 @@ export function FilterBar({
   );
 
   return (
-    <div className="glass relative z-20 rounded-3xl p-3 shadow-card md:p-4">
+    <div className="glass eka-in relative z-20 rounded-3xl p-3 shadow-lift ring-1 ring-gold-500/15 md:p-4" style={{ "--d": "520ms" } as React.CSSProperties}>
       <div className="flex gap-3">
         <SearchBox value={filters.q} onSearch={onSearch} pending={pending} />
         <Button
@@ -77,7 +77,7 @@ export function FilterBar({
           aria-controls="catalog-filters"
           onClick={() => setOpen((o) => !o)}
         >
-          <Filter size={18} />
+          <Filter size={18} variant="Bulk" className="text-gold-400" />
           <span className="hidden sm:inline">{t("catalog.filters.toggle")}</span>
           {active > 0 && (
             <span className="grid size-5 place-items-center rounded-full bg-gold-gradient font-mono text-[10px] font-bold text-onyx">{active}</span>
@@ -134,7 +134,7 @@ function SearchBox({ value, onSearch, pending }: { value: string; onSearch: (q: 
 
   return (
     <div className="relative min-w-0 flex-1">
-      <SearchNormal1 size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+      <SearchNormal1 size={18} variant="TwoTone" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gold-400" />
       <label htmlFor="catalog-search" className="sr-only">
         {t("catalog.filters.searchLabel")}
       </label>
@@ -249,7 +249,7 @@ function PriceRange({ min, max, onChange }: { min: number | null; max: number | 
           aria-label={t("catalog.filters.price")}
           className="group flex h-11 w-full cursor-pointer items-center gap-2 rounded-xl border border-line bg-ink-850 px-3.5 text-left text-sm transition-colors hover:border-line-strong data-[state=open]:border-gold-500/60"
         >
-          <MoneySend size={17} className="shrink-0 text-ink-400" />
+          <MoneySend size={17} variant="Bulk" className="shrink-0 text-gold-400" />
           <span className={cn("flex-1 truncate", display ? "text-stone-100" : "text-ink-400")}>{display ?? t("catalog.filters.priceAny")}</span>
           <ArrowDown2 size={16} className="text-ink-400 transition-transform duration-300 group-data-[state=open]:rotate-180" />
         </button>

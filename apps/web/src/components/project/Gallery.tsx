@@ -6,6 +6,7 @@ import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import { CoverPlaceholder } from "@/components/catalog/ProjectCover";
 import { Lightbox } from "./Lightbox";
+import { apiImg, apiSrcSet } from "@/components/marketing/img";
 
 /** Hero gallery: main image with crossfade, arrows, thumbnails, lightbox. */
 export function Gallery({ images, name, seed, floors }: { images: string[]; name: string; seed: string; floors: number }) {
@@ -20,28 +21,39 @@ export function Gallery({ images, name, seed, floors }: { images: string[]; name
 
   return (
     <div>
-      <div className="group relative aspect-[16/11] overflow-hidden rounded-3xl border border-line bg-ink-900 shadow-card">
-        <AnimatePresence initial={false} mode="popLayout">
+      <div className="eka-dark group relative aspect-[16/11] overflow-hidden rounded-3xl border border-line bg-ink-900 shadow-card">
+        {/* true crossfade: the outgoing image stays while the next one fades in over it with a slow push-in */}
+        <AnimatePresence initial={false}>
           <motion.button
             key={src}
             type="button"
             onClick={() => setOpen(true)}
-            initial={{ opacity: 0, scale: 1.04 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0 }}
-            transition={{ duration: 0.7, ease: [0.16, 1, 0.3, 1] }}
-            className="absolute inset-0 block size-full cursor-zoom-in"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0, transition: { duration: 0.6, delay: 0.25 } }}
+            transition={{ duration: 0.85, ease: [0.16, 1, 0.3, 1] }}
+            className="absolute inset-0 block size-full cursor-zoom-in overflow-hidden"
             aria-label={t("catalog.detail.gallery.open")}
           >
             {src && !broken.has(src) ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={src}
-                alt={`${name} — ${i + 1}`}
-                className="size-full object-cover transition-transform duration-[1500ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.03]"
-                fetchPriority={i === 0 ? "high" : "auto"}
-                onError={() => setBroken((b) => new Set(b).add(src))}
-              />
+              <motion.span
+                className="block size-full"
+                initial={{ scale: 1.08 }}
+                animate={{ scale: 1 }}
+                transition={{ duration: 1.6, ease: [0.16, 1, 0.3, 1] }}
+              >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={apiImg(src, 1600)}
+                  srcSet={apiSrcSet(src, [768, 1024, 1600])}
+                  sizes="(min-width: 1024px) 55vw, 100vw"
+                  alt={`${name} — ${i + 1}`}
+                  decoding="async"
+                  className="size-full object-cover transition-[scale] duration-[1500ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.03]"
+                  fetchPriority={i === 0 ? "high" : "auto"}
+                  onError={() => setBroken((b) => new Set(b).add(src))}
+                />
+              </motion.span>
             ) : (
               <CoverPlaceholder name={name} seed={seed} floors={floors} />
             )}
@@ -51,7 +63,7 @@ export function Gallery({ images, name, seed, floors }: { images: string[]; name
 
         <div className="absolute bottom-4 left-4 flex items-center gap-2">
           <span className="glass inline-flex items-center gap-1.5 rounded-full px-3 py-1 font-mono text-xs text-ink-100">
-            <GalleryIcon size={14} className="text-gold-300" />
+            <GalleryIcon size={14} variant="Bulk" className="text-gold-300" />
             {t("catalog.detail.gallery.counter", { index: i + 1, total: n })}
           </span>
         </div>
@@ -61,7 +73,7 @@ export function Gallery({ images, name, seed, floors }: { images: string[]; name
           className="glass absolute bottom-4 right-4 grid size-10 cursor-pointer place-items-center rounded-full text-stone-100 opacity-0 transition group-hover:opacity-100 focus-visible:opacity-100"
           aria-label={t("catalog.detail.gallery.open")}
         >
-          <Maximize4 size={18} />
+          <Maximize4 size={18} className="text-gold-200" />
         </button>
         {n > 1 && (
           <>
@@ -97,15 +109,29 @@ export function Gallery({ images, name, seed, floors }: { images: string[]; name
                 aria-current={k === i}
                 aria-label={t("catalog.detail.gallery.counter", { index: k + 1, total: n })}
                 className={cn(
-                  "relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl border-2 transition-all duration-300",
-                  k === i ? "border-gold-400 shadow-glow" : "border-transparent opacity-70 hover:opacity-100",
+                  "group/th relative aspect-[4/3] cursor-pointer overflow-hidden rounded-xl transition-opacity duration-300",
+                  k === i ? "opacity-100" : "opacity-65 hover:opacity-100",
                 )}
               >
                 {broken.has(s) ? (
                   <CoverPlaceholder name={name} seed={seed + k} floors={floors} showInitial={false} />
                 ) : (
                   // eslint-disable-next-line @next/next/no-img-element
-                  <img src={s} alt="" loading="lazy" className="size-full object-cover" onError={() => setBroken((b) => new Set(b).add(s))} />
+                  <img
+                    src={apiImg(s, 480)}
+                    alt=""
+                    loading="lazy"
+                    decoding="async"
+                    className="size-full object-cover transition-[scale] duration-700 group-hover/th:scale-105"
+                    onError={() => setBroken((b) => new Set(b).add(s))}
+                  />
+                )}
+                {k === i && (
+                  <motion.span
+                    layoutId="eka-gallery-thumb"
+                    className="pointer-events-none absolute inset-0 rounded-xl ring-2 ring-inset ring-gold-400 shadow-glow"
+                    transition={{ type: "spring", stiffness: 420, damping: 36 }}
+                  />
                 )}
                 {more && (
                   <span className="absolute inset-0 grid place-items-center bg-ink-950/70 font-mono text-sm font-semibold text-stone-100 backdrop-blur-[2px]">

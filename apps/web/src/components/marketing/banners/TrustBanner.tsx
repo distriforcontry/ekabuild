@@ -26,7 +26,7 @@ export async function TrustBanner({ stats }: { stats: PublicStats | null }) {
   ];
 
   return (
-    <section aria-labelledby="trust-banner-title" className="relative isolate overflow-hidden bg-[#0b0b0c]">
+    <section aria-labelledby="trust-banner-title" className="eka-dark relative isolate overflow-hidden bg-[#0b0b0c]">
       <ParallaxLayer range={90} scale={1.22}>
         <SmartImg src={img.src} srcSet={img.srcSet} sizes="100vw" lqip={img.lqip} imgStyle={{ objectPosition: "60% 40%" }} />
       </ParallaxLayer>

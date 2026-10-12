@@ -67,7 +67,7 @@ export function RulesBrowser({ rules, initialCategory }: { rules: RuleItem[]; in
           })}
         </div>
         <div className="relative w-full lg:w-80">
-          <SearchNormal1 size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+          <SearchNormal1 size={18} variant="TwoTone" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gold-400" />
           <Input type="search" value={q} onChange={(e) => setQ(e.target.value)} placeholder={t("landing.pages.rules.searchPlaceholder")} aria-label={t("landing.common.search")} className="pl-11" />
         </div>
       </div>

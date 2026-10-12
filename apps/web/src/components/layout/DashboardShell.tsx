@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown";
 import { ThemeToggle } from "./ThemeToggle";
 import { LanguageSwitcher } from "./LanguageSwitcher";
-import { BreadcrumbProvider, Breadcrumbs, useCrumbs } from "./Breadcrumbs";
+import { BreadcrumbProvider, Breadcrumbs, matchNav, useCrumbs } from "./Breadcrumbs";
 import { MobileTabBar } from "./MobileTabBar";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
@@ -303,15 +303,8 @@ function SidebarInner({
 }) {
   const pathname = usePathname();
   const allItems = React.useMemo(() => nav.flatMap((s) => s.items), [nav]);
-  // the longest matching href wins, so /app/developer doesn't also light up /app
-  const activeHref = React.useMemo(() => {
-    let best: string | null = null;
-    for (const item of allItems) {
-      const hit = item.exact ? pathname === item.href : pathname === item.href || pathname.startsWith(item.href + "/");
-      if (hit && (!best || item.href.length > best.length)) best = item.href;
-    }
-    return best;
-  }, [allItems, pathname]);
+  // one matcher for sidebar, breadcrumbs and tab bar: the longest matching href wins (/app/developer doesn't light up /app)
+  const activeHref = React.useMemo(() => matchNav(allItems, pathname)?.href ?? null, [allItems, pathname]);
   const fade = { animate: { opacity: collapsed ? 0 : 1 }, transition: { duration: collapsed ? 0.15 : 0.3, delay: collapsed ? 0 : 0.12 } };
   const layoutGroup = drawer ? "drawer" : "sidebar";
 

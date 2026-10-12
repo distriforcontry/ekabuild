@@ -244,15 +244,15 @@ function Sequence({
                 <rect x={Math.min(x1, x2) - 14} y={y - 22} width={Math.abs(x2 - x1) + 28} height={36} fill="transparent" />
                 <line x1={x1} x2={x2} y1={y} y2={y} stroke={color} strokeWidth={state === "current" ? 2.5 : 1.75} strokeLinecap="round" strokeDasharray={s.variant === "async" ? "6 5" : undefined} />
                 <path d={`M${x2 - dir * 9},${y - 5} L${x2},${y} L${x2 - dir * 9},${y + 5}`} fill="none" stroke={color} strokeWidth={state === "current" ? 2.5 : 1.75} strokeLinecap="round" strokeLinejoin="round" />
-                {state === "current" && !reduce && (
+                {state === "current" && (
                   <motion.circle
                     key={`dot-${cur}`}
                     r={4.5}
                     cy={y}
                     fill={color}
                     initial={{ cx: x1, opacity: 0 }}
-                    animate={{ cx: [x1, x2], opacity: [0, 1, 1, 0] }}
-                    transition={{ duration: 1.2, repeat: Infinity, repeatDelay: 0.35, ease: "easeInOut" }}
+                    animate={reduce ? { cx: x2, opacity: 0 } : { cx: [x1, x2], opacity: [0, 1, 1, 0] }}
+                    transition={reduce ? { duration: 0 } : { duration: 1.2, repeat: Infinity, repeatDelay: 0.35, ease: "easeInOut" }}
                   />
                 )}
                 {state === "current" && <circle cx={cx(s.from)} cy={y} r={15} fill={color} opacity={0.18} className="motion-safe:animate-pulse" />}

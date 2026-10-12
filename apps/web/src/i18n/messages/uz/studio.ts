@@ -468,6 +468,7 @@ const studio = {
     screenshot: "Skrinshot saqlandi",
     opened: "{name} ochildi · {time}",
     nothingSelected: "Avval obyektni tanlang",
+    locked: "Obyekt qulflangan — avval qulfdan chiqaring",
   },
   status: {
     triangles: "{n} uchb.",

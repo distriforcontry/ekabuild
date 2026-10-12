@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import Link from "next/link";
+import type { CSSProperties } from "react";
 import { cache } from "react";
 import { notFound } from "next/navigation";
 import { ArrowRight2, InfoCircle } from "iconsax-reactjs";
@@ -103,7 +104,7 @@ export default async function ProjectPage({ params }: Params) {
               </Link>
             </li>
             <li aria-hidden>
-              <ArrowRight2 size={12} />
+              <ArrowRight2 size={12} className="text-gold-500/70" />
             </li>
             <li>
               <Link href={`/projects?region=${encodeURIComponent(p.region)}`} className="transition hover:text-gold-300">
@@ -111,7 +112,7 @@ export default async function ProjectPage({ params }: Params) {
               </Link>
             </li>
             <li aria-hidden>
-              <ArrowRight2 size={12} />
+              <ArrowRight2 size={12} className="text-gold-500/70" />
             </li>
             <li className="truncate text-ink-200" aria-current="page">
               {tr(p.name)}
@@ -130,7 +131,7 @@ export default async function ProjectPage({ params }: Params) {
           <ProjectHero />
           <div className="mt-14 grid gap-8 lg:mt-20 lg:grid-cols-[minmax(0,1fr)_340px] xl:grid-cols-[minmax(0,1fr)_380px] xl:gap-10">
             <aside className="min-w-0 lg:order-2">
-              <div className="lg:sticky lg:top-24">
+              <div className="eka-in lg:sticky lg:top-24" style={{ "--d": "350ms" } as CSSProperties}>
                 <TrustPanel />
               </div>
             </aside>

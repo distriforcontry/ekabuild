@@ -125,7 +125,8 @@ export function HeroVisual() {
       </div>
 
       <div role="img" aria-label={t("landing.hero.visualLabel")} className="absolute inset-[6%] lg:inset-x-[8%] lg:inset-y-[7%]">
-        <div className="eka-in-scale size-full" style={{ "--d": "260ms" } as React.CSSProperties}>
+        {/* LCP: the framed render is painted from the first frame (transform-only entrance, priority image) */}
+        <div className="eka-settle size-full" style={{ "--d": "120ms" } as React.CSSProperties}>
           <Tilt max={4} disabled={mode === "3d"} className="size-full rounded-[2rem]">
             <div className="relative size-full overflow-hidden rounded-[2rem] border border-gold-500/25 bg-ink-900 shadow-[0_40px_120px_-40px_rgb(201_164_100/0.45)]">
               <AnimatePresence initial={false} mode="wait">

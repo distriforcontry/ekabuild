@@ -1,8 +1,11 @@
 import Link from "next/link";
-import { ArrowRight, Call, Clock, Instagram, Location, ScanBarcode, Send2, Sms, Youtube, Facebook } from "iconsax-reactjs";
-import { Logo } from "@/components/brand/Logo";
+import type { CSSProperties } from "react";
+import { Call, Clock, Instagram, Location, Send2, Sms, Youtube, Facebook } from "iconsax-reactjs";
+import { Logo, LogoMark } from "@/components/brand/Logo";
 import { getI18n } from "@/i18n/server";
 import { Container } from "./primitives";
+import { InView } from "./motion";
+import { VerifyBanner } from "./banners/VerifyBanner";
 
 export async function Footer() {
   const { t } = await getI18n();
@@ -50,30 +53,13 @@ export async function Footer() {
       <div aria-hidden className="pointer-events-none absolute -top-40 left-1/2 -z-10 h-80 w-[720px] -translate-x-1/2 rounded-full bg-gold-500 opacity-[0.06] blur-[110px]" />
 
       <Container className="pt-16 md:pt-20">
-        {/* verify banner */}
-        <div className="mb-14 flex flex-col items-start justify-between gap-5 rounded-3xl border border-gold-500/20 bg-gradient-to-r from-gold-500/10 via-gold-500/[0.04] to-transparent p-6 sm:flex-row sm:items-center md:p-8">
-          <div className="flex items-center gap-4">
-            <span className="grid size-12 shrink-0 place-items-center rounded-2xl bg-gold-gradient text-onyx shadow-glow">
-              <ScanBarcode size={22} variant="Bold" />
-            </span>
-            <div>
-              <div className="font-display text-2xl text-stone-100 md:text-3xl">{t("landing.footer.verifyTitle")}</div>
-              <p className="mt-1 text-sm text-ink-300">{t("landing.footer.verifyText")}</p>
-            </div>
-          </div>
-          <Link
-            href="/verify"
-            className="group inline-flex h-12 items-center gap-2 rounded-xl border border-gold-500/40 px-5 text-sm font-semibold text-gold-200 transition hover:border-gold-400 hover:bg-gold-500/10"
-          >
-            {t("landing.footer.verifyCta")}
-            <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
-          </Link>
-        </div>
+        {/* certificate check with the QR motif */}
+        <VerifyBanner variant="compact" className="mb-14" />
 
         <div className="grid gap-12 lg:grid-cols-12">
           <div className="lg:col-span-4">
             <Link href="/" aria-label="EKA BUILD" className="inline-block rounded-lg">
-              <Logo tagline />
+              <Logo tagline taglineText={t("landing.splash.tagline")} size="lg" />
             </Link>
             <p className="mt-6 max-w-sm text-sm leading-relaxed text-ink-300">{t("landing.footer.about")}</p>
             <div className="mt-6 flex items-center gap-2" aria-label={t("landing.footer.follow")}>
@@ -84,7 +70,7 @@ export async function Footer() {
                   target="_blank"
                   rel="noopener noreferrer"
                   aria-label={label}
-                  className="grid size-10 place-items-center rounded-xl border border-line text-ink-300 transition hover:-translate-y-0.5 hover:border-gold-500/40 hover:text-gold-300"
+                  className="grid size-10 place-items-center rounded-xl border border-line bg-ink-900/60 text-gold-400 transition hover:-translate-y-0.5 hover:border-gold-500/50 hover:bg-gold-500/10 hover:text-gold-300"
                 >
                   <Icon size={18} variant="Bulk" />
                 </a>
@@ -154,9 +140,12 @@ export async function Footer() {
         </div>
       </Container>
 
-      {/* oversized watermark */}
+      {/* oversized watermark: the lockup word only (the plate already says EKA) */}
       <div aria-hidden className="pointer-events-none select-none overflow-hidden">
-        <div className="text-gold-gradient -mb-[0.22em] text-center font-display text-[22vw] leading-none opacity-[0.12] lg:text-[17rem]">EKA BUILD</div>
+        <InView className="eka-iv-up flex items-end justify-center gap-[3vw] opacity-[0.13] lg:gap-10" style={{ "--d": "100ms" } as CSSProperties}>
+          <LogoMark className="-mb-[1.6vw] h-[15vw] w-auto lg:-mb-5 lg:h-48" shimmer />
+          <span className="text-gold-shimmer -mb-[0.16em] font-sans text-[12vw] font-bold uppercase leading-none tracking-[0.3em] lg:text-[10.5rem]">Build</span>
+        </InView>
       </div>
     </footer>
   );

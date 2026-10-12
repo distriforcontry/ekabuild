@@ -119,7 +119,7 @@ export function Kpi({
           </span>
         )}
       </div>
-      <div className="relative mt-3 font-mono text-[26px] font-semibold leading-none tracking-tight text-stone-100 md:text-[30px]">{value}</div>
+      <div className="relative mt-3 whitespace-nowrap font-mono text-[22px] font-semibold leading-none tracking-tight text-stone-100 sm:text-[26px] md:text-[30px]">{value}</div>
       {hint && <div className="relative mt-2 text-xs text-ink-400">{hint}</div>}
       {footer && <div className="relative mt-4">{footer}</div>}
       {href && (

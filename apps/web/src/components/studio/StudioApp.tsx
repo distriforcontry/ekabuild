@@ -93,6 +93,11 @@ export default function StudioApp({ source: initialSource, project: initialProje
 
   React.useEffect(() => setWebgl(hasWebGL()), []);
   React.useEffect(() => () => engine.dispose(), [engine]);
+  React.useEffect(() => {
+    engine.notify = (reason) => {
+      if (reason === "locked") toast.warning(t("studio.toast.locked"), { id: "studio-locked", duration: 1800 });
+    };
+  }, [engine, t]);
 
   // ── fill the viewport under the cabinet top bar ──
   React.useLayoutEffect(() => {
@@ -408,8 +413,8 @@ export default function StudioApp({ source: initialSource, project: initialProje
         case "backspace":
           if (s.selection) {
             const o = engine.get(s.selection);
-            engine.remove(s.selection);
-            if (o) toast(t("studio.toast.deleted", { name: displayName(o) }), { action: { label: t("studio.toolbar.undo"), onClick: () => actions.undo() } });
+            if (engine.remove(s.selection) && o)
+              toast(t("studio.toast.deleted", { name: displayName(o) }), { action: { label: t("studio.toolbar.undo"), onClick: () => actions.undo() } });
           }
           break;
         case "escape":

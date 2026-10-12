@@ -50,9 +50,14 @@ export function Regions({ rows, metric }: { rows: RegionRow[]; metric: RegionMet
   }
   const fmt = (m: RegionMetric, v: number) =>
     m === "revenue" || m === "avgPricePerSqm" ? f.compactMoney(v) : m === "avgTrust" ? String(Math.round(v)) : f.number(v);
+  // tiles are narrow: drop the decimal once the integer part has 2+ digits ("175 mlrd")
+  const short = (m: RegionMetric, v: number) => fmt(m, v).replace(/(\d{2,})[.,]\d(?=\s)/, "$1");
   const values = rows.map((r) => r[metric]);
   const max = Math.max(0, ...values);
   const min = Math.min(...values.filter((v) => v > 0), max);
+
+  const focusRow =
+    (active && rows.find((r) => TILE_BY_NORM.get(norm(r.region))?.name === active)) || [...rows].sort((a, b) => b[metric] - a[metric])[0] || null;
 
   const bars = [...rows].map((r) => ({ ...r, units: r.sold + r.available })).sort((a, b) => b.units - a.units || b.projects - a.projects);
   const maxUnits = Math.max(1, ...bars.map((b) => b.units));
@@ -93,12 +98,9 @@ export function Regions({ rows, metric }: { rows: RegionRow[]; metric: RegionMet
                 )}
                 style={{ background: has ? goldRamp(0.12 + tnorm * 0.88) : "transparent" }}
               >
-                <span className={cn("truncate text-[9px] font-bold uppercase tracking-wider sm:text-[10px]", has && strong ? "text-onyx/75" : "text-ink-300")}>
-                  <span className="lg:hidden">{tr(tile.code)}</span>
-                  <span className="hidden lg:inline">{tr(name)}</span>
-                </span>
-                <span className={cn("truncate font-mono text-[10px] font-semibold sm:text-xs", has ? (strong ? "text-onyx" : "text-stone-100") : "text-ink-500")}>
-                  {has ? fmt(metric, v) : "—"}
+                <span className={cn("truncate font-mono text-[9px] font-bold tracking-wider sm:text-[11px]", has && strong ? "text-ink-950/70" : "text-ink-300")}>{tr(tile.code)}</span>
+                <span className={cn("truncate text-[10px] font-semibold tracking-tight sm:text-[13px]", has ? (strong ? "text-ink-950" : "text-stone-100") : "text-ink-500")}>
+                  {has ? short(metric, v) : "—"}
                 </span>
               </motion.div>
             );
@@ -119,6 +121,30 @@ export function Regions({ rows, metric }: { rows: RegionRow[]; metric: RegionMet
             <span className="size-2.5 rounded-[3px] border border-dashed border-line-strong" /> {t("admin.analytics.regions.noProjects")}
           </span>
         </div>
+        {focusRow && (
+          <div className="mt-4 rounded-xl border border-line bg-ink-850/60 p-4" aria-live="polite">
+            <div className="flex items-center gap-2">
+              <span className="rounded-md bg-gold-500/15 px-1.5 py-0.5 font-mono text-[10px] font-bold text-gold-200">{tr(TILE_BY_NORM.get(norm(focusRow.region))?.code ?? "—")}</span>
+              <span className="text-sm font-semibold text-stone-100">{tr(focusRow.region)}</span>
+            </div>
+            <dl className="mt-3 grid grid-cols-2 gap-x-4 gap-y-2 sm:grid-cols-5">
+              {(
+                [
+                  ["projects", f.number(focusRow.projects)],
+                  ["units", `${f.number(focusRow.sold)} / ${f.number(focusRow.sold + focusRow.available)}`],
+                  ["revenue", f.compactMoney(focusRow.revenue)],
+                  ["avgTrust", String(Math.round(focusRow.avgTrust))],
+                  ["avgPricePerSqm", f.compactMoney(focusRow.avgPricePerSqm)],
+                ] as const
+              ).map(([k, v]) => (
+                <div key={k} className="min-w-0">
+                  <dt className="truncate text-[10px] uppercase tracking-wider text-ink-400">{t(`admin.analytics.regions.${k}`)}</dt>
+                  <dd className={cn("truncate font-mono text-sm", k === metric ? "font-semibold text-gold-200" : "text-stone-100")}>{v}</dd>
+                </div>
+              ))}
+            </dl>
+          </div>
+        )}
       </div>
 
       <div className="xl:col-span-2">

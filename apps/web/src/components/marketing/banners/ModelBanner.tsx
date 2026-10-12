@@ -36,7 +36,7 @@ export async function ModelBanner({ href = "/projects", className, compact = fal
               {/* stage */}
               <InView className="eka-iv-scale relative lg:col-span-7">
                 <Tilt max={5} className="rounded-3xl">
-                  <div className="relative aspect-[16/11] overflow-hidden rounded-3xl border border-gold-500/25 bg-ink-850">
+                  <div className="eka-dark relative aspect-[16/11] overflow-hidden rounded-3xl border border-gold-500/25 bg-ink-850">
                     <SmartImg src={img.src} srcSet={img.srcSet} sizes="(min-width: 1024px) 50vw, 92vw" lqip={img.lqip} imgClassName="transition-[scale] duration-[1600ms] group-hover/tilt:scale-[1.04]" />
                     <div aria-hidden className="absolute inset-0 bg-[radial-gradient(ellipse_at_center,transparent_45%,rgb(11_11_12/0.45))]" />
                     {/* orbit rings in perspective */}

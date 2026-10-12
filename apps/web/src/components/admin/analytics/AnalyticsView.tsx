@@ -157,10 +157,18 @@ export function AnalyticsView() {
           )}
         </Panel>
 
-        <Panel title={t("admin.analytics.funnel.title")} hint={t("admin.analytics.funnel.hint")} icon={Data} className={span("xl:col-span-3")}>
+        <Panel title={t("admin.analytics.funnel.title")} hint={t("admin.analytics.funnel.hint")} icon={Data} className={span("xl:col-span-5")}>
           {!data ? <ChartSkeleton height={300} dim={Boolean(error)} /> : data.funnel.every((s) => !s.count) ? <NoData /> : (
             <Dimmed active={refreshing}>
               <Funnel data={data.funnel} />
+            </Dimmed>
+          )}
+        </Panel>
+
+        <Panel title={t("admin.analytics.flow.title")} hint={t("admin.analytics.flow.hint")} icon={Hierarchy} className={span("xl:col-span-3")}>
+          {!data ? <ChartSkeleton height={320} dim={Boolean(error)} /> : empty(data.statusFlow.length) ? <NoData /> : (
+            <Dimmed active={refreshing}>
+              <StatusFlow links={data.statusFlow} />
             </Dimmed>
           )}
         </Panel>
@@ -173,10 +181,10 @@ export function AnalyticsView() {
           )}
         </Panel>
 
-        <Panel title={t("admin.analytics.flow.title")} hint={t("admin.analytics.flow.hint")} icon={Hierarchy} className={span("xl:col-span-3")}>
-          {!data ? <ChartSkeleton height={320} dim={Boolean(error)} /> : empty(data.statusFlow.length) ? <NoData /> : (
+        <Panel title={t("admin.analytics.units.title")} hint={t("admin.analytics.units.hint")} icon={Home2} className={span("xl:col-span-3")}>
+          {!data ? <ChartSkeleton height={260} kind="rows" dim={Boolean(error)} /> : empty(data.unitMix.length) ? <NoData /> : (
             <Dimmed active={refreshing}>
-              <StatusFlow links={data.statusFlow} />
+              <UnitMix rows={data.unitMix} />
             </Dimmed>
           )}
         </Panel>
@@ -211,7 +219,7 @@ export function AnalyticsView() {
           title={t("admin.analytics.developers.title")}
           hint={t("admin.analytics.developers.hint")}
           icon={Ranking}
-          className={span("xl:col-span-3")}
+          className={span("xl:col-span-5")}
           contentClassName="px-0 pb-0 md:px-0 md:pb-0"
         >
           {!data ? (
@@ -220,14 +228,6 @@ export function AnalyticsView() {
             </div>
           ) : (
             <DeveloperLeaderboard rows={data.byDeveloper} />
-          )}
-        </Panel>
-
-        <Panel title={t("admin.analytics.scatter.title")} hint={t("admin.analytics.scatter.hint")} icon={ShieldTick} className={span("xl:col-span-2")}>
-          {!data ? <ChartSkeleton height={300} dim={Boolean(error)} /> : empty(data.trustVsSales.length) ? <NoData /> : (
-            <Dimmed active={refreshing}>
-              <TrustScatter points={data.trustVsSales} />
-            </Dimmed>
           )}
         </Panel>
 
@@ -247,10 +247,10 @@ export function AnalyticsView() {
           )}
         </Panel>
 
-        <Panel title={t("admin.analytics.units.title")} hint={t("admin.analytics.units.hint")} icon={Home2} className={span("xl:col-span-2")}>
-          {!data ? <ChartSkeleton height={260} kind="rows" dim={Boolean(error)} /> : empty(data.unitMix.length) ? <NoData /> : (
+        <Panel title={t("admin.analytics.scatter.title")} hint={t("admin.analytics.scatter.hint")} icon={ShieldTick} className={span("xl:col-span-2")}>
+          {!data ? <ChartSkeleton height={300} dim={Boolean(error)} /> : empty(data.trustVsSales.length) ? <NoData /> : (
             <Dimmed active={refreshing}>
-              <UnitMix rows={data.unitMix} />
+              <TrustScatter points={data.trustVsSales} />
             </Dimmed>
           )}
         </Panel>

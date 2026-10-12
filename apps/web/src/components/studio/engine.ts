@@ -11,6 +11,7 @@ import {
   disposeObject,
   displayName,
   isAncestor,
+  isLocked,
   isRenderable,
   materialsOf,
   trianglesOf,
@@ -160,6 +161,8 @@ export class Engine {
   /** last camera pose — survives perspective ⇄ orthographic switches */
   camView = { pos: new THREE.Vector3(90, 70, 110), target: new THREE.Vector3(0, 10, 0), zoom: 6, ortho: false };
   camAnimating = false;
+  /** UI feedback for refused edits (e.g. the object is locked) */
+  notify: (reason: "locked") => void = () => {};
   /** material the inspector should open next (set from the properties panel) */
   focusMaterial: string | null = null;
   /** set on load; the camera rig frames the model on its next frame */
@@ -361,9 +364,16 @@ export class Engine {
     this.push({ label, undo: () => apply(before), redo: () => apply(after) });
   }
 
+  /** locked objects (or objects inside a locked group) refuse edits */
+  private guard(o: THREE.Object3D) {
+    if (!isLocked(o, this.root)) return true;
+    this.notify("locked");
+    return false;
+  }
+
   toggleVisible(uuid: string) {
     const o = this.get(uuid);
-    if (o) this.setVisible([uuid], !o.visible, o.visible ? "hide" : "show");
+    if (o && this.guard(o)) this.setVisible([uuid], !o.visible, o.visible ? "hide" : "show");
   }
 
   showAll() {
@@ -401,7 +411,7 @@ export class Engine {
   rename(uuid: string, name: string) {
     const o = this.get(uuid);
     const next = name.trim();
-    if (!o || !next || next === displayName(o)) return;
+    if (!o || !next || next === displayName(o) || !this.guard(o)) return;
     const before = { name: o.name, u: o.userData.name as string | undefined };
     const apply = (n: string, u: string | undefined) => {
       o.name = n;
@@ -415,7 +425,7 @@ export class Engine {
 
   remove(uuid: string) {
     const o = this.get(uuid);
-    if (!o || o === this.root || !o.parent) return;
+    if (!o || o === this.root || !o.parent || !this.guard(o)) return false;
     const parent = o.parent;
     const idx = parent.children.indexOf(o);
     const doIt = () => {
@@ -434,11 +444,12 @@ export class Engine {
     };
     doIt();
     this.push({ label: "delete", undo, redo: doIt });
+    return true;
   }
 
   duplicate(uuid: string) {
     const o = this.get(uuid);
-    if (!o || o === this.root || !o.parent) return null;
+    if (!o || o === this.root || !o.parent || !this.guard(o)) return null;
     const parent = o.parent;
     const copy = o.clone(true);
     const base = displayName(o).replace(/\.\d{3}$/, "");
@@ -865,7 +876,17 @@ export class Engine {
     try {
       const exporter = new GLTFExporter();
       const identity = root.position.lengthSq() === 0 && root.quaternion.equals(new THREE.Quaternion()) && root.scale.equals(new THREE.Vector3(1, 1, 1));
-      const input = target === root && identity ? root.children.slice() : target;
+      let input: THREE.Object3D | THREE.Object3D[];
+      if (target === root) input = identity ? root.children.slice() : root;
+      else {
+        // a sub-object keeps only its local transform in glTF — bake the full model-space transform
+        // (parent scale / up-axis rotation, e.g. mm→m or Z-up fixes) into a detached clone
+        const clone = target.clone(true);
+        const m = new THREE.Matrix4().copy(this.wrapper.matrixWorld).invert().multiply(target.matrixWorld);
+        m.decompose(clone.position, clone.quaternion, clone.scale);
+        clone.updateMatrix();
+        input = clone;
+      }
       const res = await exporter.parseAsync(input, {
         binary: true,
         onlyVisible: opts.onlyVisible,

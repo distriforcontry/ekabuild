@@ -168,7 +168,7 @@ function ProgressCard({ item: u, onOpenMedia }: { item: ProgressItem; onOpenMedi
         {u.stage && <Badge tone="neutral">{tr(u.stage)}</Badge>}
         {typeof u.percent === "number" && (
           <span className="ml-auto inline-flex items-center gap-1.5 rounded-full border border-gold-500/30 bg-gold-500/10 px-2.5 py-0.5 font-mono text-[11px] font-semibold text-gold-200">
-            <Activity size={12} />
+            <Activity size={12} variant="Bulk" className="text-gold-400" />
             {u.percent}%
           </span>
         )}
@@ -199,7 +199,7 @@ function ProgressCard({ item: u, onOpenMedia }: { item: ProgressItem; onOpenMedi
       )}
       {u.author && (
         <div className="mt-4 flex items-center gap-1.5 text-xs text-ink-400">
-          <User size={13} />
+          <User size={13} variant="Bulk" className="text-gold-400" />
           {t("catalog.progress.author", { name: tr(u.author.fullName) })}
         </div>
       )}

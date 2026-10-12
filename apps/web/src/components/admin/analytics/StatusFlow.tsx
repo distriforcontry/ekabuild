@@ -75,8 +75,6 @@ export function StatusFlow({ links }: { links: FlowLink[] }) {
       if (!changed) break;
     }
     const maxLayer = Math.max(1, ...layer.values());
-    // justify: outcomes (sinks) sit in the last column
-    for (const id of ids) if (!links.some((l) => l.from === id)) layer.set(id, maxLayer);
 
     const nodes: Node[] = ids.map((id) => {
       const inV = links.filter((l) => l.to === id).reduce((s, l) => s + l.count, 0);
@@ -194,7 +192,6 @@ export function StatusFlow({ links }: { links: FlowLink[] }) {
           </g>
 
           {layout.nodes.map((n, i) => {
-            const last = n.layer === layout.maxLayer;
             const lit = nodeLit(n);
             return (
               <motion.g
@@ -214,7 +211,7 @@ export function StatusFlow({ links }: { links: FlowLink[] }) {
                 <rect x={n.x - 3} y={n.y - 3} width={NODE_W + 6} height={n.h + 6} rx={6} fill="none" stroke="transparent" strokeWidth={2} />
                 <rect x={n.x} y={n.y} width={NODE_W} height={n.h} rx={4} fill={n.color} />
                 <text
-                  x={last ? n.x + NODE_W + 10 : n.x + NODE_W + 10}
+                  x={n.x + NODE_W + 10}
                   y={n.y + n.h / 2}
                   dominantBaseline="middle"
                   className="fill-[var(--color-stone-100)] text-[12px] font-semibold"

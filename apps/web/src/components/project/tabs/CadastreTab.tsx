@@ -163,7 +163,7 @@ export function CadastreTab() {
                 label={t("catalog.cadastre.number")}
                 value={
                   <span className="inline-flex items-center gap-1 font-mono text-xs">
-                    <DocumentText size={14} className="text-ink-400" />
+                    <DocumentText size={14} variant="Bulk" className="text-gold-400" />
                     {p.cadastreNumber}
                   </span>
                 }
@@ -177,7 +177,7 @@ export function CadastreTab() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-xs font-medium text-ink-200 transition hover:border-gold-500/40 hover:text-gold-200"
                 >
-                  <Global size={15} /> Google Maps
+                  <Global size={15} variant="Bulk" className="text-gold-400" /> Google Maps
                 </a>
                 <a
                   href={`https://yandex.uz/maps/?pt=${p.lng},${p.lat}&z=17&l=map`}
@@ -185,7 +185,7 @@ export function CadastreTab() {
                   rel="noopener noreferrer"
                   className="inline-flex items-center gap-1.5 rounded-xl border border-line px-3 py-2 text-xs font-medium text-ink-200 transition hover:border-gold-500/40 hover:text-gold-200"
                 >
-                  <Map1 size={15} /> Yandex Maps
+                  <Map1 size={15} variant="Bulk" className="text-gold-400" /> Yandex Maps
                 </a>
               </div>
             )}

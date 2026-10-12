@@ -689,6 +689,7 @@ const admin = {
       mock: "Demo imzo",
       total: "Jami imzo",
       share: "E-IMZO ulushi",
+      note: "Demo imzo faqat test rejimida (EIMZO_MODE=mock) ishlaydi; productionda shartnomalar faqat E-IMZO kaliti bilan imzolanadi.",
     },
     support: {
       title: "Qo'llab-quvvatlash",
@@ -715,7 +716,7 @@ const admin = {
     legend: { http: "HTTP so'rov", data: "Ma'lumot", event: "Hodisa (RabbitMQ)", external: "Tashqi integratsiya" },
     status: { up: "Ishlayapti", down: "Ishlamayapti", unknown: "Tekshirilmaydi", answered: "Javob berdi" },
     pools: { web: "web_pool · least_conn", api: "api_pool · least_conn", worker: "worker · prefetch", webK8s: "Deployment web", apiK8s: "Deployment api", workerK8s: "Deployment worker", data: "StatefulSet" },
-    edges: { https: "HTTPS :443", api: "/api/*", ssr: "SSR → API", publish: "publish", consume: "consume", verify: "PKCS#7", sms: "SMS", scrape: "/metrics" },
+    edges: { api: "/api/*", ssr: "SSR → API", publish: "publish", consume: "consume", verify: "PKCS#7", sms: "SMS", scrape: "/metrics" },
     health: {
       title: "Jonli holat",
       polling: "Har 10 soniyada /api/v1/health",

@@ -78,7 +78,7 @@ export async function FeaturesBento() {
               <ul className="space-y-2.5 self-center">
                 {docs.map((d, i) => (
                   <li key={d} className="flex items-center gap-3 rounded-xl border border-line bg-ink-850/60 px-3 py-2.5 transition-colors group-hover/spot:border-line-strong">
-                    <DocumentText size={18} variant="Bulk" className="shrink-0 text-ink-400" />
+                    <DocumentText size={18} variant="Bulk" className="shrink-0 text-gold-400" />
                     <div className="min-w-0 flex-1">
                       <div className="truncate text-[13px] font-medium text-stone-100">{d}</div>
                       <div className="font-mono text-[10px] text-ink-500">sha256 · {hashes[i % hashes.length]}</div>
@@ -127,7 +127,7 @@ export async function FeaturesBento() {
                 ).map(([type, result]) => (
                   <li key={type} className="flex items-center justify-between gap-2 rounded-lg bg-fg/[0.03] px-2.5 py-1.5 text-xs">
                     <span className="flex items-center gap-2 text-ink-200">
-                      <Clipboard size={14} className="text-ink-400" />
+                      <Clipboard size={14} variant="Bulk" className="text-gold-400" />
                       {label("inspectionType", type)}
                     </span>
                     <StatusBadge kind="inspectionResult" value={result} />

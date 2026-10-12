@@ -72,11 +72,13 @@ export function ProjectTabs() {
                 {active && (
                   <motion.span
                     layoutId="project-tab-pill"
-                    className="absolute inset-0 rounded-xl border border-gold-500/25 bg-ink-700 shadow-card"
+                    className="absolute inset-0 overflow-hidden rounded-xl border border-gold-500/30 bg-gradient-to-b from-ink-700 to-ink-800 shadow-card"
                     transition={{ type: "spring", stiffness: 400, damping: 34 }}
-                  />
+                  >
+                    <span className="absolute inset-x-3 bottom-0 h-[2px] rounded-full bg-gold-gradient shadow-[0_0_12px_rgb(201_164_100/0.8)]" />
+                  </motion.span>
                 )}
-                <I size={17} variant={active ? "Bold" : "Linear"} className={cn("relative", active && "text-gold-300")} />
+                <I size={17} variant={active ? "Bold" : "Bulk"} className={cn("relative transition-colors", active ? "text-gold-300" : "text-gold-500/70")} />
                 <span className="relative">{t(`catalog.tabs.${key}`)}</span>
                 {typeof count === "number" && count > 0 && (
                   <span
@@ -97,9 +99,9 @@ export function ProjectTabs() {
       {TABS.map(({ key, render }) => (
         <TabsPrimitive.Content key={key} value={key} className="mt-6 focus-visible:outline-none md:mt-8">
           <motion.div
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, ease: [0.16, 1, 0.3, 1] }}
+            initial={{ opacity: 0, y: 14, scale: 0.995 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            transition={{ duration: 0.55, ease: [0.16, 1, 0.3, 1] }}
           >
             {render()}
           </motion.div>

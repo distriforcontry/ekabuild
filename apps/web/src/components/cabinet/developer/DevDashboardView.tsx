@@ -23,8 +23,7 @@ import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
-import { api } from "@/lib/api";
-import type { ContractDetail, ProjectCard, ProjectDetail, PurchaseItem } from "@/lib/types";
+import type { ProjectCard, PurchaseItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCabinetUser } from "../CabinetContext";
 import { asList, useApi } from "../hooks";
@@ -32,9 +31,22 @@ import { useFmt } from "../format";
 import { AnimatedNumber, Kpi, PageHead, Panel, PanelEmpty, SeeAll } from "../kit";
 import { ErrorState, ListSkeleton, StatCardsSkeleton } from "../states";
 import { ProjectCover } from "../ui";
+import type { ListContract } from "../buyer/ContractsView";
 import { SalesByMonthChart, TrustBars, UnitsDonut, useMonthlySales } from "./DevCharts";
 
-export type DevStats = { projects: number; unitsSold: number; unitsAvailable: number; revenue: string | number; pendingSignatures: number; avgTrust: number };
+export type DevStats = {
+  projects: number;
+  unitsSold: number;
+  unitsAvailable: number;
+  unitsReserved?: number;
+  unitsTotal?: number;
+  /** collected payments */
+  revenue: string | number;
+  /** total value of contracts */
+  contracted?: string | number;
+  pendingSignatures: number;
+  avgTrust: number;
+};
 export type DevProject = ProjectCard & { published: boolean };
 
 export function DevDashboardView() {
@@ -46,55 +58,15 @@ export function DevDashboardView() {
   const sales = useApi<PurchaseItem[]>("/dev/purchases", undefined, { select: asList });
   const org = user.organization;
 
-  // units by status: sum the per-project summaries (falls back to /dev/stats)
-  const [units, setUnits] = React.useState<{ sold: number; reserved: number; available: number } | null>(null);
-  React.useEffect(() => {
-    const list = projects.data ?? [];
-    if (!list.length) return;
-    let alive = true;
-    Promise.allSettled(list.slice(0, 12).map((p) => api.get<ProjectDetail>(`/projects/${p.slug}`))).then((res) => {
-      if (!alive) return;
-      const acc = { sold: 0, reserved: 0, available: 0 };
-      let ok = 0;
-      for (const r of res) {
-        if (r.status !== "fulfilled" || !r.value?.unitsSummary) continue;
-        ok++;
-        acc.sold += r.value.unitsSummary.SOLD ?? 0;
-        acc.reserved += r.value.unitsSummary.RESERVED ?? 0;
-        acc.available += r.value.unitsSummary.AVAILABLE ?? 0;
-      }
-      if (ok) setUnits(acc);
-    });
-    return () => {
-      alive = false;
-    };
-  }, [projects.data]);
-
-  // contracts waiting for the seller's signature
-  const [toSign, setToSign] = React.useState<PurchaseItem[] | null>(null);
-  React.useEffect(() => {
-    const candidates = (sales.data ?? []).filter((p) => p.contract && (p.contract.status === "PENDING" || p.contract.status === "PARTIALLY_SIGNED")).slice(0, 10);
-    if (!candidates.length) {
-      setToSign(sales.data ? [] : null);
-      return;
-    }
-    let alive = true;
-    Promise.all(
-      candidates.map((p) =>
-        api
-          .get<ContractDetail>(`/contracts/${p.contract!.id}`)
-          .then((c) => (c.canSign ? p : null))
-          .catch(() => p),
-      ),
-    ).then((res) => alive && setToSign(res.filter((x): x is PurchaseItem => Boolean(x))));
-    return () => {
-      alive = false;
-    };
-  }, [sales.data]);
+  // contracts waiting for the seller's signature (canSign comes with the list DTO)
+  const toSign = React.useMemo(
+    () => (sales.data ? sales.data.filter((p) => (p.contract as ListContract | null)?.canSign) : null),
+    [sales.data],
+  );
 
   const s = stats.data;
   const monthly = useMonthlySales(sales.data ?? []);
-  const donut = units ?? (s ? { sold: s.unitsSold, reserved: 0, available: s.unitsAvailable } : null);
+  const donut = s ? { sold: s.unitsSold, reserved: s.unitsReserved ?? 0, available: s.unitsAvailable } : null;
   const trust = (projects.data ?? []).map((p) => ({ name: tr(p.name), score: p.trustScore })).sort((a, b) => b.score - a.score);
   const salesTotal = monthly.reduce((x, m) => x + m.amount, 0);
 
@@ -142,6 +114,7 @@ export function DevDashboardView() {
             href="/app/developer/sales"
             label={t("app.developer.dashboard.stats.revenue")}
             value={<AnimatedNumber value={Number(s.revenue) || 0} duration={1.4} format={(n) => fmt.compact(Math.round(n))} />}
+            hint={s.contracted != null ? t("app.developer.dashboard.stats.contractedHint", { v: fmt.compact(s.contracted) }) : undefined}
             icon={DollarCircle}
           />
           <Kpi
@@ -182,10 +155,10 @@ export function DevDashboardView() {
           action={(toSign?.length ?? 0) > 0 ? <span className="grid h-6 min-w-6 place-items-center rounded-full bg-gold-gradient px-2 font-mono text-[11px] font-bold text-onyx">{toSign!.length}</span> : undefined}
           className={cn((toSign?.length ?? 0) > 0 && "border-gold-500/25")}
         >
-          {sales.loading || toSign === null ? (
-            <ListSkeleton rows={2} />
-          ) : sales.error ? (
+          {sales.error ? (
             <ErrorState error={sales.error} onRetry={sales.reload} compact />
+          ) : sales.loading || toSign === null ? (
+            <ListSkeleton rows={2} />
           ) : (
             <div className="space-y-5">
               {toSign.length === 0 ? (
@@ -200,7 +173,7 @@ export function DevDashboardView() {
                 </div>
               ) : (
                 <ul className="space-y-2">
-                  {toSign.map((p) => (
+                  {toSign.slice(0, 6).map((p) => (
                     <li key={p.id}>
                       <Link
                         href={`/app/contracts/${p.contract!.id}`}
@@ -227,6 +200,11 @@ export function DevDashboardView() {
                     </li>
                   ))}
                 </ul>
+              )}
+              {toSign.length > 6 && (
+                <Link href="/app/developer/sales" className="flex items-center justify-center gap-1.5 rounded-xl border border-dashed border-gold-500/30 py-2 text-xs font-semibold text-gold-300 transition hover:bg-gold-500/5">
+                  {t("app.developer.dashboard.signatures.more", { n: toSign.length - 6 })} <ArrowRight size={14} />
+                </Link>
               )}
               {(sales.data ?? []).length > 0 && (
                 <div>

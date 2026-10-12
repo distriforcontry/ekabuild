@@ -70,7 +70,7 @@ export type MapNode = {
   replica?: string;
 };
 
-export type MapEdge = { from: string; to: string; kind: EdgeKind; label?: "https" | "api" | "ssr" | "publish" | "consume" | "verify" | "sms" | "scrape" };
+export type MapEdge = { from: string; to: string; kind: EdgeKind; label?: "api" | "ssr" | "publish" | "consume" | "verify" | "sms" | "scrape" };
 
 export const CANVAS = { w: 1200, h: 650 };
 
@@ -108,7 +108,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       N({ id: "worker2", info: "worker", x: 994, y: 468, w: 176, h: 62, icon: Cpu, title: "worker-2", subtitle: "eka.* consumer" }),
     ],
     edges: [
-      { from: "internet", to: "nginx", kind: "http", label: "https" },
+      { from: "internet", to: "nginx", kind: "http" },
       { from: "nginx", to: "webPool", kind: "http" },
       { from: "nginx", to: "apiPool", kind: "http", label: "api" },
       { from: "webPool", to: "apiPool", kind: "http", label: "ssr" },
@@ -148,7 +148,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       N({ id: "keda", info: "keda", kind: "chip", x: 1080, y: 340, w: 112, h: 26, title: "KEDA 2→12", icon: Repeat }),
     ],
     edges: [
-      { from: "internet", to: "ingress", kind: "http", label: "https" },
+      { from: "internet", to: "ingress", kind: "http" },
       { from: "ingress", to: "webPool", kind: "http" },
       { from: "ingress", to: "apiPool", kind: "http", label: "api" },
       { from: "webPool", to: "apiPool", kind: "http", label: "ssr" },

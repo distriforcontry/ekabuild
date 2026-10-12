@@ -63,11 +63,19 @@ function Bridge() {
     engine.canvas = gl.domElement;
     gl.localClippingEnabled = true;
     invalidate();
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __ekaStudio?: unknown }).__ekaStudio = { engine, gl };
     return () => {
       engine.invalidate = () => {};
       engine.canvas = null;
     };
   }, [engine, invalidate, gl]);
+  const last = React.useRef(0);
+  useFrame(() => {
+    if (process.env.NODE_ENV === "production" || !(window as unknown as { __ekaDebug?: boolean }).__ekaDebug) return;
+    const now = performance.now();
+    console.warn(`[studio] frame ${gl.info.render.frame} +${Math.round(now - last.current)}ms calls=${gl.info.render.calls} tris=${gl.info.render.triangles} progs=${gl.info.programs?.length} anim=${engine.camAnimating}`);
+    last.current = now;
+  });
   return null;
 }
 

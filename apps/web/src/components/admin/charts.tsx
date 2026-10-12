@@ -422,33 +422,30 @@ export function Sparkline({
   const area = `${line}L${W},${height}L0,${height}Z`;
   const last = xy[xy.length - 1]!;
   return (
-    <svg viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" className={cn("block w-full overflow-visible", className)} style={{ height }} aria-hidden>
-      <defs>
-        <linearGradient id={`spk-${id}`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor={color} stopOpacity={0.22} />
-          <stop offset="100%" stopColor={color} stopOpacity={0} />
-        </linearGradient>
-      </defs>
-      <path d={area} fill={`url(#spk-${id})`} className="animate-[eka-fade_.9s_ease-out_both]" />
-      <path
-        d={line}
-        fill="none"
-        stroke={color}
-        strokeWidth={2}
-        strokeLinejoin="round"
-        strokeLinecap="round"
-        vectorEffect="non-scaling-stroke"
-        pathLength={1}
-        className="[stroke-dasharray:1] [stroke-dashoffset:1] animate-[eka-draw_1.2s_cubic-bezier(.16,1,.3,1)_.1s_forwards] motion-reduce:animate-none motion-reduce:[stroke-dashoffset:0]"
+    <div className={cn("relative animate-[eka-reveal_1.1s_cubic-bezier(.16,1,.3,1)_.1s_both] motion-reduce:animate-none", className)} style={{ height }} aria-hidden>
+      <svg viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" className="absolute inset-0 block size-full overflow-visible">
+        <defs>
+          <linearGradient id={`spk-${id}`} x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+            <stop offset="100%" stopColor={color} stopOpacity={0} />
+          </linearGradient>
+        </defs>
+        <path d={area} fill={`url(#spk-${id})`} />
+        <path d={line} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+      </svg>
+      {/* end dot in HTML so the stretched viewBox can't turn it into an ellipse */}
+      <span
+        className="absolute size-2 -translate-x-1/2 -translate-y-1/2 rounded-full ring-2 ring-ink-900"
+        style={{ left: `${(last[0] / W) * 100}%`, top: last[1], background: color }}
       />
-      <circle cx={last[0]} cy={last[1]} r={3} fill={color} stroke="var(--color-ink-900)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" className="animate-[eka-fade_.4s_ease-out_1s_both]" />
-    </svg>
+    </div>
   );
 }
 
 /** Keyframes used by the hand-drawn charts / diagrams (draw-on, fade, flowing dashes). */
 export const CHART_KEYFRAMES_CSS = `
 @keyframes eka-draw{to{stroke-dashoffset:0}}
+@keyframes eka-reveal{from{clip-path:inset(-20% 100% -20% 0)}to{clip-path:inset(-20% -2% -20% 0)}}
 @keyframes eka-fade{from{opacity:0}to{opacity:1}}
 @keyframes eka-flow{to{stroke-dashoffset:-24}}
 @keyframes eka-flow-rev{to{stroke-dashoffset:24}}

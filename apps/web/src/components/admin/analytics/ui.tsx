@@ -36,10 +36,11 @@ export function Panel({
     <motion.section
       id={id}
       aria-labelledby={headingId}
-      initial={reduce ? false : { opacity: 0, y: 16 }}
+      // same initial state on server and client (hydration); reduced motion → instant
+      initial={{ opacity: 0, y: 16 }}
       whileInView={{ opacity: 1, y: 0 }}
       viewport={{ once: true, margin: "-40px" }}
-      transition={{ duration: 0.6, ease: [0.16, 1, 0.3, 1] }}
+      transition={{ duration: reduce ? 0 : 0.6, ease: [0.16, 1, 0.3, 1] }}
       className={cn("min-w-0 break-inside-avoid print:!opacity-100 print:!transform-none", className)}
     >
       <Card className="h-full print:shadow-none">

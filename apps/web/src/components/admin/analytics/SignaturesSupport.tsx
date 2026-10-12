@@ -2,7 +2,7 @@
 import * as React from "react";
 import { motion, useReducedMotion } from "motion/react";
 import { Cell, Pie, PieChart, ResponsiveContainer } from "recharts";
-import { Danger, Messages2, TickCircle, Timer1, Warning2 } from "iconsax-reactjs";
+import { Danger, InfoCircle, Messages2, TickCircle, Timer1, Warning2 } from "iconsax-reactjs";
 import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import { useFormat } from "../format";
@@ -22,7 +22,7 @@ export function SignaturesDonut({ data }: { data: Analytics["signatures"] }) {
   const shown = active !== null ? rows[active]! : null;
 
   return (
-    <div className="flex flex-col items-center gap-5 sm:flex-row">
+    <div className="flex flex-col items-center gap-5 sm:flex-row sm:flex-wrap">
       <SrTable caption={t("admin.analytics.signatures.title")} head={[t("admin.analytics.signatures.title"), t("admin.analytics.signatures.total")]} rows={rows.map((r) => [r.label, r.value])} />
       <div className="relative size-[168px] shrink-0" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
@@ -73,6 +73,10 @@ export function SignaturesDonut({ data }: { data: Analytics["signatures"] }) {
           {t("admin.analytics.signatures.total")} <span className="font-mono text-sm font-semibold text-stone-100">{f.number(total)}</span>
         </li>
       </ul>
+      <p className="flex w-full basis-full items-start gap-2 rounded-xl border border-line bg-ink-850/60 p-3 text-xs leading-relaxed text-ink-300 sm:basis-auto">
+        <InfoCircle size={16} variant="Bulk" className="mt-px shrink-0 text-gold-300" />
+        {t("admin.analytics.signatures.note")}
+      </p>
     </div>
   );
 }

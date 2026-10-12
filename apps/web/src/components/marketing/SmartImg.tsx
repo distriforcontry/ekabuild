@@ -5,6 +5,8 @@ import { cn } from "@/lib/utils";
 /**
  * <img> that fades/sharpens in from a blurred placeholder (or a shimmering skeleton) once decoded.
  * Works with SSR: an image that finished loading before hydration is detected via `complete`.
+ * `priority` images (LCP) skip the fade and paint as soon as the bytes arrive; without JS every image is
+ * shown anyway (`html:not([data-js]) .eka-img` in globals.css).
  */
 export function SmartImg({
   src,
@@ -68,7 +70,8 @@ export function SmartImg({
         onLoad={() => setLoaded(true)}
         onError={onError}
         data-loaded={loaded ? "" : undefined}
-        className={cn("eka-img absolute inset-0 size-full object-cover", imgClassName)}
+        // priority (LCP) images are visible straight from the server HTML — no JS-driven fade
+        className={cn(!priority && "eka-img", "absolute inset-0 size-full object-cover", imgClassName)}
         style={imgStyle}
       />
     </div>

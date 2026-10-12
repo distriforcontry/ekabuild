@@ -31,7 +31,7 @@ export function TrustScatter({ points }: { points: TrustSalesPoint[] }) {
         head={[t("admin.analytics.projects.name"), t("admin.analytics.scatter.x"), t("admin.analytics.scatter.y"), t("admin.analytics.scatter.units")]}
         rows={data.map((p) => [p.label, String(p.x), `${p.y}%`, f.number(p.units)])}
       />
-      <div className="h-[300px]" aria-hidden>
+      <div className="h-[340px] xl:h-[420px]" aria-hidden>
         <ResponsiveContainer width="100%" height="100%">
           <ScatterChart margin={{ top: 10, right: 12, bottom: 4, left: 0 }}>
             <CartesianGrid stroke="var(--color-line)" />

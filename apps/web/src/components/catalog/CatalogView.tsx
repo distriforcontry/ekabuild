@@ -67,7 +67,7 @@ export function CatalogView({ data, filters, failed }: { data: Paginated<Project
               <div className="min-w-0 flex-1 sm:w-56 sm:flex-none">
                 <Combobox
                   aria-label={t("catalog.filters.sort")}
-                  options={sortOptions.map((o) => ({ ...o, icon: <Sort size={16} className="text-ink-400" /> }))}
+                  options={sortOptions.map((o) => ({ ...o, icon: <Sort size={16} variant="Bulk" className="text-gold-400" /> }))}
                   value={optimistic.sort}
                   onChange={(v) => v && navigate({ sort: v as CatalogFilters["sort"] })}
                   searchable={false}

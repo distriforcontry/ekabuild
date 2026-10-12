@@ -90,7 +90,7 @@ function CodeForm() {
       <Label htmlFor={id}>{t("landing.verify.codeLabel")}</Label>
       <div className="flex flex-col gap-3 sm:flex-row">
         <div className="relative flex-1">
-          <ScanBarcode size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+          <ScanBarcode size={18} variant="Bulk" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gold-400" />
           <Input
             id={id}
             value={code}
@@ -150,7 +150,7 @@ function NumberSearch({ initial }: { initial: string }) {
         <Label htmlFor={id}>{t("landing.verify.numberLabel")}</Label>
         <div className="flex flex-col gap-3 sm:flex-row">
           <div className="relative flex-1">
-            <Hashtag size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+            <Hashtag size={18} variant="Bulk" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gold-400" />
             <Input
               id={id}
               value={q}

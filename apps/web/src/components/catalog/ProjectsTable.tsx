@@ -39,8 +39,8 @@ export function ProjectsTable({
         exportValue: (p) => p.name,
         cell: (p) => (
           <div className="flex min-w-56 items-center gap-3">
-            <div className="size-12 shrink-0 overflow-hidden rounded-xl border border-line">
-              <ProjectCover src={p.coverUrl} name={p.name} seed={p.slug} floors={p.floors} showInitial={false} />
+            <div className="relative size-12 shrink-0 overflow-hidden rounded-xl border border-line">
+              <ProjectCover src={p.coverUrl} name={p.name} seed={p.slug} floors={p.floors} showInitial={false} width={480} sizes="48px" />
             </div>
             <div className="min-w-0">
               <div className="truncate font-semibold text-stone-100">{tr(p.name)}</div>

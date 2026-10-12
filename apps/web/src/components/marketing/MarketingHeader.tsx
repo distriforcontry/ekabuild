@@ -154,7 +154,7 @@ function MobileMenu({
           aria-label={t("landing.header.menu")}
           className="grid size-10 cursor-pointer place-items-center rounded-xl border border-line text-ink-100 transition hover:border-line-strong hover:bg-fg/5 lg:hidden"
         >
-          <HamburgerMenu size={20} />
+          <HamburgerMenu size={20} className="text-gold-300" />
         </button>
       </DialogPrimitive.Trigger>
       <AnimatePresence>
@@ -185,7 +185,7 @@ function MobileMenu({
                     aria-label={t("landing.header.closeMenu")}
                     className="grid size-10 cursor-pointer place-items-center rounded-xl border border-line text-ink-200 transition hover:bg-fg/5 hover:text-stone-100"
                   >
-                    <CloseCircle size={20} />
+                    <CloseCircle size={20} variant="Bulk" className="text-gold-300" />
                   </DialogPrimitive.Close>
                 </div>
 
@@ -238,7 +238,7 @@ function MobileMenu({
                       </span>
                     </a>
                     <a href={`mailto:${t("common.contact.email")}`} className="mt-3 flex items-center gap-3 text-sm text-ink-300 hover:text-gold-300">
-                      <Sms size={16} className="ml-3 text-ink-400" />
+                      <Sms size={16} variant="Bulk" className="ml-3 text-gold-400" />
                       {t("common.contact.email")}
                     </a>
                   </div>

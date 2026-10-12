@@ -1,14 +1,14 @@
 "use client";
 import * as React from "react";
 import { useRouter } from "next/navigation";
-import { Clock, DocumentText, TickCircle } from "iconsax-reactjs";
+import { Clock, DocumentText, FingerScan, TickCircle } from "iconsax-reactjs";
 import { Badge } from "@/components/ui/badge";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
 import type { PurchaseItem } from "@/lib/types";
-import { isAdmin } from "@/lib/roles";
+import type { SignerRole } from "@eka/shared";
 import { useCabinetUser } from "../CabinetContext";
 import { asList } from "../hooks";
 import { useFmt } from "../format";
@@ -16,7 +16,9 @@ import { AnimatedNumber, Kpi, PageHead, PanelEmpty } from "../kit";
 import { ErrorState } from "../states";
 
 type Side = "BUYER" | "SELLER";
-type Row = PurchaseItem & { contract: NonNullable<PurchaseItem["contract"]>; side: Side };
+/** list DTOs carry the viewer's side and whether they can sign right now */
+export type ListContract = NonNullable<PurchaseItem["contract"]> & { signedRoles?: SignerRole[]; viewerRole?: SignerRole | null; canSign?: boolean };
+type Row = PurchaseItem & { contract: ListContract; side: Side };
 
 /** Contracts I am a party to: as a buyer (/purchases) and — for developers — as the seller (/dev/purchases). */
 function useMyContracts(seller: boolean) {
@@ -29,8 +31,14 @@ function useMyContracts(seller: boolean) {
       return;
     }
     const rows = new Map<string, Row>();
-    const add = (list: PurchaseItem[], side: Side) => {
-      for (const p of list) if (p.contract && !rows.has(p.contract.id)) rows.set(p.contract.id, { ...p, contract: p.contract, side });
+    const add = (list: PurchaseItem[], fallback: Side) => {
+      for (const p of list) {
+        const c = p.contract as ListContract | null;
+        if (!c || rows.has(c.id)) continue;
+        // the API tells us which side we sign for; the source list is only a fallback
+        const side: Side = c.viewerRole === "SELLER" || c.viewerRole === "BUYER" ? c.viewerRole : fallback;
+        rows.set(c.id, { ...p, contract: c, side });
+      }
     };
     if (sold.status === "fulfilled") add(asList<PurchaseItem>(sold.value), "SELLER");
     if (mine.status === "fulfilled") add(asList<PurchaseItem>(mine.value), "BUYER");
@@ -47,7 +55,8 @@ export function ContractsView() {
   const fmt = useFmt();
   const router = useRouter();
   const { user } = useCabinetUser();
-  const seller = user.role === "DEVELOPER" || isAdmin(user.role);
+  // only developer-organisation members sign as the seller; admins see just their own purchases here (the full list lives in /admin)
+  const seller = user.role === "DEVELOPER" && Boolean(user.organization);
   const { rows, loading, error, reload } = useMyContracts(seller);
   const showSide = seller && rows.some((r) => r.side === "SELLER");
   const waiting = rows.filter((r) => r.contract.status === "PENDING" || r.contract.status === "PARTIALLY_SIGNED").length;
@@ -115,7 +124,16 @@ export function ContractsView() {
     {
       key: "status",
       header: t("app.contracts.columns.status"),
-      cell: (r) => <StatusBadge kind="contractStatus" value={r.contract.status} />,
+      cell: (r) => (
+        <div className="flex flex-wrap items-center gap-1.5">
+          <StatusBadge kind="contractStatus" value={r.contract.status} />
+          {r.contract.canSign && (
+            <Badge tone="gold">
+              <FingerScan variant="Bold" /> {t("app.dashboard.cta.sign")}
+            </Badge>
+          )}
+        </div>
+      ),
       sortValue: (r) => r.contract.status,
       exportValue: (r) => label("contractStatus", r.contract.status),
     },

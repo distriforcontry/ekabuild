@@ -33,6 +33,15 @@ export function SystemView() {
   }, [view]);
 
   const statusOf = React.useCallback((n: MapNode): NodeStatus => hc.statusOf(n.health), [hc]);
+  const panelRef = React.useRef<HTMLDivElement>(null);
+  // on click, bring the explanation into view when it sits below the map (< 2xl)
+  const select = React.useCallback((id: string) => {
+    setSelected(id);
+    const el = panelRef.current;
+    if (!el || window.matchMedia("(min-width: 1536px)").matches) return;
+    const r = el.getBoundingClientRect();
+    if (r.top > window.innerHeight - 120) el.scrollIntoView({ behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth", block: "start" });
+  }, []);
   const activeId = hovered ?? selected;
   const activeNode = VIEWS[view].nodes.find((n) => n.id === activeId) ?? null;
 
@@ -59,7 +68,8 @@ export function SystemView() {
 
       <HealthStrip hc={hc} />
 
-      <div className="mt-4 grid gap-4 xl:grid-cols-[minmax(0,1fr)_340px]">
+      {/* map full-width; the explanation sits beside it only where the map can stay legible (2xl) */}
+      <div className="mt-4 grid gap-4 2xl:grid-cols-[minmax(0,1fr)_360px]">
         <Card className="min-w-0 overflow-hidden">
           <div className="flex flex-wrap items-center justify-between gap-3 border-b border-line px-5 py-3.5 md:px-6">
             <p className="text-sm text-ink-300">{t(`admin.system.viewHint.${view}`)}</p>
@@ -68,9 +78,9 @@ export function SystemView() {
           <div className="bg-blueprint p-3 md:p-5">
             <ArchitectureMap
               view={view}
-              active={activeId}
+              active={hovered}
               selected={selected}
-              onSelect={setSelected}
+              onSelect={select}
               onHover={setHovered}
               statusOf={statusOf}
               answered={hc.health?.instance ?? null}
@@ -86,7 +96,9 @@ export function SystemView() {
           </div>
         </Card>
 
-        <NodePanel node={activeNode} view={view} status={activeNode ? statusOf(activeNode) : "unknown"} answered={hc.health?.instance ?? null} onSelect={setSelected} />
+        <div ref={panelRef} className="scroll-mt-24">
+          <NodePanel node={activeNode} view={view} status={activeNode ? statusOf(activeNode) : "unknown"} answered={hc.health?.instance ?? null} onSelect={setSelected} />
+        </div>
       </div>
 
       <section className="mt-12" aria-labelledby="flows-title">
@@ -321,7 +333,7 @@ function NodePanel({
     .filter((l, i, arr) => arr.findIndex((x) => x.other.info === l.other.info && x.outgoing === l.outgoing) === i);
 
   return (
-    <Card className="xl:sticky xl:top-20 xl:max-h-[calc(100dvh-6rem)] xl:overflow-y-auto">
+    <Card className="2xl:sticky 2xl:top-20 2xl:max-h-[calc(100dvh-6rem)] 2xl:overflow-y-auto">
       <AnimatePresence mode="wait" initial={false}>
         <motion.div key={`${view}-${node.id}`} initial={{ opacity: 0, x: 10 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -10 }} transition={{ duration: 0.22 }} className="p-5 md:p-6">
           <div className="flex items-start gap-3">
@@ -347,7 +359,7 @@ function NodePanel({
             )}
           </div>
 
-          <dl className="mt-5 space-y-4 text-sm">
+          <dl className="mt-5 grid gap-4 text-sm lg:grid-cols-3 lg:gap-6 2xl:grid-cols-1 2xl:gap-4">
             {(["role", "scaling", "health"] as const).map((k) => (
               <div key={k}>
                 <dt className="mb-1 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400">{t(`admin.system.panel.${k}`)}</dt>
@@ -356,6 +368,7 @@ function NodePanel({
             ))}
           </dl>
 
+          <div className="grid gap-x-6 lg:grid-cols-2 2xl:grid-cols-1">
           <div className="mt-5">
             <div className="mb-2 text-[11px] font-bold uppercase tracking-[0.16em] text-ink-400">{t("admin.system.panel.facts")}</div>
             <div className="flex flex-wrap gap-1.5">
@@ -368,7 +381,7 @@ function NodePanel({
           </div>
 
           {links.length > 0 && (
-            <ul className="mt-5 space-y-1 border-t border-line pt-4">
+            <ul className="mt-5 space-y-1 border-t border-line pt-4 lg:border-t-0 lg:pt-0 2xl:border-t 2xl:pt-4">
               {links.map(({ e, outgoing, other }) => (
                 <li key={`${e.from}-${e.to}`}>
                   <button
@@ -387,6 +400,7 @@ function NodePanel({
               ))}
             </ul>
           )}
+          </div>
         </motion.div>
       </AnimatePresence>
     </Card>

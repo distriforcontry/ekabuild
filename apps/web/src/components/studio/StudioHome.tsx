@@ -21,7 +21,7 @@ import {
 import { formatBytes } from "@eka/shared";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
-import type { FileRef, Paginated, ProjectCard, ProjectDetail } from "@/lib/types";
+import type { FileRef, Paginated, ProjectCard } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -42,23 +42,21 @@ type Card = {
   published: boolean;
 };
 
-async function details(list: ProjectCard[], own: boolean): Promise<Card[]> {
-  const res = await Promise.allSettled(list.map((p) => api.get<ProjectDetail>(`/projects/${encodeURIComponent(p.slug)}`)));
-  return list.map((p, i) => {
-    const r = res[i];
-    const d = r?.status === "fulfilled" ? r.value : null;
-    return {
-      id: p.id,
-      slug: p.slug,
-      name: p.name,
-      region: p.region,
-      coverUrl: p.coverUrl,
-      floors: p.floors,
-      model: d?.model3d ?? null,
-      own,
-      published: p.published ?? true,
-    };
-  });
+/** /projects and /dev/projects cards carry `model3d` (FileRef | null) — no per-project detail requests needed. */
+type CardWithModel = ProjectCard & { model3d?: FileRef | null };
+
+function toCard(p: CardWithModel, own: boolean): Card {
+  return {
+    id: p.id,
+    slug: p.slug,
+    name: p.name,
+    region: p.region,
+    coverUrl: p.coverUrl,
+    floors: p.floors,
+    model: p.model3d ?? null,
+    own,
+    published: p.published ?? true,
+  };
 }
 
 export function StudioHome({ initialUrl, initialName }: { initialUrl?: string; initialName?: string }) {
@@ -101,11 +99,10 @@ function Gallery({ isDev, onOpen }: { isDev: boolean; onOpen: (s: ModelSource) =
       let ownIds = new Set<string>();
       if (isDev) {
         try {
-          const own = await api.get<ProjectCard[]>("/dev/projects");
+          const own = await api.get<CardWithModel[]>("/dev/projects");
           const list = Array.isArray(own) ? own : [];
           ownIds = new Set(list.map((p) => p.id));
-          const cards = await details(list, true);
-          if (alive) setMine(cards);
+          if (alive) setMine(list.map((p) => toCard(p, true)));
         } catch {
           if (alive) {
             setMine([]);
@@ -114,10 +111,9 @@ function Gallery({ isDev, onOpen }: { isDev: boolean; onOpen: (s: ModelSource) =
         }
       }
       try {
-        const page = await api.get<Paginated<ProjectCard>>("/projects", { query: { pageSize: 24, sort: "trust" } });
-        const list = (page?.items ?? []).filter((p) => !ownIds.has(p.id));
-        const cards = (await details(list, false)).filter((c) => c.model);
-        if (alive) setCatalog(cards);
+        const page = await api.get<Paginated<CardWithModel>>("/projects", { query: { has3d: 1, pageSize: 48, sort: "trust" } });
+        const list = (page?.items ?? []).filter((p) => !ownIds.has(p.id) && p.model3d);
+        if (alive) setCatalog(list.map((p) => toCard(p, false)));
       } catch {
         if (alive) {
           setCatalog([]);

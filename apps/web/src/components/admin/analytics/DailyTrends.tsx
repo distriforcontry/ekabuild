@@ -134,7 +134,7 @@ export function DailyTrends({ data, days }: { data: DailyPoint[]; days: number }
                       ) : s.key === "views" ? (
                         <Area key={s.key} type="monotone" dataKey={s.key} stroke={chartVar(s.slot)} strokeWidth={2} fill={`url(#trend-${s.key})`} dot={false} activeDot={{ r: 4, stroke: "var(--color-ink-900)", strokeWidth: 2 }} animationDuration={900} />
                       ) : (
-                        <Line key={s.key} type="monotone" dataKey={s.key} stroke={chartVar(s.slot)} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: "var(--color-ink-900)", strokeWidth: 2 }} animationDuration={900} />
+                        <Line key={s.key} type="linear" dataKey={s.key} stroke={chartVar(s.slot)} strokeWidth={2} dot={false} activeDot={{ r: 4, stroke: "var(--color-ink-900)", strokeWidth: 2 }} animationDuration={900} />
                       ),
                     )}
                   </ComposedChart>

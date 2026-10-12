@@ -165,12 +165,12 @@ export function OverviewTab() {
                 <div className="mt-3 flex flex-wrap gap-2 text-xs">
                   {dev.phone && (
                     <a href={`tel:${dev.phone.replace(/\s/g, "")}`} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-ink-200 transition hover:border-gold-500/40 hover:text-gold-200">
-                      <Call size={14} /> {dev.phone}
+                      <Call size={14} variant="Bulk" className="text-gold-400" /> {dev.phone}
                     </a>
                   )}
                   {dev.email && (
                     <a href={`mailto:${dev.email}`} className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-ink-200 transition hover:border-gold-500/40 hover:text-gold-200">
-                      <Sms size={14} /> {dev.email}
+                      <Sms size={14} variant="Bulk" className="text-gold-400" /> {dev.email}
                     </a>
                   )}
                   {dev.website && (
@@ -180,7 +180,7 @@ export function OverviewTab() {
                       rel="noopener noreferrer"
                       className="inline-flex items-center gap-1.5 rounded-lg border border-line px-2.5 py-1.5 text-ink-200 transition hover:border-gold-500/40 hover:text-gold-200"
                     >
-                      <Global size={14} /> {dev.website.replace(/^https?:\/\//, "")}
+                      <Global size={14} variant="Bulk" className="text-gold-400" /> {dev.website.replace(/^https?:\/\//, "")}
                     </a>
                   )}
                 </div>

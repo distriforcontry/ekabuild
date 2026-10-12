@@ -691,6 +691,7 @@ const admin: Shape<typeof uz> = {
       mock: "Демо-подпись",
       total: "Всего подписей",
       share: "Доля E-IMZO",
+      note: "Демо-подпись работает только в тестовом режиме (EIMZO_MODE=mock); в продакшене договоры подписываются только ключом E-IMZO.",
     },
     support: {
       title: "Поддержка",
@@ -717,7 +718,7 @@ const admin: Shape<typeof uz> = {
     legend: { http: "HTTP-запрос", data: "Данные", event: "Событие (RabbitMQ)", external: "Внешняя интеграция" },
     status: { up: "Работает", down: "Не работает", unknown: "Не проверяется", answered: "Ответил" },
     pools: { web: "web_pool · least_conn", api: "api_pool · least_conn", worker: "worker · prefetch", webK8s: "Deployment web", apiK8s: "Deployment api", workerK8s: "Deployment worker", data: "StatefulSet" },
-    edges: { https: "HTTPS :443", api: "/api/*", ssr: "SSR → API", publish: "publish", consume: "consume", verify: "PKCS#7", sms: "SMS", scrape: "/metrics" },
+    edges: { api: "/api/*", ssr: "SSR → API", publish: "publish", consume: "consume", verify: "PKCS#7", sms: "SMS", scrape: "/metrics" },
     health: {
       title: "Живой статус",
       polling: "Каждые 10 секунд /api/v1/health",

@@ -51,7 +51,7 @@ export function DevelopersGrid({ developers }: { developers: DeveloperListItem[]
     <div>
       <div className="flex flex-col gap-3 rounded-2xl border border-line bg-ink-900/70 p-3 shadow-card md:flex-row md:items-center">
         <div className="relative flex-1">
-          <SearchNormal1 size={18} className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-ink-400" />
+          <SearchNormal1 size={18} variant="TwoTone" className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-gold-400" />
           <Input
             type="search"
             value={q}

@@ -158,7 +158,7 @@ export function TopProjectsTable({ rows }: { rows: TopProject[] }) {
       exportName="analytics-top-projects"
       emptyTitle={t("admin.analytics.projects.empty")}
       initialSort={{ key: "views", dir: "desc" }}
-      pageSize={10}
+      pageSize={6}
       className={tableChrome}
     />
   );

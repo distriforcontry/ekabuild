@@ -186,8 +186,12 @@ export function Outliner() {
   const start = Math.max(0, Math.floor(scrollTop / ROW) - 8);
   const end = Math.min(rows.length, Math.ceil((scrollTop + viewH) / ROW) + 8);
   const slice = rows.slice(start, end);
-  let nodeCount = 0;
-  root?.traverse(() => nodeCount++);
+  const nodeCount = React.useMemo(() => {
+    let n = 0;
+    root?.traverse(() => n++);
+    return n;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [root, version]);
 
   const onKey = (e: React.KeyboardEvent) => {
     if (renaming || (e.target as HTMLElement).tagName === "INPUT") return;

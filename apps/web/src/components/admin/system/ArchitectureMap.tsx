@@ -126,7 +126,9 @@ export function ArchitectureMap({
 
   return (
     <div ref={ref} className="relative overflow-x-auto overflow-y-hidden pb-2" onMouseLeave={() => onHover(null)}>
-      <div style={{ width: CANVAS.w * scale, height: CANVAS.h * scale }}>
+      <div className="mx-auto" style={{ width: CANVAS.w * scale, height: CANVAS.h * scale }}>
+        {/* plain wrapper owns the scale (motion would reset transform-origin) */}
+        <div style={{ width: CANVAS.w, height: CANVAS.h, transform: `scale(${scale})`, transformOrigin: "0 0" }}>
         <AnimatePresence mode="wait" initial={false}>
           <motion.div
             key={view}
@@ -136,8 +138,8 @@ export function ArchitectureMap({
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.25 }}
-            className="relative origin-top-left"
-            style={{ width: CANVAS.w, height: CANVAS.h, transform: `scale(${scale})` }}
+            className="relative"
+            style={{ width: CANVAS.w, height: CANVAS.h }}
           >
             {/* pools (behind everything) */}
             {nodes
@@ -190,9 +192,9 @@ export function ArchitectureMap({
                       strokeOpacity={down ? 0.5 : 1}
                       strokeWidth={1.5}
                       markerEnd={`url(#arrow-${down ? "down" : e.kind})`}
-                      initial={reduce ? false : { pathLength: 0 }}
+                      initial={{ pathLength: 0 }}
                       animate={{ pathLength: 1 }}
-                      transition={{ duration: 0.8, delay: 0.25 + i * 0.05, ease: [0.65, 0, 0.35, 1] }}
+                      transition={{ duration: reduce ? 0 : 0.8, delay: reduce ? 0 : 0.25 + i * 0.05, ease: [0.65, 0, 0.35, 1] }}
                     />
                     {e.kind !== "metrics" && (
                       <path
@@ -202,8 +204,8 @@ export function ArchitectureMap({
                         strokeWidth={lit && focus ? 2.5 : 2}
                         strokeLinecap="round"
                         strokeDasharray={down ? "3 7" : "2 10"}
-                        className={cn("eka-flowing", !reduce && "animate-[eka-fade_.6s_ease-out_both]")}
-                        style={{ animation: down || reduce ? undefined : `eka-flow ${e.kind === "event" ? 1.6 : e.kind === "external" ? 2 : 1.1}s linear infinite`, animationDelay: "0s" }}
+                        className="eka-flowing"
+                        style={{ animation: down ? undefined : `eka-flow ${e.kind === "event" ? 1.6 : e.kind === "external" ? 2 : 1.1}s linear infinite` }}
                       />
                     )}
                     {e.kind === "metrics" && <path d={e.d} fill="none" stroke={color} strokeWidth={1.25} strokeDasharray="1 5" strokeLinecap="round" />}
@@ -246,6 +248,7 @@ export function ArchitectureMap({
               ))}
           </motion.div>
         </AnimatePresence>
+        </div>
       </div>
     </div>
   );
@@ -301,9 +304,9 @@ function MapNodeCard({
     onBlur: () => onHover(null),
     "aria-pressed": selected,
     "aria-label": `${title} — ${subtitle} — ${t(`admin.system.status.${status}`)}`,
-    initial: reduce ? false : { opacity: 0, scale: 0.92 },
+    initial: { opacity: 0, scale: 0.92 },
     animate: { opacity: lit ? 1 : 0.4, scale: 1 },
-    transition: { duration: 0.45, delay: reduce ? 0 : Math.min(0.6, (n.x / 1200) * 0.5 + index * 0.01), ease: [0.16, 1, 0.3, 1] as const },
+    transition: { duration: reduce ? 0 : 0.45, delay: reduce ? 0 : Math.min(0.6, (n.x / 1200) * 0.5 + index * 0.01), ease: [0.16, 1, 0.3, 1] as const },
     style: { left: n.x, top: n.y, width: n.w, height: n.h },
   };
 
@@ -360,7 +363,7 @@ function MapNodeCard({
       )}
       {n.info === "internet" && (
         <span className="mt-2 flex flex-wrap gap-1">
-          {["www", "app", "admin", "api"].map((c) => (
+          {["app", "admin", "api"].map((c) => (
             <span key={c} className="rounded-md border border-line bg-fg/[0.03] px-1.5 py-0.5 font-mono text-[9.5px] text-ink-300">
               {c}
             </span>

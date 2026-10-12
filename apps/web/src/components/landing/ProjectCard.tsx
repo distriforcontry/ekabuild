@@ -34,7 +34,7 @@ export function ProjectCard({ project, className, pick = false }: { project: Pro
         pick && "rounded-[calc(1.5rem-1px)]",
       )}
     >
-      <div className="relative aspect-[16/11] overflow-hidden">
+      <div className="eka-dark relative aspect-[16/11] overflow-hidden">
         {imgOk && project.coverUrl ? (
           <SmartImg
             src={apiImg(project.coverUrl, 768)}
@@ -47,8 +47,9 @@ export function ProjectCard({ project, className, pick = false }: { project: Pro
           <CoverPlaceholder floors={project.floors} />
         )}
         <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0b0b0c]/85 via-[#0b0b0c]/10 to-transparent" />
+        <div aria-hidden className="absolute inset-x-0 top-0 h-20 bg-gradient-to-b from-[#0b0b0c]/55 to-transparent" />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
-          <StatusBadge kind="projectStatus" value={project.status} className="backdrop-blur-md" />
+          <StatusBadge kind="projectStatus" value={project.status} className="bg-ink-950/60 backdrop-blur-md" />
           {project.verificationStatus === "VERIFIED" && (
             <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-[#0b0b0c]/60 px-2.5 py-0.5 text-[11px] font-semibold text-[#5fd3a6] backdrop-blur-md">
               <Verify size={12} variant="Bold" />

@@ -24,8 +24,7 @@ import { Button } from "@/components/ui/button";
 import { formatMasked } from "@/components/ui/masked-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
-import { api } from "@/lib/api";
-import type { ContractDetail, ProgressItem, ProjectCard, PurchaseItem } from "@/lib/types";
+import type { ProgressItem, ProjectCard, PurchaseItem } from "@/lib/types";
 import type { DocumentItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { useCabinetUser } from "../CabinetContext";
@@ -35,6 +34,7 @@ import { AnimatedNumber, Kpi, Panel, PanelEmpty, SeeAll } from "../kit";
 import { ProjectMiniCard } from "../ProjectMiniCard";
 import { CardGridSkeleton, ErrorState, ListSkeleton, StatCardsSkeleton } from "../states";
 import { ProjectCover } from "../ui";
+import type { ListContract } from "./ContractsView";
 import { JourneyStepper } from "./JourneyStepper";
 
 export type FeedItem = ProgressItem & { project: { slug: string; name: string } };
@@ -60,27 +60,11 @@ export function DashboardView() {
   const recommended = useApi<ProjectCard[]>("/projects", { sort: "trust", pageSize: 4 }, { select: asList });
   const org = user.organization;
 
-  // contracts that need *my* signature (ask the API — it knows which side I sign for)
-  const [toSign, setToSign] = React.useState<Set<string>>(new Set());
-  React.useEffect(() => {
-    const candidates = (purchases.data ?? []).filter((p) => p.contract && (p.contract.status === "PENDING" || p.contract.status === "PARTIALLY_SIGNED")).slice(0, 8);
-    if (!candidates.length) {
-      setToSign(new Set());
-      return;
-    }
-    let alive = true;
-    Promise.all(
-      candidates.map((p) =>
-        api
-          .get<ContractDetail>(`/contracts/${p.contract!.id}`)
-          .then((c) => (c.canSign ? p.id : null))
-          .catch(() => (p.contract!.status === "PENDING" ? p.id : null)),
-      ),
-    ).then((res) => alive && setToSign(new Set(res.filter((x): x is string => Boolean(x)))));
-    return () => {
-      alive = false;
-    };
-  }, [purchases.data]);
+  // contracts waiting for *my* signature — the list DTO already says whether I can sign now
+  const toSign = React.useMemo(
+    () => new Set((purchases.data ?? []).filter((p) => (p.contract as ListContract | null)?.canSign).map((p) => p.id)),
+    [purchases.data],
+  );
 
   const list = React.useMemo(() => [...(purchases.data ?? [])].sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt)), [purchases.data]);
   const live = list.filter((p) => p.status !== "CANCELLED");

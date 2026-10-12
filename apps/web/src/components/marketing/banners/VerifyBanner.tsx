@@ -51,7 +51,7 @@ export async function VerifyBanner({ variant = "full", className }: { variant?: 
       <Container>
         <div className="eka-border rounded-[2rem]">
           <div aria-hidden className="eka-border-spin" />
-          <div className="relative isolate overflow-hidden rounded-[calc(2rem-1px)] bg-[#0f0f10]">
+          <div className="eka-dark relative isolate overflow-hidden rounded-[calc(2rem-1px)] bg-[#0f0f10]">
             {/* render, heavily graded — this banner is dark in both themes */}
             <div aria-hidden className="pointer-events-none absolute inset-0 -z-10">
               {/* eslint-disable-next-line @next/next/no-img-element */}
