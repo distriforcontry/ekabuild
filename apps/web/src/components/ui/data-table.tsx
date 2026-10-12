@@ -76,6 +76,8 @@ export type DataTableProps<T> = {
   initialSort?: Sort;
   /** initial value of the built-in search box (e.g. `q` from the URL) */
   initialQuery?: string;
+  /** summary row rendered under the table body, above the pagination (totals, sums…) */
+  footer?: React.ReactNode;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -113,6 +115,7 @@ export function DataTable<T>({
   dense,
   initialSort = null,
   initialQuery = "",
+  footer,
 }: DataTableProps<T>) {
   const { t } = useI18n();
   const [query, setQuery] = React.useState(initialQuery);
@@ -399,6 +402,8 @@ export function DataTable<T>({
           </tbody>
         </table>
       </div>
+
+      {footer && !loading && rows.length > 0 && <div className="border-t border-line bg-fg/[0.015]">{footer}</div>}
 
       {/* pagination */}
       {total > 0 && (

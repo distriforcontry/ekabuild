@@ -261,10 +261,10 @@ export function OptionsStrip() {
       >
         {tool === "select" && !transform && (
           <>
-            <span className="hidden pl-1 text-[11px] font-semibold text-ink-300 sm:inline">{t("studio.toolbar.pickMode")}</span>
+            <span className="hidden shrink-0 whitespace-nowrap pl-1 text-[11px] font-semibold text-ink-300 sm:inline">{t("studio.toolbar.pickMode")}</span>
             <Segmented
               size="sm"
-              className="w-40"
+              className="w-40 shrink-0"
               value={pickMode}
               onChange={(v) => store.set({ pickMode: v })}
               options={[

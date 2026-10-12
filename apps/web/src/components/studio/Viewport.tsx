@@ -63,19 +63,11 @@ function Bridge() {
     engine.canvas = gl.domElement;
     gl.localClippingEnabled = true;
     invalidate();
-    if (process.env.NODE_ENV !== "production") (window as unknown as { __ekaStudio?: unknown }).__ekaStudio = { engine, gl };
     return () => {
       engine.invalidate = () => {};
       engine.canvas = null;
     };
   }, [engine, invalidate, gl]);
-  const last = React.useRef(0);
-  useFrame(() => {
-    if (process.env.NODE_ENV === "production" || !(window as unknown as { __ekaDebug?: boolean }).__ekaDebug) return;
-    const now = performance.now();
-    console.warn(`[studio] frame ${gl.info.render.frame} +${Math.round(now - last.current)}ms calls=${gl.info.render.calls} tris=${gl.info.render.triangles} progs=${gl.info.programs?.length} anim=${engine.camAnimating}`);
-    last.current = now;
-  });
   return null;
 }
 
@@ -477,10 +469,10 @@ function GridFloor() {
       infiniteGrid
       cellSize={big ? 10 : 1}
       sectionSize={big ? 100 : 10}
-      cellThickness={0.6}
-      sectionThickness={1.1}
-      cellColor={light ? "#cfc8ba" : "#2c2e35"}
-      sectionColor={light ? "#b08a4e" : "#6b522d"}
+      cellThickness={0.5}
+      sectionThickness={0.9}
+      cellColor={light ? "#d9d3c7" : "#24262c"}
+      sectionColor={light ? "#c2a777" : "#4f3f27"}
       fadeDistance={Math.max(80, radius * 7)}
       fadeStrength={1.4}
       followCamera={false}

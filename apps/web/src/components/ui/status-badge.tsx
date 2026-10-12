@@ -31,6 +31,8 @@ const TONES: Record<string, Tone> = {
   SIGNED: "info",
   PAID: "success",
   CANCELLED: "danger",
+  // payments
+  OVERDUE: "danger",
   // inspections / cadastre
   PASSED: "success",
   ISSUES: "warning",
@@ -64,7 +66,7 @@ export function StatusBadge({ kind, value, className }: { kind: LabelKind; value
           ? ShieldCross
           : value === "EXPIRED" || value === "REVOKED"
             ? CloseCircle
-            : value === "ISSUES" || value === "PARTIAL"
+            : value === "ISSUES" || value === "PARTIAL" || value === "OVERDUE"
               ? Warning2
               : null;
   return (

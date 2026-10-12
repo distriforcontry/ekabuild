@@ -28,7 +28,7 @@ export async function DeveloperBanner({ className }: { className?: string }) {
                 srcSet={img.srcSet}
                 sizes="(min-width: 1024px) 60vw, 100vw"
                 lqip={img.lqip}
-                className="[mask-image:linear-gradient(to_bottom,transparent_35%,black_70%)] lg:[mask-image:linear-gradient(to_right,transparent,black_42%)]"
+                className="[mask-image:linear-gradient(to_bottom,transparent_52%,black_88%)] lg:[mask-image:linear-gradient(to_right,transparent,black_42%)]"
                 imgStyle={{ objectPosition: "50% 30%" }}
               />
             </Drift>
