@@ -1,0 +1,668 @@
+// EKA BUILD — data model
+// MySQL 8.4 · Prisma 6
+
+generator client {
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "debian-openssl-3.0.x"]
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ───────────────────────────── Enums ─────────────────────────────
+
+enum Role {
+  BUYER
+  DEVELOPER
+  INSPECTOR
+  ADMIN
+  SUPERADMIN
+}
+
+enum UserStatus {
+  ACTIVE
+  BLOCKED
+}
+
+enum OrgType {
+  DEVELOPER // quruvchi kompaniya
+  BUYER_COMPANY // xaridor yuridik shaxs
+  INSPECTION_BODY // nazorat organi
+}
+
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum ProjectStatus {
+  PLANNING
+  PERMITTED
+  UNDER_CONSTRUCTION
+  COMPLETED
+  COMMISSIONED
+  SUSPENDED
+}
+
+enum ProjectType {
+  RESIDENTIAL
+  COMMERCIAL
+  MIXED
+  INDUSTRIAL
+}
+
+enum UnitType {
+  APARTMENT
+  COMMERCIAL
+  OFFICE
+  PARKING
+  STORAGE
+}
+
+enum UnitStatus {
+  AVAILABLE
+  RESERVED
+  SOLD
+}
+
+enum DocumentType {
+  BUILDING_PERMIT
+  LICENSE
+  EXPERTISE
+  CADASTRE_EXTRACT
+  LAND_ALLOTMENT
+  CONFORMITY_CERT
+  COMMISSIONING_ACT
+  DRAWING
+  MODEL_3D
+  FLOOR_PLAN
+  REGULATION
+  CONTRACT
+  PHOTO
+  OTHER
+}
+
+enum AccessLevel {
+  PUBLIC // har kim ko'radi
+  BUYERS // faqat sotib olganlar
+  PRIVATE // faqat egasi va admin
+}
+
+enum CertificateType {
+  BUILDING_PERMIT
+  CONSTRUCTION_LICENSE
+  STATE_EXPERTISE
+  CONFORMITY
+  COMMISSIONING
+  FIRE_SAFETY
+  ENVIRONMENTAL
+}
+
+enum CertificateStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+  EXPIRED
+  REVOKED
+}
+
+enum CadastreResult {
+  MATCH
+  PARTIAL
+  MISMATCH
+  NOT_FOUND
+  ERROR
+}
+
+enum InspectionType {
+  SCHEDULED
+  UNSCHEDULED
+  FOUNDATION
+  FRAME
+  ENGINEERING
+  FINAL
+}
+
+enum InspectionResult {
+  PASSED
+  ISSUES
+  FAILED
+}
+
+enum ProgressPhase {
+  CONSTRUCTION
+  POST_HANDOVER
+}
+
+enum PurchaseStatus {
+  DRAFT
+  PENDING_SIGNATURES
+  SIGNED
+  PAID
+  COMPLETED
+  CANCELLED
+}
+
+enum PurchaseKind {
+  UNIT // xonadon / joy xaridi
+  DOCUMENT_PACKAGE // chizma va hujjatlar paketi xaridi
+}
+
+enum ContractStatus {
+  DRAFT
+  PENDING
+  PARTIALLY_SIGNED
+  SIGNED
+  CANCELLED
+}
+
+enum SignerRole {
+  BUYER
+  SELLER
+  WITNESS
+}
+
+enum SignatureMethod {
+  EIMZO
+  MOCK
+}
+
+enum ComplaintStatus {
+  OPEN
+  IN_REVIEW
+  RESOLVED
+  DISMISSED
+}
+
+enum NotificationType {
+  INFO
+  SUCCESS
+  WARNING
+  DANGER
+}
+
+// ───────────────────────────── Identity ─────────────────────────────
+
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique @db.VarChar(191)
+  phone        String?    @unique @db.VarChar(32)
+  passwordHash String     @db.VarChar(255)
+  fullName     String     @db.VarChar(191)
+  pinfl        String?    @db.VarChar(14)
+  avatarUrl    String?    @db.VarChar(512)
+  role         Role       @default(BUYER)
+  status       UserStatus @default(ACTIVE)
+  locale       String     @default("uz") @db.VarChar(5)
+  lastLoginAt  DateTime?
+
+  organizationId String?
+  organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
+
+  sessions       Session[]
+  purchases      Purchase[]       @relation("PurchaseBuyer")
+  signatures     Signature[]
+  inspections    Inspection[]
+  notifications  Notification[]
+  complaints     Complaint[]
+  uploadedFiles  FileObject[]
+  progressPosts  ProgressUpdate[]
+  favorites      Favorite[]
+  auditLogs      AuditLog[]
+  certVerified   Certificate[]    @relation("CertVerifier")
+  docVerified    Document[]       @relation("DocVerifier")
+  cadastreChecks CadastreCheck[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([role])
+  @@index([organizationId])
+}
+
+model Session {
+  id               String    @id @default(cuid())
+  userId           String
+  user             User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  refreshTokenHash String    @unique @db.VarChar(128)
+  userAgent        String?   @db.VarChar(512)
+  ip               String?   @db.VarChar(64)
+  expiresAt        DateTime
+  revokedAt        DateTime?
+  createdAt        DateTime  @default(now())
+
+  @@index([userId])
+}
+
+model Organization {
+  id             String             @id @default(cuid())
+  type           OrgType
+  name           String             @db.VarChar(191)
+  legalName      String?            @db.VarChar(255)
+  tin            String             @unique @db.VarChar(9) // STIR / INN
+  director       String?            @db.VarChar(191)
+  phone          String?            @db.VarChar(32)
+  email          String?            @db.VarChar(191)
+  website        String?            @db.VarChar(255)
+  address        String?            @db.VarChar(512)
+  region         String?            @db.VarChar(128)
+  licenseNumber  String?            @db.VarChar(64)
+  logoUrl        String?            @db.VarChar(512)
+  description    String?            @db.Text
+  foundedYear    Int?
+  status         VerificationStatus @default(PENDING)
+  rejectReason   String?            @db.VarChar(512)
+  verifiedAt     DateTime?
+
+  members   User[]
+  projects  Project[]
+  purchases Purchase[] @relation("PurchaseBuyerOrg")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([type, status])
+}
+
+// ───────────────────────────── Projects ─────────────────────────────
+
+model Project {
+  id              String        @id @default(cuid())
+  slug            String        @unique @db.VarChar(191)
+  name            String        @db.VarChar(191)
+  tagline         String?       @db.VarChar(255)
+  description     String?       @db.Text
+  type            ProjectType   @default(RESIDENTIAL)
+  status          ProjectStatus @default(PLANNING)
+
+  developerId String
+  developer   Organization @relation(fields: [developerId], references: [id], onDelete: Restrict)
+
+  region         String   @db.VarChar(128)
+  district       String?  @db.VarChar(128)
+  address        String   @db.VarChar(512)
+  lat            Float
+  lng            Float
+  cadastreNumber String?  @db.VarChar(64)
+  landArea       Float? // m²
+  totalArea      Float? // m²
+  floors         Int      @default(1)
+  sections       Int      @default(1)
+  unitsTotal     Int      @default(0)
+  priceFrom      Decimal? @db.Decimal(16, 2)
+  pricePerSqm    Decimal? @db.Decimal(16, 2)
+  currency       String   @default("UZS") @db.VarChar(3)
+
+  startDate      DateTime?
+  plannedEndDate DateTime?
+  actualEndDate  DateTime?
+  progress       Int       @default(0) // 0..100
+
+  coverUrl    String? @db.VarChar(512)
+  gallery     Json? // string[] of file urls
+  // Procedural 3D massing parameters used when no GLB model is uploaded
+  massing     Json?
+  model3dId   String? @unique
+  model3d     FileObject? @relation("ProjectModel", fields: [model3dId], references: [id], onDelete: SetNull)
+
+  // Document package price (drawings + technical docs) for legal entities
+  packagePrice Decimal? @db.Decimal(16, 2)
+
+  trustScore         Int                @default(0)
+  trustBreakdown     Json?
+  verificationStatus VerificationStatus @default(PENDING)
+  published          Boolean            @default(false)
+  featured           Boolean            @default(false)
+  views              Int                @default(0)
+
+  units          Unit[]
+  documents      Document[]
+  certificates   Certificate[]
+  cadastreChecks CadastreCheck[]
+  inspections    Inspection[]
+  progressPosts  ProgressUpdate[]
+  purchases      Purchase[]
+  complaints     Complaint[]
+  favorites      Favorite[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([developerId])
+  @@index([status, published])
+  @@index([region])
+}
+
+model Unit {
+  id        String     @id @default(cuid())
+  projectId String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  number    String     @db.VarChar(32)
+  section   Int        @default(1)
+  floor     Int
+  type      UnitType   @default(APARTMENT)
+  rooms     Int        @default(1)
+  area      Float
+  price     Decimal    @db.Decimal(16, 2)
+  status    UnitStatus @default(AVAILABLE)
+  planUrl   String?    @db.VarChar(512)
+  features  Json?
+
+  purchases Purchase[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([projectId, section, number])
+  @@index([projectId, status])
+}
+
+model FileObject {
+  id           String   @id @default(cuid())
+  storageKey   String   @unique @db.VarChar(512)
+  originalName String   @db.VarChar(255)
+  mime         String   @db.VarChar(128)
+  size         Int
+  sha256       String   @db.VarChar(64)
+  uploadedById String?
+  uploadedBy   User?    @relation(fields: [uploadedById], references: [id], onDelete: SetNull)
+  createdAt    DateTime @default(now())
+
+  document       Document?
+  projectModel   Project?        @relation("ProjectModel")
+  progressMedia  ProgressMedia[]
+  inspectionFile InspectionFile[]
+
+  @@index([sha256])
+}
+
+model Document {
+  id          String       @id @default(cuid())
+  projectId   String
+  project     Project      @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  type        DocumentType
+  title       String       @db.VarChar(255)
+  description String?      @db.Text
+  number      String?      @db.VarChar(128)
+  issuer      String?      @db.VarChar(255)
+  issuedAt    DateTime?
+  expiresAt   DateTime?
+  access      AccessLevel  @default(PUBLIC)
+  fileId      String       @unique
+  file        FileObject   @relation(fields: [fileId], references: [id], onDelete: Cascade)
+  version     Int          @default(1)
+
+  status       VerificationStatus @default(PENDING)
+  verifiedById String?
+  verifiedBy   User?              @relation("DocVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt   DateTime?
+  rejectReason String?            @db.VarChar(512)
+
+  certificate Certificate?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([projectId, type])
+}
+
+model Certificate {
+  id         String            @id @default(cuid())
+  code       String            @unique @db.VarChar(32) // public verification code (QR)
+  projectId  String
+  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentId String?           @unique
+  document   Document?         @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  type       CertificateType
+  number     String            @db.VarChar(128)
+  issuer     String            @db.VarChar(255)
+  issuedAt   DateTime
+  validUntil DateTime?
+  status     CertificateStatus @default(PENDING)
+  note       String?           @db.VarChar(512)
+  registryRef String?          @db.VarChar(255) // reference in an official registry
+
+  verifiedById String?
+  verifiedBy   User?     @relation("CertVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
+  verifiedAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([type, number])
+  @@index([projectId])
+  @@index([status])
+}
+
+model CadastreCheck {
+  id             String         @id @default(cuid())
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  cadastreNumber String         @db.VarChar(64)
+  provider       String         @db.VarChar(32)
+  result         CadastreResult
+  details        Json?
+  distanceM      Float? // distance between declared and registry coordinates
+  checkedById    String?
+  checkedBy      User?          @relation(fields: [checkedById], references: [id], onDelete: SetNull)
+  createdAt      DateTime       @default(now())
+
+  @@index([projectId, createdAt])
+}
+
+model Inspection {
+  id          String           @id @default(cuid())
+  projectId   String
+  project     Project          @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  inspectorId String
+  inspector   User             @relation(fields: [inspectorId], references: [id], onDelete: Restrict)
+  type        InspectionType
+  result      InspectionResult
+  date        DateTime
+  summary     String           @db.VarChar(512)
+  notes       String?          @db.Text
+  violations  Json? // { code, text, severity, resolved }[]
+  files       InspectionFile[]
+  createdAt   DateTime         @default(now())
+
+  @@index([projectId, date])
+}
+
+model InspectionFile {
+  inspectionId String
+  inspection   Inspection @relation(fields: [inspectionId], references: [id], onDelete: Cascade)
+  fileId       String
+  file         FileObject @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([inspectionId, fileId])
+}
+
+model ProgressUpdate {
+  id          String          @id @default(cuid())
+  projectId   String
+  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId    String?
+  author      User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  phase       ProgressPhase   @default(CONSTRUCTION)
+  title       String          @db.VarChar(255)
+  body        String?         @db.Text
+  stage       String?         @db.VarChar(128)
+  percent     Int? // project progress after this update
+  date        DateTime
+  media       ProgressMedia[]
+  createdAt   DateTime        @default(now())
+
+  @@index([projectId, date])
+}
+
+model ProgressMedia {
+  progressId String
+  progress   ProgressUpdate @relation(fields: [progressId], references: [id], onDelete: Cascade)
+  fileId     String
+  file       FileObject     @relation(fields: [fileId], references: [id], onDelete: Cascade)
+
+  @@id([progressId, fileId])
+}
+
+// ───────────────────────────── Deals ─────────────────────────────
+
+model Purchase {
+  id        String         @id @default(cuid())
+  number    String         @unique @db.VarChar(32)
+  kind      PurchaseKind
+  status    PurchaseStatus @default(DRAFT)
+  projectId String
+  project   Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  unitId    String?
+  unit      Unit?          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  // Guarantees a unit cannot be sold twice: set to unitId while the deal is active, null otherwise
+  activeUnitLock String? @unique @db.VarChar(64)
+
+  buyerId    String
+  buyer      User          @relation("PurchaseBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
+  buyerOrgId String?
+  buyerOrg   Organization? @relation("PurchaseBuyerOrg", fields: [buyerOrgId], references: [id], onDelete: SetNull)
+
+  amount   Decimal @db.Decimal(16, 2)
+  currency String  @default("UZS") @db.VarChar(3)
+  paidAt   DateTime?
+  note     String? @db.VarChar(512)
+
+  contract Contract?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([buyerId])
+  @@index([projectId])
+}
+
+model ContractTemplate {
+  id        String   @id @default(cuid())
+  key       String   @unique @db.VarChar(64)
+  name      String   @db.VarChar(191)
+  kind      PurchaseKind
+  body      String   @db.LongText // Markdown with {{placeholders}}
+  version   Int      @default(1)
+  active    Boolean  @default(true)
+  contracts Contract[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Contract {
+  id          String         @id @default(cuid())
+  number      String         @unique @db.VarChar(32)
+  purchaseId  String         @unique
+  purchase    Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  templateId  String?
+  template    ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  title       String         @db.VarChar(255)
+  body        String         @db.LongText // rendered markdown — immutable once pending
+  bodyHash    String         @db.VarChar(64) // sha256 of body
+  status      ContractStatus @default(DRAFT)
+  signedAt    DateTime?
+  signatures  Signature[]
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+}
+
+model Signature {
+  id           String          @id @default(cuid())
+  contractId   String
+  contract     Contract        @relation(fields: [contractId], references: [id], onDelete: Cascade)
+  userId       String
+  user         User            @relation(fields: [userId], references: [id], onDelete: Restrict)
+  role         SignerRole
+  method       SignatureMethod
+  pkcs7        String          @db.LongText
+  certSerial   String?         @db.VarChar(64)
+  signerName   String?         @db.VarChar(255)
+  signerTin    String?         @db.VarChar(14)
+  signerPinfl  String?         @db.VarChar(14)
+  certValidTo  DateTime?
+  verified     Boolean         @default(false)
+  verifyDetail Json?
+  signedAt     DateTime        @default(now())
+
+  @@unique([contractId, role])
+}
+
+// ───────────────────────────── Content & trust ─────────────────────────────
+
+model Rule {
+  id        String   @id @default(cuid())
+  slug      String   @unique @db.VarChar(191)
+  title     String   @db.VarChar(255)
+  category  String   @db.VarChar(64)
+  code      String?  @db.VarChar(64) // e.g. ShNQ 2.07.01-23
+  summary   String?  @db.VarChar(512)
+  body      String   @db.LongText
+  sourceUrl String?  @db.VarChar(512)
+  order     Int      @default(0)
+  published Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Complaint {
+  id         String          @id @default(cuid())
+  projectId  String?
+  project    Project?        @relation(fields: [projectId], references: [id], onDelete: SetNull)
+  reporterId String?
+  reporter   User?           @relation(fields: [reporterId], references: [id], onDelete: SetNull)
+  contact    String?         @db.VarChar(191)
+  category   String          @db.VarChar(64)
+  message    String          @db.Text
+  status     ComplaintStatus @default(OPEN)
+  resolution String?         @db.Text
+  createdAt  DateTime        @default(now())
+  updatedAt  DateTime        @updatedAt
+
+  @@index([status])
+}
+
+model Favorite {
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  projectId String
+  project   Project  @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  createdAt DateTime @default(now())
+
+  @@id([userId, projectId])
+}
+
+model Notification {
+  id        String           @id @default(cuid())
+  userId    String
+  user      User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type      NotificationType @default(INFO)
+  title     String           @db.VarChar(255)
+  body      String?          @db.VarChar(1024)
+  link      String?          @db.VarChar(512)
+  readAt    DateTime?
+  createdAt DateTime         @default(now())
+
+  @@index([userId, readAt])
+}
+
+// Tamper-evident audit trail: each row hashes its content together with the previous row's hash
+model AuditLog {
+  id        BigInt   @id @default(autoincrement())
+  actorId   String?
+  actor     User?    @relation(fields: [actorId], references: [id], onDelete: SetNull)
+  action    String   @db.VarChar(64)
+  entity    String   @db.VarChar(64)
+  entityId  String?  @db.VarChar(64)
+  meta      Json?
+  ip        String?  @db.VarChar(64)
+  prevHash  String   @db.VarChar(64)
+  hash      String   @unique @db.VarChar(64)
+  createdAt DateTime @default(now())
+
+  @@index([entity, entityId])
+  @@index([actorId])
+}
