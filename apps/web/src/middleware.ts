@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * 1. Subdomain routing (one Next app serves every host):
- *      admin.ekabuild.uz/  → /admin           app.ekabuild.uz/ → /app
+ *      admin.ekabuild.uz/  → /admin           cabinet.ekabuild.uz/ (or app.) → /app
  *    Only the root is rewritten; every other path is served as-is, so links like <Link href="/admin/users">
  *    or /projects/… work identically on every host and in local dev.
  * 2. Session refresh: when the short-lived access cookie is gone but a refresh cookie exists,
@@ -14,7 +14,8 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:4000"
 function areaForHost(host: string): "admin" | "app" | null {
   const sub = host.split(":")[0]!.split(".")[0];
   if (sub === "admin") return "admin";
-  if (sub === "app") return "app";
+  // cabinet.ekabuild.uz (production DNS) — app. kept as an alias
+  if (sub === "cabinet" || sub === "app") return "app";
   return null;
 }
 

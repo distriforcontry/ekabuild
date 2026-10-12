@@ -21,6 +21,8 @@ import buyerRoutes from "./routes/buyer";
 import inspectionRoutes from "./routes/inspection";
 import adminRoutes from "./routes/admin";
 import supportRoutes from "./routes/support";
+import analyticsRoutes from "./routes/analytics";
+import controlRoutes from "./routes/control";
 
 const startedAt = Date.now();
 
@@ -48,7 +50,7 @@ export async function buildServer() {
       try {
         const host = new URL(origin).hostname;
         const base = new URL(env.PUBLIC_URL).hostname;
-        cb(null, host === base || host.endsWith(`.${base}`) || host === "localhost");
+        cb(null, host === base || host.endsWith(`.${base}`) || (!isProd && host === "localhost"));
       } catch {
         cb(null, false);
       }
@@ -138,6 +140,8 @@ export async function buildServer() {
       await api.register(inspectionRoutes);
       await api.register(supportRoutes);
       await api.register(adminRoutes);
+      await api.register(analyticsRoutes);
+      await api.register(controlRoutes);
     },
     { prefix: "/api/v1" },
   );

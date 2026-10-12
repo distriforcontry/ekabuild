@@ -131,11 +131,16 @@ Demo accounts (seed, password **`Eka12345!`**, phone login):
 
 | | Path | Notes |
 |---|---|---|
-| 🔐 POST | `/purchases` | `{ projectId, kind: 'UNIT'\|'DOCUMENT_PACKAGE', unitId? }` → `{ purchase: PurchaseItem }` (reserves unit, creates contract) |
+| 🔐 POST | `/purchases` | `{ projectId, kind: 'UNIT'\|'DOCUMENT_PACKAGE', unitId?, plan?: { planType: 'FULL'\|'INSTALLMENT', downPercent?: 20–90 (30), months?: 3–60 (12) } }` → `{ purchase: PurchaseItem }` — reserves the unit for 7 days (`reservationUntil`), creates the contract (payment table rendered into it) and the `Payment` schedule. 400 `PROJECT_ARCHIVED` / `DEVELOPER_BLOCKED` |
 | 🔐 GET | `/purchases` | my purchases → `PurchaseItem[]` |
 | 🔐 GET | `/purchases/:id` | `PurchaseItem` |
 | 🔐 POST | `/purchases/:id/cancel` | only DRAFT / PENDING_SIGNATURES |
-| 🔐 POST | `/purchases/:id/pay` | demo payment, requires SIGNED → PAID (unit → SOLD, files unlocked) |
+| 🔐 POST | `/purchases/:id/pay` | demo gateway: pays the **next due instalment** (requires SIGNED). First payment → PAID, unit SOLD, files unlocked; last instalment of a plan → COMPLETED. 400 `NOTHING_DUE` |
+| 🔐 GET | `/purchases/:id/payments` | `{ planType, downPercent, months, total, paid, balance, progress: 0–100, next: PaymentItem\|null, overdue: number, items: PaymentItem[] }` — `PaymentItem = { id, seq (0 = down payment), dueDate, amount, status: 'PENDING'\|'PAID'\|'OVERDUE'\|'CANCELLED', paidAt, method, reference }` |
+| GET | `/calc/installment` | public calculator `?amount&downPercent=30&months=12&ratePercent=0` → `{ total, interest, down, monthly, count, limits: { minDown, maxMonths, monthsOptions }, schedule: { seq, dueDate, amount, principal, interest, balanceAfter }[] }` |
+| 🔐 GET | `/purchases/:id/annexes` | annex templates for this deal → `{ key, name, version }[]` (`annex-reservation`, `annex-payment-schedule`, `annex-acceptance`) |
+| 🔐 GET | `/purchases/:id/annexes/:key` | rendered annex as **DOCX**; `?format=md` → `{ key, title, version, body, bodyHash }` |
+| 🔐 GET | `/contracts/:id/docx` | contract as **DOCX** (Word) with SHA-256 and signatures evidence block |
 | 🔐 GET | `/contracts/:id` | `ContractDetail` (buyer, seller org members, admin) |
 | 🔐 GET | `/contracts/:id/challenge` | `{ data: base64, text, mode: 'EIMZO'\|'MOCK' }` — the exact payload to sign |
 | 🔐 POST | `/contracts/:id/sign` | `{ method: 'EIMZO'\|'MOCK', pkcs7: string }` → `ContractDetail` |
@@ -161,6 +166,11 @@ Demo accounts (seed, password **`Eka12345!`**, phone login):
 | POST | `/dev/projects/:id/progress` | `{ phase, title, body?, stage?, percent?, date, fileIds?: string[] }` |
 | POST | `/dev/projects/:id/model3d` | `{ fileId }` (GLB/GLTF) |
 | GET | `/dev/purchases` | purchases of own projects → `PurchaseItem[]` |
+| POST | `/dev/projects/:id/archive` | `{ archived: boolean }` — 400 `OPEN_DEALS` while deals await signature/payment |
+| GET | `/dev/finance` · `/dev/payments` · `/dev/deadlines` · `/dev/export/:entity` | same shapes as the admin control centre below, scoped to the developer's organisation (exports: `projects, units, purchases, payments, certificates, documents`) |
+
+A **blocked** developer organisation keeps read access but gets 403 `ORG_BLOCKED` on create / submit / add units, and its
+projects disappear from the public catalog.
 
 ## Inspection — 🔎
 
@@ -194,6 +204,28 @@ Demo accounts (seed, password **`Eka12345!`**, phone login):
 | GET | `/admin/audit` | `?entity&actorId&page` → `Paginated<AuditItem>` `{ id, action, entity, entityId, meta, ip, hash, prevHash, createdAt, actor: { fullName, email }|null }` |
 | GET | `/admin/audit/verify` | `{ ok: boolean, checked: number, brokenAt: string|null }` |
 
+List endpoints for organizations, projects, documents and complaints accept `archived` (absent → active only, `1` → archived
+only, `all` → both); organizations also `blocked=1`.
+
+## Control centre — finance, exports, block/archive, deadlines, activity 🛡
+
+| | Path | Notes |
+|---|---|---|
+| GET | `/admin/finance` | `?months=12` → `{ totals: { deals, contracted, collected, receivable, overdue, overdueCount, pendingCount, collectionRate }, byPlan: { planType, count, amount }[], monthly: { month: 'YYYY-MM', collected, scheduled, overdue }[] (past `months` + 6 ahead), byProject: { id, name, contracted, collected, overdue }[], upcoming: DuePayment[], overdue: DuePayment[] }` — `DuePayment = PaymentItem & { daysLeft, purchase: { id, number, projectName, buyerName, buyerPhone } }` |
+| GET | `/admin/payments` | `?status&q&from&to&sort=dueDate\|amount\|paidAt\|status&order&page` → `Paginated<DuePayment> & { sum }` |
+| POST | `/admin/payments/:id/mark-paid` | manual reconciliation `{ reference, method: 'bank'\|'cash'\|'click'\|'payme'\|'uzum', paidAt? }` |
+| GET | `/admin/export` | available entities |
+| GET | `/admin/export/:entity` | **Excel (.xlsx)** — `projects, units, purchases, payments, certificates, documents, users, organizations, complaints, audit`; filters `?q&status&from&to&archived`. Gold header, frozen row, autofilter, money/date formats. Audited (`EXPORT`) |
+| GET | `/admin/deadlines` | `?days=60` → `{ items: Deadline[], summary: { overdue, critical, soon, <kind>: n } }` — `Deadline = { id, kind: 'certificate'\|'project'\|'reservation'\|'payment'\|'contract'\|'complaint'\|'document', severity: 'overdue'\|'critical'\|'soon', dueDate, daysLeft, title, subtitle, link }` |
+| POST | `/admin/organizations/:id/block` | `{ blocked, reason (required when blocking) }` — members notified (SMS), catalog hides its projects |
+| POST | `/admin/users/:id/block` | `{ blocked, reason }` — revokes all sessions |
+| POST | `/admin/:entity/:id/archive` | `entity = projects\|organizations\|documents\|complaints`, `{ archived, reason? }` |
+| GET | `/admin/users/:id/activity` | `{ user, lastSeen, activeDays90, totals: { events, byType, purchases, supportThreads, favorites }, daily: { date, count }[90], topProjects: { id, name, count }[], recent: { at, kind: 'event'\|'audit', type, projectName, entity?, ip? }[], sessions: { id, ip, userAgent, createdAt, expiresAt, revokedAt, active }[], purchases }` |
+
+**Background jobs (worker, leader-elected):** every 10 min — expired reservations are cancelled, the DB unit lock released and
+the unit returned to sale (buyer + developer notified); hourly — PENDING instalments become OVERDUE one day after the due
+date (SMS to buyer, alert to developer), reminders 3 days before each due date, certificate expiry.
+
 ## Support chat (real-time)
 
 | | Path | Notes |
@@ -216,3 +248,29 @@ Types: see `SupportThread` / `SupportMessage` in `apps/web/src/lib/types.ts`.
 ## Inspector queue
 
 `GET /inspector/queue` 🔎 → `{ certificates: (CertificateItem & { project: { slug, name } })[], documents: { id, type, title, number, issuer, status, createdAt, project: { slug, name }, file: FileRef }[] }` — pending items awaiting verification.
+
+## Analytics — `/admin/analytics` 🛡
+
+`GET /admin/analytics?days=30` (7 | 30 | 90 | 365) →
+
+```ts
+{
+  range: { from, to, days },
+  totals: { views, certificateLookups, fileChecks, registrations, logins, purchases, signed, paid, revenue /* string */,
+            complaints, supportThreads, avgTrust },
+  previous: { /* same keys for the preceding period — for % deltas */ },
+  funnel: { step: "views" | "favorites" | "purchases" | "signed" | "paid", count }[],
+  daily: { date /* yyyy-mm-dd */, views, registrations, purchases, paid, revenue, lookups }[],
+  byRegion: { region, projects, sold, available, revenue, avgTrust, avgPricePerSqm }[],
+  byDeveloper: { id, name, projects, sold, revenue, avgTrust, complaints }[],
+  topProjects: { slug, name, views, purchases, conversion /* % */, trustScore, coverUrl }[],
+  trustVsSales: { name, slug, trustScore, soldShare /* 0..1 */, units }[],
+  unitMix: { rooms, sold, reserved, available, avgArea, avgPrice }[],
+  statusFlow: { from, to, count }[],      // purchase state transitions (Sankey: created → signed → paid / cancelled)
+  signatures: { EIMZO, MOCK },
+  support: { threads, closed, avgFirstResponseMin },
+  hourly: { hour /* 0..23 */, views, purchases }[]   // activity by hour of day (Tashkent time)
+}
+```
+
+Images: every image file supports `GET /files/:id?w=320|480|768|1024|1600|2400` → resized **WebP** (generated once, cached).

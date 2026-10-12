@@ -14,6 +14,42 @@ import { audit } from "../src/lib/audit";
 import { cadastreProvider, evaluateCadastre } from "../src/lib/cadastre";
 import { sha256 } from "../src/lib/auth";
 import { closeBus } from "../src/lib/bus";
+import { buildSchedule, type PlanInput, type ScheduleRow } from "../src/lib/finance";
+
+/**
+ * Payment rows for a seeded deal. Instalments already due are paid (a few days early / late, as in real life),
+ * except `missLast` most recent ones which stay unpaid → OVERDUE (or PENDING within the 1-day grace).
+ */
+async function seedPayments(purchaseId: string, rows: ScheduleRow[], opts: { paid: boolean; firstPaidAt?: Date; missLast?: number; r: () => number }) {
+  const now = Date.now();
+  const due = rows.filter((x) => x.dueDate.getTime() <= now);
+  const missFrom = opts.missLast ? Math.max(1, due.length - opts.missLast) : Infinity;
+  let allPaid = true;
+  for (const row of rows) {
+    const isDue = row.dueDate.getTime() <= now;
+    let status: "PENDING" | "PAID" | "OVERDUE" = "PENDING";
+    let paidAt: Date | null = null;
+    if (opts.paid && (row.seq === 0 || (isDue && row.seq < missFrom))) {
+      status = "PAID";
+      paidAt = row.seq === 0 && opts.firstPaidAt ? opts.firstPaidAt : new Date(row.dueDate.getTime() - Math.floor(opts.r() * 5 - 1) * 86400_000);
+      if (paidAt.getTime() > now) paidAt = new Date(now - 3600_000);
+    } else if (opts.paid && isDue && row.dueDate.getTime() < now - 86400_000) status = "OVERDUE";
+    if (status !== "PAID") allPaid = false;
+    await prisma.payment.create({
+      data: {
+        purchaseId,
+        seq: row.seq,
+        dueDate: row.dueDate,
+        amount: row.amount,
+        status,
+        paidAt,
+        method: paidAt ? (["click", "payme", "bank", "uzum"] as const)[Math.floor(opts.r() * 4)] : null,
+        reference: paidAt ? `TX${Math.floor(opts.r() * 1e10).toString(36).toUpperCase()}` : null,
+      },
+    });
+  }
+  return { allPaid };
+}
 
 /**
  * Seed:
@@ -55,9 +91,15 @@ const UNIT_TEMPLATE = `# KO'CHMAS MULK OLDI-SOTDI (ULUSHLI QURILISH) SHARTNOMASI
 
 ## 2. Narx va to'lov tartibi
 
-2.1. Shartnoma bahosi: **{{amount}}** ({{amountWords}}).
+2.1. Shartnoma bahosi: **{{amount}}** ({{amountWords}}). Narx shartnoma amal qilish davomida o'zgarmaydi.
 
-2.2. To'lov EKA BUILD platformasi orqali, shartnoma ikki tomonlama E-IMZO bilan imzolangandan so'ng amalga oshiriladi.
+2.2. To'lov tartibi: {{payment.plan}}. To'lov jadvali (1-ilova) shartnomaning ajralmas qismi hisoblanadi:
+
+{{payment.table}}
+
+2.3. To'lovlar EKA BUILD platformasi orqali, shartnoma ikki tomonlama E-IMZO bilan imzolangandan so'ng amalga oshiriladi. Har bir to'lov platformada qayd etiladi va Xaridorga SMS orqali tasdiqlanadi.
+
+2.4. To'lov muddati o'tib ketganda Xaridorga eslatma yuboriladi; 30 (o'ttiz) kundan ortiq kechikish Quruvchiga shartnomani bir tomonlama bekor qilish huquqini beradi, bunda to'langan summa 10 (o'n) bank kuni ichida qaytariladi.
 
 ## 3. Tomonlarning majburiyatlari
 
@@ -109,6 +151,92 @@ const PACKAGE_TEMPLATE = `# LOYIHA HUJJATLARI PAKETINI TAQDIM ETISH SHARTNOMASI
 ## 4. Yakuniy qoidalar
 
 4.1. Shartnoma tomonlarning E-IMZO imzolari bilan kuchga kiradi.
+`;
+
+
+const RESERVATION_TEMPLATE = `# XONADONNI BAND QILISH (BRON) TO'G'RISIDA KELISHUV
+
+**{{contract.number}}-sonli shartnomaga ilova** · {{contract.date}}
+
+**Quruvchi:** {{seller.name}} (STIR {{seller.tin}}). **Xaridor:** {{buyer.fullName}} {{buyerOrg.name}}, tel. {{buyer.phone}}.
+
+## 1. Band qilinadigan xonadon
+
+| Ko'rsatkich | Qiymat |
+|---|---|
+| Obyekt | {{project.name}} |
+| Manzil | {{project.address}} |
+| Xonadon | № {{unit.number}}, {{unit.floor}}-qavat, {{unit.section}}-blok |
+| Xonalar / maydon | {{unit.rooms}} xona · {{unit.area}} m² |
+| Narx | {{amount}} |
+
+## 2. Band qilish muddati
+
+2.1. Xonadon **{{reservation.until}}** gacha Xaridor uchun band qilinadi. Bu muddat davomida xonadon boshqa xaridorlarga taklif etilmaydi — platforma uni ma'lumotlar bazasi darajasida bloklaydi.
+
+2.2. Muddat ichida shartnoma ikki tomonlama imzolanmasa va boshlang'ich to'lov amalga oshirilmasa, bron avtomatik bekor qilinadi va xonadon sotuvga qaytariladi.
+
+## 3. Boshqa shartlar
+
+3.1. Band qilish uchun to'lov olinmaydi. Kelishuv EKA BUILD platformasida elektron shaklda tuzilgan.
+`;
+
+const PAYMENT_SCHEDULE_TEMPLATE = `# TO'LOV JADVALI
+
+**{{contract.number}}-sonli oldi-sotdi shartnomasiga 1-ilova** · {{contract.date}}
+
+**Obyekt:** {{project.name}}, xonadon № {{unit.number}} ({{unit.area}} m²). **Xaridor:** {{buyer.fullName}} {{buyerOrg.name}}.
+
+## 1. Umumiy shartlar
+
+| Ko'rsatkich | Qiymat |
+|---|---|
+| Shartnoma bahosi | {{amount}} |
+| To'lov tartibi | {{payment.plan}} |
+| Boshlang'ich to'lov | {{payment.down}} |
+| Oylik to'lov | {{payment.monthly}} |
+| To'lovlar soni | {{payment.count}} |
+| Oxirgi to'lov sanasi | {{payment.lastDate}} |
+
+## 2. Jadval
+
+{{payment.table}}
+
+## 3. Izohlar
+
+3.1. To'lov muddatidan oldin to'lash mumkin — qolgan qism shunga mos ravishda kamayadi, jarima qo'llanilmaydi.
+
+3.2. Har bir to'lov platformada qayd etiladi; to'lov tarixi Xaridorning shaxsiy kabinetida doimiy ko'rinadi.
+`;
+
+const ACCEPTANCE_TEMPLATE = `# XONADONNI QABUL QILISH-TOPSHIRISH DALOLATNOMASI
+
+**{{contract.number}}-sonli shartnoma asosida** · {{contract.date}}
+
+Biz, quyida imzo chekuvchilar, **{{seller.name}}** (Quruvchi, direktor {{seller.director}}) va **{{buyer.fullName}}** {{buyerOrg.name}} (Xaridor), ushbu dalolatnomani tuzdik:
+
+## 1. Topshirilayotgan obyekt
+
+| Ko'rsatkich | Qiymat |
+|---|---|
+| Obyekt | {{project.name}} |
+| Manzil / kadastr | {{project.address}} · {{project.cadastreNumber}} |
+| Xonadon | № {{unit.number}}, {{unit.floor}}-qavat |
+| Xonalar / maydon | {{unit.rooms}} xona · {{unit.area}} m² |
+
+## 2. Holat
+
+2.1. Xonadon loyiha hujjatlariga muvofiq qurilgan, muhandislik tarmoqlari (elektr, suv, kanalizatsiya, gaz, isitish) ulangan va sinovdan o'tgan.
+
+2.2. Hisoblagichlar ko'rsatkichlari: elektr ______ kVt·soat, suv ______ m³, gaz ______ m³.
+
+2.3. Aniqlangan kamchiliklar: ______. Quruvchi ularni 30 kun ichida bartaraf etish majburiyatini oladi.
+
+## 3. Kafolat
+
+3.1. Konstruktiv elementlarga kafolat muddati — 5 yil, muhandislik tizimlariga — 2 yil. Kafolat davridagi murojaatlar EKA BUILD platformasi orqali qabul qilinadi va kuzatib boriladi.
+
+3.2. Tomonlar bir-biriga moliyaviy da'volari yo'qligini tasdiqlaydi.
 `;
 
 const RULES: { slug: string; title: string; category: string; code?: string; summary: string; body: string; order: number }[] = [
@@ -261,12 +389,20 @@ async function seedBase() {
   for (const [key, name, kind, body] of [
     ["unit-sale", "Ko'chmas mulk oldi-sotdi shartnomasi", "UNIT", UNIT_TEMPLATE],
     ["document-package", "Hujjatlar paketi shartnomasi", "DOCUMENT_PACKAGE", PACKAGE_TEMPLATE],
+    ["annex-reservation", "Bron kelishuvi (ilova)", "UNIT", RESERVATION_TEMPLATE],
+    ["annex-payment-schedule", "To'lov jadvali (1-ilova)", "UNIT", PAYMENT_SCHEDULE_TEMPLATE],
+    ["annex-acceptance", "Qabul-topshirish dalolatnomasi", "UNIT", ACCEPTANCE_TEMPLATE],
   ] as const) {
     await prisma.contractTemplate.upsert({ where: { key }, update: {}, create: { key, name, kind, body } });
   }
   for (const r of RULES) await prisma.rule.upsert({ where: { slug: r.slug }, update: {}, create: r });
 
-  const phone = process.env.SUPERADMIN_PHONE ?? "+998901000001";
+  // empty env values (compose passes "" when unset) must fall back too — never create an admin with an empty password
+  const phone = process.env.SUPERADMIN_PHONE?.trim() || "+998901000001";
+  const password = process.env.SUPERADMIN_PASSWORD?.trim() || DEMO_PASSWORD;
+  if (process.env.NODE_ENV === "production" && password === DEMO_PASSWORD && process.env.SEED_DEMO === "false") {
+    console.warn("⚠ SUPERADMIN_PASSWORD is not set — the bootstrap admin uses the demo password. Change it immediately!");
+  }
   if (!(await prisma.user.findUnique({ where: { phone } }))) {
     await prisma.user.create({
       data: {
@@ -274,7 +410,7 @@ async function seedBase() {
         phoneVerifiedAt: new Date(),
         email: "admin@ekabuild.uz",
         fullName: "Bosh administrator",
-        passwordHash: await bcrypt.hash(process.env.SUPERADMIN_PASSWORD ?? DEMO_PASSWORD, 11),
+        passwordHash: await bcrypt.hash(password, 11),
         role: "SUPERADMIN",
       },
     });
@@ -813,17 +949,28 @@ async function seedDemo() {
 
   // ── deals: one completed purchase (signed + paid), one pending signature, one company package
   const sig = (data: string) => Buffer.from(JSON.stringify({ mock: true, data, signedAt: new Date().toISOString() })).toString("base64");
-  async function deal(buyerUser: typeof buyer, projectSlug: string, kind: "UNIT" | "DOCUMENT_PACKAGE", finalStatus: "PENDING_SIGNATURES" | "PAID" | "COMPLETED") {
+  async function deal(
+    buyerUser: typeof buyer,
+    projectSlug: string,
+    kind: "UNIT" | "DOCUMENT_PACKAGE",
+    finalStatus: "PENDING_SIGNATURES" | "PAID" | "COMPLETED",
+    opts: { plan?: PlanInput; ageDays?: number } = {},
+  ) {
+    const createdAt = new Date(Date.now() - (opts.ageDays ?? 0) * 86400_000);
+    const plan: PlanInput = opts.plan ?? { planType: "FULL" };
     const project = await prisma.project.findUniqueOrThrow({ where: { slug: projectSlug }, include: { developer: true } });
     const unit = kind === "UNIT" ? await prisma.unit.findFirst({ where: { projectId: project.id, status: "AVAILABLE", floor: { gte: 6 } }, orderBy: { floor: "asc" } }) : null;
     const template = await prisma.contractTemplate.findUniqueOrThrow({ where: { key: kind === "UNIT" ? "unit-sale" : "document-package" } });
     const org = buyerUser.organizationId ? await prisma.organization.findUnique({ where: { id: buyerUser.organizationId } }) : null;
     const amount = Number(unit ? unit.price : project.packagePrice);
     const number = docNumber("C");
+    const schedule = buildSchedule(amount, plan, createdAt);
+    const reservationUntil = unit && finalStatus === "PENDING_SIGNATURES" ? new Date(createdAt.getTime() + 7 * 86400_000) : null;
     const body = renderTemplate(
       template.body,
       contractContext({
         number,
+        date: createdAt,
         buyer: { fullName: buyerUser.fullName, phone: buyerUser.phone, pinfl: buyerUser.pinfl },
         buyerOrg: org ? { name: org.name, tin: org.tin } : null,
         seller: { name: project.developer.legalName ?? project.developer.name, tin: project.developer.tin, director: project.developer.director, address: project.developer.address },
@@ -831,10 +978,14 @@ async function seedDemo() {
         unit: unit ? { number: unit.number, floor: unit.floor, area: unit.area, rooms: unit.rooms, section: unit.section } : null,
         amount,
         currency: "UZS",
+        payment: unit ? { planType: plan.planType, downPercent: plan.downPercent ?? 100, months: plan.months ?? 0, rows: schedule } : null,
+        reservationUntil,
       }),
     );
     const bodyHash = sha256(body);
     const signed = finalStatus !== "PENDING_SIGNATURES";
+    const signedAt = new Date(createdAt.getTime() + 86400_000);
+    const firstPaidAt = new Date(createdAt.getTime() + 3 * 86400_000);
     const purchase = await prisma.purchase.create({
       data: {
         number: docNumber("P"),
@@ -846,11 +997,19 @@ async function seedDemo() {
         buyerId: buyerUser.id,
         buyerOrgId: org?.id,
         amount,
-        paidAt: signed ? new Date() : null,
-        contract: { create: { number, templateId: template.id, title: `${template.name} — ${project.name}${unit ? `, №${unit.number}` : ""}`, body, bodyHash, status: signed ? "SIGNED" : "PARTIALLY_SIGNED", signedAt: signed ? new Date() : null } },
+        paidAt: signed ? firstPaidAt : null,
+        planType: plan.planType,
+        downPercent: plan.planType === "INSTALLMENT" ? (plan.downPercent ?? 30) : 100,
+        months: plan.months ?? 0,
+        reservationUntil,
+        createdAt,
+        contract: {
+          create: { number, templateId: template.id, title: `${template.name} — ${project.name}${unit ? `, №${unit.number}` : ""}`, body, bodyHash, status: signed ? "SIGNED" : "PARTIALLY_SIGNED", signedAt: signed ? signedAt : null, createdAt },
+        },
       },
       include: { contract: true },
     });
+    await seedPayments(purchase.id, schedule, { paid: signed, firstPaidAt, r: rng(7) });
     if (unit) await prisma.unit.update({ where: { id: unit.id }, data: { status: signed ? "SOLD" : "RESERVED" } });
     const seller = await prisma.user.findFirstOrThrow({ where: { organizationId: project.developerId } });
     const c = purchase.contract!;
@@ -870,15 +1029,17 @@ async function seedDemo() {
           signerTin: role === "SELLER" ? project.developer.tin : org?.tin,
           signerPinfl: user.pinfl,
           verified: true,
+          signedAt: role === "SELLER" ? new Date(createdAt.getTime() + 3600_000) : signedAt,
         },
       });
     }
     await audit({ actorId: buyerUser.id, action: "PURCHASE_CREATE", entity: "Purchase", entityId: purchase.id, meta: { number: purchase.number, kind, contractHash: bodyHash } });
     return purchase;
   }
-  await deal(buyer, "chilonzor-smart-city", "UNIT", "PAID");
-  await deal(buyer, "oltin-vodiy-residence", "UNIT", "PENDING_SIGNATURES");
-  await deal(companyUser, "farg-ona-business-tower".replace("farg-ona", "fargona"), "DOCUMENT_PACKAGE", "COMPLETED");
+  // demo buyer: 24-month instalment plan started ~4 months ago (down + 3 instalments paid, next one due soon)
+  await deal(buyer, "chilonzor-smart-city", "UNIT", "PAID", { plan: { planType: "INSTALLMENT", downPercent: 30, months: 24 }, ageDays: 117 });
+  await deal(buyer, "oltin-vodiy-residence", "UNIT", "PENDING_SIGNATURES", { ageDays: 2 });
+  await deal(companyUser, "farg-ona-business-tower".replace("farg-ona", "fargona"), "DOCUMENT_PACKAGE", "COMPLETED", { ageDays: 21 });
   await prisma.favorite.createMany({
     data: [
       { userId: buyer.id, projectId: (await prisma.project.findUniqueOrThrow({ where: { slug: "mirzo-ulugbek-park" } })).id },
@@ -911,12 +1072,277 @@ async function seedDemo() {
   console.log("✓ support, notifications");
 }
 
+// ───────────────────────────── history: consistent deals & analytics ─────────────────────────────
+
+const FIRST_NAMES = ["Aziz", "Bekzod", "Dilshod", "Jahongir", "Otabek", "Sardor", "Sherzod", "Ulug'bek", "Javohir", "Akmal", "Rustam", "Farrux", "Nodir", "Islom", "Timur",
+  "Malika", "Dilnoza", "Gulnora", "Madina", "Nigora", "Sevara", "Shahnoza", "Zarina", "Kamola", "Feruza", "Mohira", "Nilufar", "Durdona", "Laylo", "Munisa"];
+const LAST_NAMES = ["Karimov", "Rahimov", "Yusupov", "Tursunov", "Aliyev", "Ergashev", "Hamidov", "Nazarov", "Rasulov", "Usmonov", "Qodirov", "Saidov", "Abdullayev",
+  "Ismoilov", "Mirzayev", "Xolmatov", "Sobirov", "Jo'rayev", "Normatov", "Ahmedov"];
+
+function personName(r: () => number) {
+  const first = FIRST_NAMES[Math.floor(r() * FIRST_NAMES.length)]!;
+  let last = LAST_NAMES[Math.floor(r() * LAST_NAMES.length)]!;
+  // female surnames take -a (Karimova, Yusupova…)
+  if (FIRST_NAMES.indexOf(first) >= 15) last = last.endsWith("v") ? `${last}a` : last;
+  return `${first} ${last}`;
+}
+
+/**
+ * Makes the demo data internally consistent: every SOLD unit has a paid purchase with a signed contract,
+ * every RESERVED unit has a pending deal, buyers registered over the last 18 months, and 120 days of
+ * product analytics (views with a realistic daily/hourly rhythm, certificate lookups, file checks, searches).
+ */
+async function seedHistory() {
+  const r = rng(2026);
+  const pw = await bcrypt.hash(DEMO_PASSWORD, 11);
+  const now = Date.now();
+  const DAY = 86400_000;
+
+  // buyers registered over 18 months
+  const buyers: { id: string; fullName: string; phone: string; pinfl: string }[] = [];
+  for (let i = 0; i < 64; i++) {
+    const created = new Date(now - Math.floor(r() * 540) * DAY - Math.floor(r() * DAY));
+    const pinfl = `3${String(Math.floor(r() * 1e13)).padStart(13, "0")}`;
+    const u = await prisma.user.create({
+      data: {
+        phone: `+99891${String(1000000 + i * 7919).slice(-7)}`,
+        phoneVerifiedAt: created,
+        fullName: personName(r),
+        pinfl,
+        role: "BUYER",
+        passwordHash: pw,
+        createdAt: created,
+      },
+    });
+    buyers.push({ id: u.id, fullName: u.fullName, phone: u.phone, pinfl });
+  }
+  const companies = await prisma.organization.findMany({ where: { type: "BUYER_COMPANY" } });
+
+  const template = await prisma.contractTemplate.findUniqueOrThrow({ where: { key: "unit-sale" } });
+  const projects = await prisma.project.findMany({ include: { developer: true } });
+  const sellers = new Map<string, string>();
+  for (const p of projects) {
+    const s = await prisma.user.findFirst({ where: { organizationId: p.developerId } });
+    if (s) sellers.set(p.developerId, s.id);
+  }
+
+  let deals = 0;
+  for (const p of projects) {
+    const sold = await prisma.unit.findMany({ where: { projectId: p.id, status: { in: ["SOLD", "RESERVED"] }, purchases: { none: {} } } });
+    const salesStart = (p.startDate ?? new Date(now - 540 * DAY)).getTime();
+    let openReservations = 0;
+    for (const unit of sold) {
+      // a reservation lives 7 days, so only a handful can be open at any moment — the rest go back on sale
+      if (unit.status === "RESERVED" && ++openReservations > 2) {
+        await prisma.unit.update({ where: { id: unit.id }, data: { status: "AVAILABLE" } });
+        continue;
+      }
+      const buyer = buyers[Math.floor(r() * buyers.length)]!;
+      const company = r() < 0.12 ? companies[0] : null;
+      const reserved = unit.status === "RESERVED";
+      // reservations live 7 days — open ones were created during the last week
+      const createdAt = new Date(reserved ? now - Math.floor(r() * 6 * DAY + 3600_000) : salesStart + Math.floor(r() * Math.max(1, now - salesStart - 10 * DAY)));
+      const signedAt = new Date(createdAt.getTime() + Math.floor(1 + r() * 2) * DAY);
+      const paidAt = new Date(signedAt.getTime() + Math.floor(1 + r() * 2) * DAY);
+      // ~45% buy with instalments (down 30–50%, 12–36 months), the rest pay in full
+      const plan: PlanInput =
+        r() < 0.45 ? { planType: "INSTALLMENT", downPercent: [30, 30, 40, 50][Math.floor(r() * 4)]!, months: [12, 18, 24, 24, 36][Math.floor(r() * 5)]! } : { planType: "FULL" };
+      const schedule = buildSchedule(Number(unit.price), plan, createdAt);
+      const reservationUntil = reserved ? new Date(createdAt.getTime() + 7 * DAY) : null;
+      const number = docNumber("C");
+      const body = renderTemplate(
+        template.body,
+        contractContext({
+          number,
+          buyer: { fullName: buyer.fullName, phone: buyer.phone, pinfl: buyer.pinfl },
+          buyerOrg: company ? { name: company.name, tin: company.tin } : null,
+          seller: { name: p.developer.legalName ?? p.developer.name, tin: p.developer.tin, director: p.developer.director, address: p.developer.address },
+          project: { name: p.name, address: p.address, cadastreNumber: p.cadastreNumber },
+          unit: { number: unit.number, floor: unit.floor, area: unit.area, rooms: unit.rooms, section: unit.section },
+          amount: Number(unit.price),
+          currency: p.currency,
+          payment: { planType: plan.planType, downPercent: plan.downPercent ?? 100, months: plan.months ?? 0, rows: schedule },
+          reservationUntil,
+          date: createdAt,
+        }),
+      );
+      const bodyHash = sha256(body);
+      const purchase = await prisma.purchase.create({
+        data: {
+          number: docNumber("P"),
+          kind: "UNIT",
+          status: reserved ? "PENDING_SIGNATURES" : p.status === "COMMISSIONED" ? "COMPLETED" : "PAID",
+          projectId: p.id,
+          unitId: unit.id,
+          activeUnitLock: unit.id,
+          buyerId: buyer.id,
+          buyerOrgId: company?.id,
+          amount: unit.price,
+          currency: p.currency,
+          paidAt: reserved ? null : paidAt,
+          planType: plan.planType,
+          downPercent: plan.planType === "INSTALLMENT" ? plan.downPercent! : 100,
+          months: plan.months ?? 0,
+          reservationUntil,
+          createdAt,
+          contract: {
+            create: {
+              number,
+              templateId: template.id,
+              title: `${template.name} — ${p.name}, №${unit.number}`,
+              body,
+              bodyHash,
+              status: reserved ? "PARTIALLY_SIGNED" : "SIGNED",
+              signedAt: reserved ? null : signedAt,
+              createdAt,
+            },
+          },
+        },
+        include: { contract: true },
+      });
+      const sellerId = sellers.get(p.developerId);
+      const signers: [SignerRole, string, string | null][] = [];
+      if (sellerId) signers.push(["SELLER", sellerId, p.developer.tin]);
+      if (!reserved) signers.push(["BUYER", buyer.id, company?.tin ?? null]);
+      for (const [role, userId, tin] of signers) {
+        const payload = signingPayload(purchase.contract!, role, userId);
+        await prisma.signature.create({
+          data: {
+            contractId: purchase.contract!.id,
+            userId,
+            role,
+            method: "MOCK",
+            pkcs7: Buffer.from(JSON.stringify({ mock: true, data: payload.data })).toString("base64"),
+            certSerial: "DEMO",
+            signerName: role === "BUYER" ? buyer.fullName : p.developer.director,
+            signerTin: tin,
+            signerPinfl: role === "BUYER" ? buyer.pinfl : null,
+            verified: true,
+            signedAt: role === "SELLER" ? new Date(createdAt.getTime() + 3600_000) : signedAt,
+          },
+        });
+      }
+      // ~10% of instalment buyers are behind by 1–2 payments → OVERDUE rows for the control centre
+      const missLast = plan.planType === "INSTALLMENT" && r() < 0.1 ? 1 + Math.floor(r() * 2) : 0;
+      const { allPaid } = await seedPayments(purchase.id, schedule, { paid: !reserved, firstPaidAt: paidAt, missLast, r });
+      if (!reserved && plan.planType === "INSTALLMENT") await prisma.purchase.update({ where: { id: purchase.id }, data: { status: allPaid ? "COMPLETED" : "PAID" } });
+      deals++;
+    }
+  }
+  console.log(`✓ history: ${deals} consistent deals with payment schedules`);
+
+  // 120 days of product analytics with weekly growth and a Tashkent day rhythm
+  const published = await prisma.project.findMany({ where: { published: true }, select: { id: true, featured: true, trustScore: true } });
+  const hourWeight = [1, 0.5, 0.3, 0.2, 0.2, 0.4, 0.8, 1.6, 2.6, 3.4, 3.8, 3.9, 3.6, 3.4, 3.6, 3.8, 3.9, 4.1, 4.6, 5.2, 5.4, 4.8, 3.4, 2];
+  const hourTotal = hourWeight.reduce((a, b) => a + b, 0);
+  const pickHour = () => {
+    let x = r() * hourTotal;
+    for (let h = 0; h < 24; h++) if ((x -= hourWeight[h]!) <= 0) return h;
+    return 20;
+  };
+  const events: Prisma.ActivityEventCreateManyInput[] = [];
+  let totalViews = 0;
+  for (let d = 120; d >= 0; d--) {
+    const day = new Date(now - d * DAY);
+    const dow = day.getUTCDay();
+    const growth = 1 + (120 - d) / 160; // steady growth
+    const weekend = dow === 0 || dow === 6 ? 1.25 : 1;
+    const at = () => {
+      const t = new Date(Date.UTC(day.getUTCFullYear(), day.getUTCMonth(), day.getUTCDate(), pickHour() - 5, Math.floor(r() * 60), Math.floor(r() * 60)));
+      return t.getTime() > now ? new Date(now - Math.floor(r() * 3600_000)) : t;
+    };
+    for (const p of published) {
+      const base = (p.featured ? 26 : 12) * (0.6 + p.trustScore / 160);
+      const n = Math.round(base * growth * weekend * (0.7 + r() * 0.6));
+      for (let k = 0; k < n; k++) {
+        // ~16% of sessions belong to signed-in buyers (stable session → user mapping)
+        const sid = Math.floor(r() * 4000);
+        events.push({ type: "project_view", projectId: p.id, sessionId: `s${sid}`, userId: sid < 640 ? buyers[sid % buyers.length]!.id : null, createdAt: at() });
+      }
+      totalViews += n;
+      if (r() < 0.55) events.push({ type: "favorite", projectId: p.id, createdAt: at() });
+    }
+    for (let k = 0; k < Math.round(6 * growth * (0.6 + r() * 0.8)); k++)
+      events.push({ type: "certificate_lookup", projectId: published[Math.floor(r() * published.length)]!.id, userId: r() < 0.3 ? buyers[Math.floor(r() * buyers.length)]!.id : null, meta: { found: r() < 0.93 }, createdAt: at() });
+    for (let k = 0; k < Math.round(1.5 * growth * r() * 2); k++)
+      events.push({ type: "file_check", projectId: published[Math.floor(r() * published.length)]!.id, meta: { match: r() < 0.88 }, createdAt: at() });
+    for (let k = 0; k < Math.round(5 * growth * (0.5 + r())); k++)
+      events.push({ type: "search", meta: { q: ["Yunusobod", "3 xonali", "Samarqand", "biznes markaz", "metro yonida", "yangi uy"][Math.floor(r() * 6)] }, createdAt: at() });
+  }
+  // demo accounts: a believable personal trail (the admin "activity" page shows it)
+  const demoBuyer = await prisma.user.findUnique({ where: { phone: "+998901000004" } });
+  const demoCompany = await prisma.user.findUnique({ where: { phone: "+998901000005" } });
+  const slugIds = new Map((await prisma.project.findMany({ select: { id: true, slug: true } })).map((p) => [p.slug, p.id]));
+  const trail: [typeof demoBuyer, string[]][] = [
+    [demoBuyer, ["chilonzor-smart-city", "oltin-vodiy-residence", "mirzo-ulugbek-park", "registon-view"]],
+    [demoCompany, ["fargona-business-tower", "chilonzor-smart-city", "namangan-gardens"]],
+  ];
+  for (const [u, slugs] of trail) {
+    if (!u) continue;
+    for (let d = 89; d >= 0; d--) {
+      if (r() < 0.55) continue; // active roughly every other day
+      const day = new Date(now - d * DAY);
+      const n = 1 + Math.floor(r() * 5);
+      for (let k = 0; k < n; k++) {
+        const t = new Date(day.getTime() - Math.floor(r() * 10 * 3600_000));
+        const pid = slugIds.get(slugs[Math.floor(r() * slugs.length)]!);
+        const type = r() < 0.7 ? "project_view" : r() < 0.6 ? "model_open" : "certificate_lookup";
+        events.push({ type, projectId: pid ?? null, userId: u.id, sessionId: `demo-${u.id.slice(-6)}-${d}`, createdAt: t, ...(type === "certificate_lookup" ? { meta: { found: true } } : {}) });
+      }
+    }
+  }
+  for (let i = 0; i < events.length; i += 2000) await prisma.activityEvent.createMany({ data: events.slice(i, i + 2000) });
+
+  // login history (sessions) — expired/revoked past sessions + the latest one, with real-looking devices
+  const DEVICES = [
+    "Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1",
+    "Mozilla/5.0 (Linux; Android 15; SM-S928B) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Mobile Safari/537.36",
+    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/140.0.0.0 Safari/537.36",
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 15_6) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Safari/605.1.15",
+    "Mozilla/5.0 (Linux; Android 14; Redmi Note 13 Pro) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Mobile Safari/537.36",
+  ];
+  const ipPool = ["213.230.", "84.54.", "95.214.", "185.139.", "195.158."];
+  const sessionUsers = [
+    ...(await prisma.user.findMany({ where: { phone: { in: ["+998901000001", "+998901000002", "+998901000003", "+998901000004", "+998901000005"] } }, select: { id: true } })).map((u) => ({ id: u.id, logins: 14 })),
+    ...buyers.map((b) => ({ id: b.id, logins: 1 + Math.floor(r() * 4) })),
+  ];
+  const sessionRows: Prisma.SessionCreateManyInput[] = [];
+  const lastLogin = new Map<string, Date>();
+  for (const su of sessionUsers) {
+    const device = DEVICES[Math.floor(r() * DEVICES.length)]!;
+    const ipBase = `${ipPool[Math.floor(r() * ipPool.length)]}${Math.floor(r() * 250)}.`;
+    for (let k = 0; k < su.logins; k++) {
+      const createdAt = new Date(now - Math.floor(r() * 85 * DAY) - 3600_000);
+      sessionRows.push({
+        userId: su.id,
+        refreshTokenHash: sha256(`seed-session-${su.id}-${k}-${r()}`),
+        userAgent: r() < 0.8 ? device : DEVICES[Math.floor(r() * DEVICES.length)]!,
+        ip: `${ipBase}${Math.floor(r() * 250)}`,
+        createdAt,
+        expiresAt: new Date(createdAt.getTime() + 30 * DAY),
+        revokedAt: r() < 0.5 ? new Date(createdAt.getTime() + Math.floor(r() * 5 * DAY)) : null,
+      });
+      if (!lastLogin.has(su.id) || lastLogin.get(su.id)! < createdAt) lastLogin.set(su.id, createdAt);
+    }
+  }
+  await prisma.session.createMany({ data: sessionRows });
+  for (const [id, at] of lastLogin) await prisma.user.update({ where: { id }, data: { lastLoginAt: at } });
+  // keep the denormalised counter consistent with the events
+  for (const p of published) {
+    const views = await prisma.activityEvent.count({ where: { type: "project_view", projectId: p.id } });
+    await prisma.project.update({ where: { id: p.id }, data: { views } });
+  }
+  console.log(`✓ analytics: ${events.length} events (${totalViews} views)`);
+  for (const p of projects) await recalculateTrust(p.id);
+}
+
 async function main() {
   await seedBase();
   const demo = (process.env.SEED_DEMO ?? "true") === "true";
   if (demo && (await prisma.project.count()) === 0) {
     console.log("Seeding demo data…");
     await seedDemo();
+    await seedHistory();
   }
   console.log("Seed complete.");
 }

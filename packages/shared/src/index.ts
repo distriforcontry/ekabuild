@@ -93,6 +93,10 @@ export type ComplaintStatus = (typeof COMPLAINT_STATUSES)[number];
 
 export const COMPLAINT_CATEGORIES = ["FRAUD", "FAKE_DOCUMENT", "DELAY", "QUALITY", "DOUBLE_SALE", "OTHER"] as const;
 export type ComplaintCategory = (typeof COMPLAINT_CATEGORIES)[number];
+export const PAYMENT_STATUSES = ["PENDING", "PAID", "OVERDUE", "CANCELLED"] as const;
+export type PaymentStatus = (typeof PAYMENT_STATUSES)[number];
+export const PAYMENT_PLANS = ["FULL", "INSTALLMENT"] as const;
+export type PaymentPlanType = (typeof PAYMENT_PLANS)[number];
 
 export const REGIONS = [
   "Toshkent shahri",
@@ -256,6 +260,16 @@ export const LABELS = {
     DOUBLE_SALE: "Ikki marta sotish",
     OTHER: "Boshqa",
   } satisfies Record<ComplaintCategory, string>,
+  paymentStatus: {
+    PENDING: "Kutilmoqda",
+    PAID: "To'langan",
+    OVERDUE: "Muddati o'tgan",
+    CANCELLED: "Bekor qilingan",
+  } satisfies Record<PaymentStatus, string>,
+  paymentPlan: {
+    FULL: "To'liq to'lov",
+    INSTALLMENT: "Bo'lib to'lash",
+  } satisfies Record<PaymentPlanType, string>,
 } as const;
 
 // ───────────────────────────── Helpers ─────────────────────────────

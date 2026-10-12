@@ -177,6 +177,18 @@ enum ComplaintStatus {
   DISMISSED
 }
 
+enum PaymentPlanType {
+  FULL // 100% bir martada
+  INSTALLMENT // boshlang'ich to'lov + oylik bo'lib to'lash
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
 enum OtpPurpose {
   REGISTER
   LOGIN
@@ -215,6 +227,7 @@ model User {
   avatarUrl       String?    @db.VarChar(512)
   role            Role       @default(BUYER)
   status          UserStatus @default(ACTIVE)
+  blockReason     String?    @db.VarChar(512)
   locale          String     @default("uz") @db.VarChar(5)
   lastLoginAt     DateTime?
 
@@ -278,6 +291,9 @@ model Organization {
   status        VerificationStatus @default(PENDING)
   rejectReason  String?            @db.VarChar(512)
   verifiedAt    DateTime?
+  blockedAt     DateTime? // blocked organisations cannot publish or sell; their projects are hidden
+  blockReason   String?            @db.VarChar(512)
+  archivedAt    DateTime?
 
   members   User[]
   projects  Project[]
@@ -339,6 +355,7 @@ model Project {
   published          Boolean            @default(false)
   featured           Boolean            @default(false)
   views              Int                @default(0)
+  archivedAt         DateTime? // archived projects leave the catalog but keep all evidence
 
   units          Unit[]
   documents      Document[]
@@ -356,6 +373,8 @@ model Project {
   @@index([developerId])
   @@index([status, published])
   @@index([region])
+  @@index([published, featured, trustScore])
+  @@index([published, createdAt])
 }
 
 model Unit {
@@ -422,6 +441,7 @@ model Document {
   verifiedBy   User?              @relation("DocVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
   verifiedAt   DateTime?
   rejectReason String?            @db.VarChar(512)
+  archivedAt   DateTime?
 
   certificate Certificate?
 
@@ -429,6 +449,7 @@ model Document {
   updatedAt DateTime @updatedAt
 
   @@index([projectId, type])
+  @@index([status, createdAt])
 }
 
 model Certificate {
@@ -456,7 +477,7 @@ model Certificate {
 
   @@unique([type, number])
   @@index([projectId])
-  @@index([status])
+  @@index([status, validUntil])
 }
 
 model CadastreCheck {
@@ -553,13 +574,22 @@ model Purchase {
   paidAt   DateTime?
   note     String?   @db.VarChar(512)
 
+  planType         PaymentPlanType @default(FULL)
+  downPercent      Int             @default(100)
+  months           Int             @default(0)
+  // unsigned reservations are released automatically after this moment (worker job)
+  reservationUntil DateTime?
+  payments         Payment[]
+
   contract Contract?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   @@index([buyerId])
-  @@index([projectId])
+  @@index([projectId, status])
+  @@index([status, createdAt])
+  @@index([buyerOrgId])
 }
 
 model ContractTemplate {
@@ -641,10 +671,12 @@ model Complaint {
   message    String          @db.Text
   status     ComplaintStatus @default(OPEN)
   resolution String?         @db.Text
+  archivedAt DateTime?
   createdAt  DateTime        @default(now())
   updatedAt  DateTime        @updatedAt
 
-  @@index([status])
+  @@index([status, createdAt])
+  @@index([projectId])
 }
 
 model Favorite {
@@ -669,6 +701,7 @@ model Notification {
   createdAt DateTime         @default(now())
 
   @@index([userId, readAt])
+  @@index([userId, createdAt])
 }
 
 // Tamper-evident audit trail: each row hashes its content together with the previous row's hash
@@ -687,6 +720,7 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([actorId])
+  @@index([action, createdAt])
 }
 
 // SMS one-time codes (hashed). Rate limits are enforced per phone in the auth service.
@@ -741,4 +775,37 @@ model SupportMessage {
   createdAt  DateTime      @default(now())
 
   @@index([threadId, createdAt])
+}
+
+// High-volume product analytics (views, lookups, searches). Not hash-chained — see AuditLog for evidence.
+model ActivityEvent {
+  id        BigInt   @id @default(autoincrement())
+  type      String   @db.VarChar(48) // project_view | certificate_lookup | file_check | favorite | search | model_open
+  projectId String?  @db.VarChar(32)
+  userId    String?  @db.VarChar(32)
+  sessionId String?  @db.VarChar(64)
+  meta      Json?
+  createdAt DateTime @default(now())
+
+  @@index([type, createdAt])
+  @@index([projectId, type, createdAt])
+  @@index([createdAt])
+}
+
+// Payment schedule (bo'lib to'lash jadvali). One row per instalment; overdue rows are flagged by the worker.
+model Payment {
+  id         String        @id @default(cuid())
+  purchaseId String
+  purchase   Purchase      @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  seq        Int // 0 = down payment
+  dueDate    DateTime
+  amount     Decimal       @db.Decimal(16, 2)
+  status     PaymentStatus @default(PENDING)
+  paidAt     DateTime?
+  method     String?       @db.VarChar(32) // demo | click | payme | uzum | bank
+  reference  String?       @db.VarChar(64)
+  createdAt  DateTime      @default(now())
+
+  @@unique([purchaseId, seq])
+  @@index([status, dueDate])
 }

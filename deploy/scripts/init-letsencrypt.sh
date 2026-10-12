@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Obtains a Let's Encrypt certificate for DOMAIN + www/app/admin/api subdomains and starts the stack.
+# Obtains a Let's Encrypt certificate for DOMAIN + www/cabinet/admin/api subdomains and starts the stack.
 # Requires DNS A records for all five names pointing at this server.
 #   DOMAIN=ekabuild.uz EMAIL=admin@ekabuild.uz ./deploy/scripts/init-letsencrypt.sh [--staging]
 set -euo pipefail
@@ -9,7 +9,9 @@ DOMAIN="${DOMAIN:-$(grep -E '^APP_DOMAIN=' .env | cut -d= -f2)}"
 EMAIL="${EMAIL:-admin@${DOMAIN}}"
 STAGING=""
 [[ "${1:-}" == "--staging" ]] && STAGING="--staging"
-NAMES=("$DOMAIN" "www.$DOMAIN" "app.$DOMAIN" "admin.$DOMAIN" "api.$DOMAIN")
+NAMES=("$DOMAIN" "www.$DOMAIN" "cabinet.$DOMAIN" "admin.$DOMAIN" "api.$DOMAIN")
+# optional alias — included only when its DNS record exists
+if getent hosts "app.$DOMAIN" >/dev/null 2>&1; then NAMES+=("app.$DOMAIN"); fi
 CONF=deploy/certbot/conf
 LIVE="$CONF/live/$DOMAIN"
 

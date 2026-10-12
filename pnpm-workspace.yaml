@@ -8,3 +8,8 @@ onlyBuiltDependencies:
   - esbuild
   - sharp
   - bcrypt
+# install native binaries for both glibc (dev) and musl (alpine images)
+supportedArchitectures:
+  os: [linux]
+  cpu: [x64]
+  libc: [glibc, musl]

@@ -19,7 +19,7 @@ metadata:
 spec:
   ingressClassName: nginx
   tls:
-    - hosts: [ekabuild.uz, www.ekabuild.uz, app.ekabuild.uz, admin.ekabuild.uz, api.ekabuild.uz]
+    - hosts: [ekabuild.uz, www.ekabuild.uz, cabinet.ekabuild.uz, admin.ekabuild.uz, api.ekabuild.uz]
       secretName: ekabuild-tls
   rules:
     - host: ekabuild.uz
@@ -36,7 +36,7 @@ spec:
           - { path: /metrics, pathType: Exact, backend: { service: { name: web, port: { number: 3000 } } } }
           - { path: /api, pathType: Prefix, backend: { service: { name: api, port: { number: 4000 } } } }
           - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 3000 } } } }
-    - host: app.ekabuild.uz
+    - host: cabinet.ekabuild.uz
       http:
         paths:
           # /metrics must never reach the API publicly — route it to web (404)

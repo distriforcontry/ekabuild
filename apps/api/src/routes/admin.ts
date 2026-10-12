@@ -11,6 +11,7 @@ import { invalidate } from "../lib/redis";
 import { certificateDto, documentDto, orgDto, paginate, projectCard, projectCardInclude, purchaseDto, purchaseInclude, userDto, userSelect } from "../lib/serializers";
 import { recalculateTrust } from "../lib/trust";
 import { requireRole } from "../plugins/auth";
+import { archivedFilter } from "./control";
 
 const pageQuery = z
   .object({
@@ -19,6 +20,8 @@ const pageQuery = z
     q: z.string().trim().max(100).optional(),
     sort: z.string().max(40).optional(),
     order: z.enum(["asc", "desc"]).optional(),
+    /** absent → active only, "1" → archived only, "all" → both */
+    archived: z.string().max(5).optional(),
   })
   .passthrough();
 
@@ -103,9 +106,11 @@ export default async function adminRoutes(app: FastifyInstance) {
 
   // ── organizations
   app.get("/admin/organizations", async (req) => {
-    const q = pageQuery.extend({ status: z.string().optional(), type: z.string().optional() }).parse(req.query);
+    const q = pageQuery.extend({ status: z.string().optional(), type: z.string().optional(), blocked: z.string().optional() }).parse(req.query);
     const { page, pageSize, skip, take } = paginate(q);
     const where: Prisma.OrganizationWhereInput = {
+      ...archivedFilter(q.archived),
+      ...(q.blocked === "1" ? { blockedAt: { not: null } } : {}),
       ...(q.status ? { status: q.status as never } : {}),
       ...(q.type ? { type: q.type as never } : {}),
       ...(q.q ? { OR: [{ name: { contains: q.q } }, { tin: { contains: q.q } }, { director: { contains: q.q } }] } : {}),
@@ -140,6 +145,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     const q = pageQuery.extend({ verification: z.string().optional(), status: z.string().optional() }).parse(req.query);
     const { page, pageSize, skip, take } = paginate(q);
     const where: Prisma.ProjectWhereInput = {
+      ...archivedFilter(q.archived),
       ...(q.verification ? { verificationStatus: q.verification as never } : {}),
       ...(q.status ? { status: q.status as never } : {}),
       ...(q.q ? { OR: [{ name: { contains: q.q } }, { address: { contains: q.q } }, { developer: { name: { contains: q.q } } }] } : {}),
@@ -203,6 +209,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     const q = pageQuery.extend({ status: z.string().optional(), type: z.string().optional() }).parse(req.query);
     const { page, pageSize, skip, take } = paginate(q);
     const where: Prisma.DocumentWhereInput = {
+      ...archivedFilter(q.archived),
       ...(q.status ? { status: q.status as never } : {}),
       ...(q.type ? { type: q.type as never } : {}),
       ...(q.q ? { OR: [{ title: { contains: q.q } }, { number: { contains: q.q } }, { project: { name: { contains: q.q } } }] } : {}),
@@ -224,10 +231,10 @@ export default async function adminRoutes(app: FastifyInstance) {
       ...(q.q ? { OR: [{ fullName: { contains: q.q } }, { phone: { contains: q.q } }, { email: { contains: q.q } }] } : {}),
     };
     const [rows, total] = await Promise.all([
-      prisma.user.findMany({ where, skip, take, select: { ...userSelect, lastLoginAt: true }, orderBy: orderBy(q, ["fullName", "phone", "role", "status", "createdAt", "lastLoginAt"], { createdAt: "desc" } as Prisma.UserOrderByWithRelationInput) }),
+      prisma.user.findMany({ where, skip, take, select: { ...userSelect, lastLoginAt: true, blockReason: true }, orderBy: orderBy(q, ["fullName", "phone", "role", "status", "createdAt", "lastLoginAt"], { createdAt: "desc" } as Prisma.UserOrderByWithRelationInput) }),
       prisma.user.count({ where }),
     ]);
-    return { items: rows.map((u) => ({ ...userDto(u), lastLoginAt: u.lastLoginAt })), total, page, pageSize };
+    return { items: rows.map((u) => ({ ...userDto(u), lastLoginAt: u.lastLoginAt, blockReason: u.blockReason })), total, page, pageSize };
   });
 
   app.patch<{ Params: { id: string } }>("/admin/users/:id", async (req) => {
@@ -265,6 +272,7 @@ export default async function adminRoutes(app: FastifyInstance) {
     const q = pageQuery.extend({ status: z.string().optional(), category: z.string().optional() }).parse(req.query);
     const { page, pageSize, skip, take } = paginate(q);
     const where: Prisma.ComplaintWhereInput = {
+      ...archivedFilter(q.archived),
       ...(q.status ? { status: q.status as never } : {}),
       ...(q.category ? { category: q.category } : {}),
       ...(q.q ? { message: { contains: q.q } } : {}),

@@ -5,9 +5,27 @@
 | # | Nima | Izoh |
 |---|---|---|
 | 1 | Server | Ubuntu 22.04/24.04, kamida **4 vCPU / 8 GB RAM / 80 GB SSD** (2 ta api, 2 ta web, 2 ta worker, MySQL, Redis, RabbitMQ) |
-| 2 | DNS | `A` yozuvlar → server IP: `ekabuild.uz`, `www`, `app`, `admin`, `api` |
+| 2 | DNS | `A` yozuvlar → server IP: `ekabuild.uz`, `www`, `cabinet`, `admin`, `api` |
 | 3 | SSH | root yoki sudo huquqli foydalanuvchi |
 | 4 | (ixtiyoriy) | Eskiz.uz SMS akkaunti, E-IMZO API kaliti va E-IMZO server, S3 ombor |
+
+## ⚡ Tez yo'l — bitta buyruq (89.39.95.156)
+
+DNS tayyor: `ekabuild.uz → 89.39.95.156`, `www / cabinet / admin / api → CNAME ekabuild.uz`.
+
+```bash
+ssh root@89.39.95.156
+git clone https://github.com/distriforcontry/ekabuild.git /opt/ekabuild && cd /opt/ekabuild
+git checkout claude/wizardly-albattani-z0u3sf
+DOMAIN=ekabuild.uz EMAIL=admin@ekabuild.uz ./deploy/scripts/bootstrap.sh
+```
+
+Skript Docker'ni o'rnatadi, xavfsiz `.env` yaratadi (SMS — mock/demo rejim, demo seed), SSL oladi va butun stackni
+(nginx LB + 2×api + 2×web + 2×worker + MySQL + Redis + RabbitMQ + monitoring) ishga tushiradi. Bosh admin paroli
+ekranga chiqariladi.
+
+**Avtomatik deploy:** GitHub → Settings → Secrets: `SSH_HOST=89.39.95.156`, `SSH_USER`, `SSH_KEY` — shundan so'ng
+`main` ga har push (yoki Actions → Deploy → Run) serverni zero-downtime yangilaydi.
 
 ## 1. Serverni tayyorlash (bir marta)
 
@@ -60,7 +78,7 @@ crontab -e
 
 ```
 Internet ──▶ nginx :443 (TLS, HTTP/2, gzip, rate-limit, WebSocket)
-              ├─ ekabuild.uz, app., admin.   → web_pool  (web-1, web-2 · least_conn · keepalive)
+              ├─ ekabuild.uz, cabinet., admin.   → web_pool  (web-1, web-2 · least_conn · keepalive)
               │      └─ /api/*                → api_pool  (same-origin cookie)
               └─ api.ekabuild.uz             → api_pool  (api-1, api-2)
 api ──▶ MySQL 8.4 · Redis (limiter, kesh, chat fan-out) · RabbitMQ eka.events ──▶ worker-1, worker-2
@@ -81,7 +99,7 @@ api ──▶ MySQL 8.4 · Redis (limiter, kesh, chat fan-out) · RabbitMQ eka.e
 | Integratsiya | `.env` | Izoh |
 |---|---|---|
 | SMS (Eskiz.uz) | `SMS_PROVIDER=eskiz`, `ESKIZ_EMAIL`, `ESKIZ_PASSWORD`, `ESKIZ_FROM` | Eskiz'da SMS shablonini tasdiqlatish kerak. `mock` rejimida kod javobda (`devCode`) qaytadi — faqat demo uchun! |
-| E-IMZO | `EIMZO_MODE=eimzo`, `EIMZO_SERVER_URL`, `NEXT_PUBLIC_EIMZO_API_KEYS=ekabuild.uz:KALIT,app.ekabuild.uz:KALIT` | API kaliti E-IMZO (soliq.uz) dan domen uchun olinadi; PKCS#7 imzolar E-IMZO server orqali tekshiriladi. |
+| E-IMZO | `EIMZO_MODE=eimzo`, `EIMZO_SERVER_URL`, `NEXT_PUBLIC_EIMZO_API_KEYS=ekabuild.uz:KALIT,cabinet.ekabuild.uz:KALIT` | API kaliti E-IMZO (soliq.uz) dan domen uchun olinadi; PKCS#7 imzolar E-IMZO server orqali tekshiriladi. |
 | Kadastr | `CADASTRE_PROVIDER` | Hozir deterministik `mock`; rasmiy API ochilganda `apps/api/src/lib/cadastre.ts` dagi `CadastreProvider` ni amalga oshiring. |
 | To'lov | — | `POST /purchases/:id/pay` demo; Click/Payme/Uzum callback'lari bilan almashtiriladi. |
 

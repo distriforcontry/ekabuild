@@ -13,6 +13,8 @@ import { verifyPkcs7 } from "../lib/eimzo";
 import { badRequest, conflict, forbidden, notFound } from "../lib/errors";
 import { notify, notifyOrgMembers } from "../lib/notify";
 import { documentDto, fileRef, purchaseDto, purchaseInclude } from "../lib/serializers";
+import { PLAN_LIMITS, buildSchedule, dec, summarize } from "../lib/finance";
+import { contractDocx } from "../lib/docx";
 import { isAdminRole, requireUser, type AuthUser } from "../plugins/auth";
 import { businessEvents } from "../lib/metrics";
 
@@ -76,9 +78,25 @@ export default async function buyerRoutes(app: FastifyInstance) {
   // ── create purchase (reserve unit + generate contract)
   app.post("/purchases", { config: { rateLimit: { max: 10, timeWindow: "1 minute" } } }, async (req) => {
     const u = requireUser(req);
-    const body = z.object({ projectId: z.string(), kind: z.enum(["UNIT", "DOCUMENT_PACKAGE"]), unitId: z.string().optional() }).parse(req.body);
+    const body = z
+      .object({
+        projectId: z.string(),
+        kind: z.enum(["UNIT", "DOCUMENT_PACKAGE"]),
+        unitId: z.string().optional(),
+        plan: z
+          .object({
+            planType: z.enum(["FULL", "INSTALLMENT"]),
+            downPercent: z.number().int().min(PLAN_LIMITS.minDown).max(90).optional(),
+            months: z.number().int().min(3).max(PLAN_LIMITS.maxMonths).optional(),
+          })
+          .optional(),
+      })
+      .parse(req.body);
+    const plan = body.kind === "UNIT" && body.plan?.planType === "INSTALLMENT" ? { planType: "INSTALLMENT" as const, downPercent: body.plan.downPercent ?? 30, months: body.plan.months ?? 12 } : { planType: "FULL" as const, downPercent: 100, months: 0 };
     const project = await prisma.project.findUnique({ where: { id: body.projectId }, include: { developer: true } });
     if (!project || !project.published) throw notFound("Obyekt topilmadi");
+    if (project.archivedAt) throw badRequest("Obyekt arxivga olingan — sotuv to'xtatilgan", "PROJECT_ARCHIVED");
+    if (project.developer.blockedAt) throw badRequest("Quruvchi faoliyati vaqtincha cheklangan — sotuv to'xtatilgan", "DEVELOPER_BLOCKED");
     if (u.orgId && project.developerId === u.orgId) throw badRequest("O'z obyektingizni sotib ololmaysiz");
 
     const buyer = await prisma.user.findUniqueOrThrow({ where: { id: u.id }, include: { organization: true } });
@@ -103,10 +121,11 @@ export default async function buyerRoutes(app: FastifyInstance) {
 
     const template =
       (await prisma.contractTemplate.findFirst({ where: { key: DEFAULT_TEMPLATES[body.kind], active: true } })) ??
-      (await prisma.contractTemplate.findFirst({ where: { kind: body.kind, active: true }, orderBy: { version: "desc" } }));
+      (await prisma.contractTemplate.findFirst({ where: { kind: body.kind, active: true, NOT: { key: { startsWith: "annex-" } } }, orderBy: { version: "desc" } }));
     if (!template) throw badRequest("Shartnoma shabloni topilmadi — administratorga murojaat qiling");
 
     const contractNumber = docNumber("C");
+    const schedule = buildSchedule(Number(amount), plan);
     const rendered = renderTemplate(
       template.body,
       contractContext({
@@ -118,6 +137,8 @@ export default async function buyerRoutes(app: FastifyInstance) {
         unit: unit ? { number: unit.number, floor: unit.floor, area: unit.area, rooms: unit.rooms, section: unit.section } : null,
         amount: Number(amount),
         currency: project.currency,
+        payment: body.kind === "UNIT" ? { ...plan, rows: schedule } : null,
+        reservationUntil: unit ? new Date(Date.now() + 7 * 86400_000) : null,
       }),
     );
 
@@ -139,6 +160,11 @@ export default async function buyerRoutes(app: FastifyInstance) {
           buyerOrgId: buyerOrg?.id,
           amount,
           currency: project.currency,
+          planType: plan.planType,
+          downPercent: plan.downPercent,
+          months: plan.months,
+          reservationUntil: unit ? new Date(Date.now() + 7 * 86400_000) : null,
+          payments: { create: schedule.map((r) => ({ seq: r.seq, dueDate: r.dueDate, amount: dec(r.amount) })) },
           contract: {
             create: {
               number: contractNumber,
@@ -198,6 +224,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
     await prisma.$transaction([
       prisma.purchase.update({ where: { id: p.id }, data: { status: "CANCELLED", activeUnitLock: null } }),
       prisma.contract.updateMany({ where: { purchaseId: p.id }, data: { status: "CANCELLED" } }),
+      prisma.payment.updateMany({ where: { purchaseId: p.id, status: { in: ["PENDING", "OVERDUE"] } }, data: { status: "CANCELLED" } }),
       ...(p.unitId ? [prisma.unit.updateMany({ where: { id: p.unitId, status: "RESERVED" }, data: { status: "AVAILABLE" } })] : []),
     ]);
     void audit({ actorId: u.id, action: "PURCHASE_CANCEL", entity: "Purchase", entityId: p.id, ip: req.ip });
@@ -205,23 +232,156 @@ export default async function buyerRoutes(app: FastifyInstance) {
     return { ok: true };
   });
 
-  // demo payment — replace with Click / Payme / Uzum callbacks in production
+  // ── payments (demo gateway — replace with Click / Payme / Uzum callbacks in production)
+  app.get<{ Params: { id: string } }>("/purchases/:id/payments", async (req) => {
+    const u = requireUser(req);
+    const p = await prisma.purchase.findFirst({ where: { id: req.params.id, ...purchaseVisibleTo(u) }, include: { payments: { orderBy: { seq: "asc" } } } });
+    if (!p) throw notFound();
+    const paid = p.payments.filter((x) => x.status === "PAID").reduce((s, x) => s + Number(x.amount), 0);
+    const total = p.payments.reduce((s, x) => s + Number(x.amount), 0);
+    const next = p.payments.find((x) => x.status !== "PAID" && x.status !== "CANCELLED");
+    return {
+      planType: p.planType,
+      downPercent: p.downPercent,
+      months: p.months,
+      total: total.toFixed(2),
+      paid: paid.toFixed(2),
+      balance: (total - paid).toFixed(2),
+      progress: total ? Math.round((paid / total) * 100) : 0,
+      next: next ? { id: next.id, seq: next.seq, dueDate: next.dueDate, amount: next.amount.toFixed(2), status: next.status } : null,
+      overdue: p.payments.filter((x) => x.status === "OVERDUE").length,
+      items: p.payments.map((x) => ({ id: x.id, seq: x.seq, dueDate: x.dueDate, amount: x.amount.toFixed(2), status: x.status, paidAt: x.paidAt, method: x.method, reference: x.reference })),
+    };
+  });
+
   app.post<{ Params: { id: string } }>("/purchases/:id/pay", async (req) => {
     const u = requireUser(req);
-    const p = await prisma.purchase.findFirst({ where: { id: req.params.id, OR: [{ buyerId: u.id }, ...(u.orgId ? [{ buyerOrgId: u.orgId }] : [])] } });
+    const p = await prisma.purchase.findFirst({
+      where: { id: req.params.id, OR: [{ buyerId: u.id }, ...(u.orgId ? [{ buyerOrgId: u.orgId }] : [])] },
+      include: { payments: { orderBy: { seq: "asc" } } },
+    });
     if (!p) throw notFound();
-    if (p.status !== "SIGNED") throw badRequest("To'lov faqat ikki tomon imzolagandan so'ng amalga oshiriladi", "NOT_SIGNED");
-    const status = p.kind === "DOCUMENT_PACKAGE" ? "COMPLETED" : "PAID";
+    if (!["SIGNED", "PAID"].includes(p.status)) throw badRequest("To'lov faqat ikki tomon imzolagandan so'ng amalga oshiriladi", "NOT_SIGNED");
+    let payments = p.payments;
+    if (!payments.length) {
+      // legacy deals without a schedule: one full payment
+      await prisma.payment.create({ data: { purchaseId: p.id, seq: 0, dueDate: new Date(), amount: p.amount } });
+      payments = await prisma.payment.findMany({ where: { purchaseId: p.id }, orderBy: { seq: "asc" } });
+    }
+    const next = payments.find((x) => x.status === "PENDING" || x.status === "OVERDUE");
+    if (!next) throw badRequest("Barcha to'lovlar amalga oshirilgan", "NOTHING_DUE");
+    const reference = `DEMO-${Date.now().toString(36).toUpperCase()}`;
+    const isLast = payments.filter((x) => x.status !== "PAID" && x.status !== "CANCELLED").length === 1;
+    const first = !p.paidAt;
     await prisma.$transaction([
-      prisma.purchase.update({ where: { id: p.id }, data: { status, paidAt: new Date() } }),
-      ...(p.unitId ? [prisma.unit.update({ where: { id: p.unitId }, data: { status: "SOLD" } })] : []),
+      prisma.payment.update({ where: { id: next.id }, data: { status: "PAID", paidAt: new Date(), method: "demo", reference } }),
+      prisma.purchase.update({
+        where: { id: p.id },
+        data: {
+          paidAt: p.paidAt ?? new Date(),
+          status: isLast && (p.kind === "DOCUMENT_PACKAGE" || p.planType === "INSTALLMENT") ? "COMPLETED" : "PAID",
+          reservationUntil: null,
+        },
+      }),
+      ...(first && p.unitId ? [prisma.unit.update({ where: { id: p.unitId }, data: { status: "SOLD" } })] : []),
     ]);
-    void audit({ actorId: u.id, action: "PURCHASE_PAY", entity: "Purchase", entityId: p.id, ip: req.ip, meta: { amount: p.amount.toString() } });
-    void publish("purchase.paid", { purchaseId: p.id, projectId: p.projectId });
+    void audit({ actorId: u.id, action: "PAYMENT", entity: "Purchase", entityId: p.id, ip: req.ip, meta: { seq: next.seq, amount: next.amount.toString(), reference } });
+    void publish("purchase.paid", { purchaseId: p.id, projectId: p.projectId, seq: next.seq });
     businessEvents.inc({ event: "purchase_paid" });
-    void notify(u.id, { type: "SUCCESS", title: "To'lov qabul qilindi", body: `Buyurtma ${p.number}. Hujjatlar endi siz uchun ochiq.`, link: `/app/purchases/${p.id}`, sms: true });
+    void notify(u.id, {
+      type: "SUCCESS",
+      title: next.seq === 0 ? "To'lov qabul qilindi" : `${next.seq}-to'lov qabul qilindi`,
+      body: `Buyurtma ${p.number}: ${Number(next.amount).toLocaleString("ru-RU")} so'm. ${first ? "Hujjatlar endi siz uchun ochiq." : ""}`,
+      link: `/app/purchases/${p.id}`,
+      sms: true,
+    });
     const updated = await prisma.purchase.findUniqueOrThrow({ where: { id: p.id }, include: purchaseInclude });
     return purchaseDto(updated);
+  });
+
+  // instalment calculator (public — used on project pages before buying)
+  app.get("/calc/installment", async (req) => {
+    const q = z
+      .object({
+        amount: z.coerce.number().positive(),
+        downPercent: z.coerce.number().int().min(PLAN_LIMITS.minDown).max(90).default(30),
+        months: z.coerce.number().int().min(3).max(PLAN_LIMITS.maxMonths).default(12),
+        ratePercent: z.coerce.number().min(0).max(60).default(0),
+      })
+      .parse(req.query);
+    const rows = buildSchedule(q.amount, { planType: "INSTALLMENT", downPercent: q.downPercent, months: q.months, ratePercent: q.ratePercent });
+    return { ...summarize(rows), limits: PLAN_LIMITS, schedule: rows.map((r) => ({ ...r, dueDate: r.dueDate.toISOString() })) };
+  });
+
+  // ── annexes (bron kelishuvi, to'lov jadvali, qabul-topshirish dalolatnomasi) — rendered from admin-managed templates
+  app.get<{ Params: { id: string } }>("/purchases/:id/annexes", async (req) => {
+    const u = requireUser(req);
+    const p = await prisma.purchase.findFirst({ where: { id: req.params.id, ...purchaseVisibleTo(u) }, select: { kind: true } });
+    if (!p) throw notFound();
+    const items = await prisma.contractTemplate.findMany({ where: { key: { startsWith: "annex-" }, kind: p.kind, active: true }, select: { key: true, name: true, version: true }, orderBy: { key: "asc" } });
+    return items;
+  });
+
+  app.get<{ Params: { id: string; key: string }; Querystring: { format?: string } }>("/purchases/:id/annexes/:key", async (req, reply) => {
+    const u = requireUser(req);
+    const p = await prisma.purchase.findFirst({
+      where: { id: req.params.id, ...purchaseVisibleTo(u) },
+      include: {
+        buyer: { select: { fullName: true, phone: true, pinfl: true } },
+        buyerOrg: { select: { name: true, tin: true } },
+        project: { include: { developer: true } },
+        unit: true,
+        contract: { include: { signatures: { orderBy: { signedAt: "asc" } } } },
+        payments: { orderBy: { seq: "asc" } },
+      },
+    });
+    if (!p) throw notFound();
+    const t = req.params.key.startsWith("annex-") ? await prisma.contractTemplate.findFirst({ where: { key: req.params.key, active: true } }) : null;
+    if (!t) throw notFound("Shablon topilmadi");
+    const dev = p.project.developer;
+    const body = renderTemplate(
+      t.body,
+      contractContext({
+        number: p.contract?.number ?? p.number,
+        date: p.contract?.createdAt ?? p.createdAt,
+        buyer: p.buyer,
+        buyerOrg: p.buyerOrg,
+        seller: { name: dev.legalName ?? dev.name, tin: dev.tin, director: dev.director, address: dev.address },
+        project: { name: p.project.name, address: p.project.address, cadastreNumber: p.project.cadastreNumber },
+        unit: p.unit ? { number: p.unit.number, floor: p.unit.floor, area: p.unit.area, rooms: p.unit.rooms, section: p.unit.section } : null,
+        amount: Number(p.amount),
+        currency: p.currency,
+        payment: p.payments.length ? { planType: p.planType, downPercent: p.downPercent, months: p.months, rows: p.payments.map((x) => ({ seq: x.seq, dueDate: x.dueDate, amount: Number(x.amount) })) } : null,
+        reservationUntil: p.reservationUntil ?? new Date(p.createdAt.getTime() + 7 * 86400_000),
+      }),
+    );
+    const hash = sha256(body);
+    if (req.query.format === "md") return { key: t.key, title: t.name, version: t.version, body, bodyHash: hash };
+    const buf = await contractDocx({
+      title: t.name,
+      number: `${p.contract?.number ?? p.number} · ${t.name}`,
+      body,
+      bodyHash: hash,
+      signatures: p.contract?.signatures ?? [],
+      note: p.contract ? `Ilova ${p.contract.number}-sonli shartnomaning ajralmas qismi bo'lib, shartnomaga qo'yilgan E-IMZO imzolari unga ham taalluqlidir.` : undefined,
+    });
+    void audit({ actorId: u.id, action: "ANNEX_DOWNLOAD", entity: "Purchase", entityId: p.id, ip: req.ip, meta: { key: t.key } });
+    return reply
+      .header("content-type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+      .header("content-disposition", `attachment; filename="${p.number}-${t.key.replace(/^annex-/, "")}.docx"`)
+      .send(buf);
+  });
+
+  // contract as DOCX (Word) with hash + signatures evidence block
+  app.get<{ Params: { id: string } }>("/contracts/:id/docx", async (req, reply) => {
+    const u = requireUser(req);
+    const { c } = await loadContract(req.params.id, u);
+    const buf = await contractDocx({ title: c.title, number: c.number, body: c.body, bodyHash: c.bodyHash, signatures: c.signatures });
+    void audit({ actorId: u.id, action: "CONTRACT_DOWNLOAD", entity: "Contract", entityId: c.id, ip: req.ip });
+    return reply
+      .header("content-type", "application/vnd.openxmlformats-officedocument.wordprocessingml.document")
+      .header("content-disposition", `attachment; filename="${c.number}.docx"`)
+      .send(buf);
   });
 
   // ── contracts & E-IMZO

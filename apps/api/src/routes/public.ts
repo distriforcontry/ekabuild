@@ -8,12 +8,15 @@ import { audit } from "../lib/audit";
 import { publish } from "../lib/bus";
 import { notFound } from "../lib/errors";
 import { cached } from "../lib/redis";
+import { track } from "../lib/activity";
+import { canResize, nearestWidth, variantStream } from "../lib/images";
 import { storage } from "../lib/storage";
 import {
   certificateDto,
   dec,
   documentDto,
   fileRef,
+  listedProject,
   orgDto,
   paginate,
   projectCard,
@@ -50,13 +53,13 @@ export default async function publicRoutes(app: FastifyInstance) {
   app.get("/stats/public", async () =>
     cached("stats:public", 60, async () => {
       const [projects, developers, verifiedCertificates, inspections, unitsSold, avg, regions] = await Promise.all([
-        prisma.project.count({ where: { published: true } }),
-        prisma.organization.count({ where: { type: "DEVELOPER", status: "VERIFIED" } }),
+        prisma.project.count({ where: listedProject }),
+        prisma.organization.count({ where: { type: "DEVELOPER", status: "VERIFIED", blockedAt: null, archivedAt: null } }),
         prisma.certificate.count({ where: { status: "VERIFIED" } }),
         prisma.inspection.count(),
         prisma.unit.count({ where: { status: "SOLD" } }),
-        prisma.project.aggregate({ where: { published: true }, _avg: { trustScore: true } }),
-        prisma.project.findMany({ where: { published: true }, distinct: ["region"], select: { region: true } }),
+        prisma.project.aggregate({ where: listedProject, _avg: { trustScore: true } }),
+        prisma.project.findMany({ where: listedProject, distinct: ["region"], select: { region: true } }),
       ]);
       return { projects, developers, verifiedCertificates, inspections, unitsSold, avgTrust: Math.round(avg._avg.trustScore ?? 0), regions: regions.length };
     }),
@@ -66,7 +69,8 @@ export default async function publicRoutes(app: FastifyInstance) {
   app.get("/projects", async (req) => {
     const q = listQuery.parse(req.query);
     const { page, pageSize, skip, take } = paginate(q, 48);
-    const where: Prisma.ProjectWhereInput = q.scope === "all" && isStaffRole(req.user?.role) ? {} : { published: true };
+    if (q.q && (q.page ?? 1) === 1) track("search", { userId: req.user?.id, meta: { q: q.q.slice(0, 64), region: q.region ?? null } });
+    const where: Prisma.ProjectWhereInput = q.scope === "all" && isStaffRole(req.user?.role) ? {} : { ...listedProject };
     if (q.q) where.OR = [{ name: { contains: q.q } }, { address: { contains: q.q } }, { district: { contains: q.q } }, { developer: { name: { contains: q.q } } }];
     if (q.region) where.region = q.region;
     if (q.status) where.status = q.status as Prisma.EnumProjectStatusFilter["equals"];
@@ -95,7 +99,7 @@ export default async function publicRoutes(app: FastifyInstance) {
   app.get("/projects/map", async () =>
     cached("projects:map", 60, () =>
       prisma.project.findMany({
-        where: { published: true },
+        where: listedProject,
         select: { id: true, slug: true, name: true, lat: true, lng: true, trustScore: true, status: true, coverUrl: true },
       }),
     ),
@@ -105,10 +109,10 @@ export default async function publicRoutes(app: FastifyInstance) {
     const p = await prisma.project.findFirst({
       where: { OR: [{ slug: req.params.slug }, { id: req.params.slug }] },
       include: {
-        developer: { include: { _count: { select: { projects: { where: { published: true } } } } } },
+        developer: { include: { _count: { select: { projects: { where: { published: true, archivedAt: null } } } } } },
         model3d: true,
         certificates: { orderBy: { issuedAt: "desc" } },
-        documents: { include: { file: true }, orderBy: [{ type: "asc" }, { createdAt: "desc" }] },
+        documents: { where: { archivedAt: null }, include: { file: true }, orderBy: [{ type: "asc" }, { createdAt: "desc" }] },
         cadastreChecks: { orderBy: { createdAt: "desc" }, take: 1 },
         inspections: {
           orderBy: { date: "desc" },
@@ -120,7 +124,12 @@ export default async function publicRoutes(app: FastifyInstance) {
     });
     if (!p) throw notFound("Obyekt topilmadi");
     const access = await projectAccess(req.user, p);
-    if (!p.published && !access.isOwner && !access.isStaff) throw notFound("Obyekt topilmadi");
+    const listed = p.published && !p.archivedAt && !p.developer.blockedAt;
+    if (!listed && !access.isOwner && !access.isStaff) {
+      // buyers keep access to objects they already bought, even after archiving / blocking
+      const owns = req.user ? await prisma.purchase.count({ where: { projectId: p.id, OR: [{ buyerId: req.user.id }, ...(req.user.orgId ? [{ buyerOrgId: req.user.orgId }] : [])] } }) : 0;
+      if (!p.published || !owns) throw notFound("Obyekt topilmadi");
+    }
 
     const [unitGroups, isFavorite, purchases] = await Promise.all([
       prisma.unit.groupBy({ by: ["status"], where: { projectId: p.id }, _count: true }),
@@ -139,7 +148,7 @@ export default async function publicRoutes(app: FastifyInstance) {
     const { _count: devCount, ...developer } = p.developer;
 
     return {
-      ...projectCard({ ...p, developer: { id: p.developer.id, name: p.developer.name, logoUrl: p.developer.logoUrl, status: p.developer.status } }),
+      ...projectCard({ ...p, developer: { id: p.developer.id, name: p.developer.name, logoUrl: p.developer.logoUrl, status: p.developer.status, blockedAt: p.developer.blockedAt } }),
       description: p.description,
       cadastreNumber: p.cadastreNumber,
       landArea: p.landArea,
@@ -198,7 +207,8 @@ export default async function publicRoutes(app: FastifyInstance) {
   });
 
   app.post<{ Params: { id: string } }>("/projects/:id/view", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req) => {
-    await prisma.project.updateMany({ where: { id: req.params.id }, data: { views: { increment: 1 } } });
+    const r = await prisma.project.updateMany({ where: { id: req.params.id }, data: { views: { increment: 1 } } });
+    if (r.count) track("project_view", { projectId: req.params.id, userId: req.user?.id, sessionId: req.headers["x-session-id"] as string | undefined });
     return { ok: true };
   });
 
@@ -211,6 +221,7 @@ export default async function publicRoutes(app: FastifyInstance) {
       return { favorite: false };
     }
     await prisma.favorite.create({ data: { userId: u.id, projectId: req.params.id } });
+    track("favorite", { projectId: req.params.id, userId: u.id });
     return { favorite: true };
   });
 
@@ -224,8 +235,8 @@ export default async function publicRoutes(app: FastifyInstance) {
   app.get("/developers", async (req) => {
     const { q, region } = z.object({ q: z.string().optional(), region: z.string().optional() }).parse(req.query);
     const orgs = await prisma.organization.findMany({
-      where: { type: "DEVELOPER", status: "VERIFIED", ...(q ? { name: { contains: q } } : {}), ...(region ? { region } : {}) },
-      include: { projects: { where: { published: true }, select: { trustScore: true } } },
+      where: { type: "DEVELOPER", status: "VERIFIED", blockedAt: null, archivedAt: null, ...(q ? { name: { contains: q } } : {}), ...(region ? { region } : {}) },
+      include: { projects: { where: { published: true, archivedAt: null }, select: { trustScore: true } } },
       orderBy: { name: "asc" },
     });
     return orgs.map(({ projects, ...o }) => ({
@@ -238,7 +249,7 @@ export default async function publicRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>("/developers/:id", async (req) => {
     const org = await prisma.organization.findFirst({ where: { id: req.params.id, type: "DEVELOPER" } });
     if (!org) throw notFound();
-    const projects = await prisma.project.findMany({ where: { developerId: org.id, published: true }, include: projectCardInclude, orderBy: { trustScore: "desc" } });
+    const projects = await prisma.project.findMany({ where: { developerId: org.id, ...listedProject }, include: projectCardInclude, orderBy: { trustScore: "desc" } });
     return { ...orgDto(org), projects: projects.map(projectCard) };
   });
 
@@ -261,6 +272,7 @@ export default async function publicRoutes(app: FastifyInstance) {
 
   app.get<{ Params: { code: string } }>("/verify/:code", { config: { rateLimit: { max: 30, timeWindow: "1 minute" } } }, async (req) => {
     const [hit] = await certPublic({ code: req.params.code.trim().toUpperCase() });
+    track("certificate_lookup", { projectId: hit?.project.id ?? null, userId: req.user?.id, meta: { found: !!hit } });
     if (!hit) throw notFound("Sertifikat topilmadi", "CERT_NOT_FOUND");
     void publish("certificate.checked", { code: req.params.code });
     businessEvents.inc({ event: "certificate_verified_lookup" });
@@ -283,6 +295,7 @@ export default async function publicRoutes(app: FastifyInstance) {
       where: { sha256: digest, document: { isNot: null } },
       include: { document: { include: { project: { select: { slug: true, name: true } } } } },
     });
+    track("file_check", { projectId: file?.document?.projectId ?? null, userId: req.user?.id, meta: { match: !!file?.document } });
     if (!file?.document) return { match: false, sha256: digest };
     const d = file.document;
     return { match: true, sha256: digest, document: { title: d.title, type: d.type, status: d.status, issuedAt: d.issuedAt, number: d.number, project: d.project } };
@@ -325,7 +338,7 @@ export default async function publicRoutes(app: FastifyInstance) {
   app.get("/meta/regions", async () => REGIONS);
 
   // ── files (auth-gated streaming)
-  app.get<{ Params: { id: string }; Querystring: { download?: string } }>("/files/:id", async (req, reply) => {
+  app.get<{ Params: { id: string }; Querystring: { download?: string; w?: string } }>("/files/:id", async (req, reply) => {
     const f = await prisma.fileObject.findUnique({
       where: { id: req.params.id },
       include: {
@@ -352,6 +365,27 @@ export default async function publicRoutes(app: FastifyInstance) {
       return reply.code(403).send({ error: { code: "LOCKED", message: "Bu fayl faqat xaridorlar uchun" } });
     }
 
+    const publicCache = !(f.document && f.document.access !== "PUBLIC");
+
+    // responsive WebP variant
+    const w = Number(req.query.w);
+    if (w > 0 && canResize(f.mime) && !req.query.download) {
+      const width = nearestWidth(w);
+      const etag = `"${f.sha256.slice(0, 16)}-w${width}"`;
+      if (req.headers["if-none-match"] === etag) return reply.code(304).send();
+      try {
+        const { stream: variant } = await variantStream(f.storageKey, width);
+        return reply
+          .header("content-type", "image/webp")
+          .header("etag", etag)
+          .header("vary", "Accept")
+          .header("cache-control", publicCache ? "public, max-age=31536000, immutable" : "private, max-age=3600")
+          .send(variant);
+      } catch (e) {
+        req.log.warn({ err: (e as Error).message, file: f.id }, "image variant failed, serving original");
+      }
+    }
+
     const stream = await storage.read(f.storageKey).catch(() => null);
     if (!stream) throw notFound("Fayl omborda topilmadi");
     const disposition = req.query.download ? "attachment" : "inline";
@@ -360,7 +394,7 @@ export default async function publicRoutes(app: FastifyInstance) {
       .header("content-length", f.size)
       .header("etag", `"${f.sha256}"`)
       .header("x-content-sha256", f.sha256)
-      .header("cache-control", f.document && f.document.access !== "PUBLIC" ? "private, max-age=300" : "public, max-age=86400, immutable")
+      .header("cache-control", publicCache ? "public, max-age=86400, immutable" : "private, max-age=300")
       .header("content-disposition", `${disposition}; filename*=UTF-8''${encodeURIComponent(f.originalName)}`);
     if (req.headers["if-none-match"] === `"${f.sha256}"`) return reply.code(304).send();
     return reply.send(stream);

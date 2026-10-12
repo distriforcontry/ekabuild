@@ -19,7 +19,7 @@
 
 ```
                        ┌──────────────── Internet ───────────────┐
-                       │ ekabuild.uz  app.  admin.  api.         │
+                       │ ekabuild.uz cabinet. admin. api.         │
                        └────────────────────┬────────────────────┘
                                             │ :80/:443 (TLS, HTTP/2, gzip, rate-limit)
                                      ┌──────▼──────┐
@@ -41,7 +41,7 @@
 
 * **Monorepo** (pnpm workspaces):
   * `apps/web` — Next.js 15 (App Router, RSC, TypeScript, Tailwind v4, Motion, React Three Fiber, Leaflet).
-    Bitta ilova, subdomen bo'yicha yo'naltiriladi: landing (`ekabuild.uz`), kabinet (`app.ekabuild.uz`), admin (`admin.ekabuild.uz`).
+    Bitta ilova, subdomen bo'yicha yo'naltiriladi: landing (`ekabuild.uz`), kabinet (`cabinet.ekabuild.uz`), admin (`admin.ekabuild.uz`).
   * `apps/api` — Fastify 5 + Prisma 6 + MySQL 8.4 + Zod. Stateless → gorizontal masshtablanadi.
   * `packages/shared` — umumiy tiplar, enumlar, Zod sxemalari, formatlash.
 * **Bir domen — bitta cookie:** har bir web-hostda `/api/*` nginx orqali API ga proksi qilinadi → CORS yo'q, cookie `.ekabuild.uz` da.
@@ -107,7 +107,7 @@
 ## 7. Deploy uchun kerak bo'ladigan narsalar
 
 1. Server IP (Ubuntu 22.04/24.04, kamida 4 vCPU / 8 GB RAM), SSH kirish.
-2. DNS `A` yozuvlari: `ekabuild.uz`, `www`, `app`, `admin`, `api` → server IP.
+2. DNS `A` yozuvlari: `ekabuild.uz`, `www`, `cabinet`, `admin`, `api` → server IP.
 3. E-IMZO API kaliti (`ekabuild.uz` domeni uchun) va E-IMZO server manzili.
 4. (ixtiyoriy) SMTP / SMS provayder, to'lov tizimi kalitlari.
 

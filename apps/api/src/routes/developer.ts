@@ -64,6 +64,13 @@ async function ownProject(user: AuthUser, id: string) {
   return p;
 }
 
+/** Blocked organisations keep read access but cannot publish, sell or change listings. */
+async function assertOrgActive(orgId: string | null | undefined) {
+  if (!orgId) return;
+  const org = await prisma.organization.findUnique({ where: { id: orgId }, select: { blockedAt: true, blockReason: true } });
+  if (org?.blockedAt) throw forbidden(`Tashkilot faoliyati cheklangan${org.blockReason ? `: ${org.blockReason}` : ""}`, "ORG_BLOCKED");
+}
+
 function devUser(req: Parameters<typeof requireRole>[0]) {
   const u = requireRole(req, "DEVELOPER", "ADMIN");
   if (!u.orgId && !isAdminRole(u.role)) throw forbidden("Quruvchi tashkiloti biriktirilmagan");
@@ -124,6 +131,7 @@ export default async function developerRoutes(app: FastifyInstance) {
   app.post("/dev/projects", async (req) => {
     const u = devUser(req);
     if (!u.orgId) throw forbidden("Tashkilot kerak");
+    await assertOrgActive(u.orgId);
     const body = projectInput.parse(req.body);
     let slug = slugify(body.name) || "obyekt";
     if (await prisma.project.findUnique({ where: { slug } })) slug = `${slug}-${Math.random().toString(36).slice(2, 6)}`;
@@ -160,6 +168,7 @@ export default async function developerRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/dev/projects/:id/submit", async (req) => {
     const u = devUser(req);
     const p = await ownProject(u, req.params.id);
+    await assertOrgActive(p.developerId);
     await prisma.project.update({ where: { id: p.id }, data: { verificationStatus: "PENDING" } });
     void audit({ actorId: u.id, action: "PROJECT_SUBMIT", entity: "Project", entityId: p.id, ip: req.ip });
     void publish("project.submitted", { projectId: p.id });
@@ -170,6 +179,7 @@ export default async function developerRoutes(app: FastifyInstance) {
   app.post<{ Params: { id: string } }>("/dev/projects/:id/units", async (req) => {
     const u = devUser(req);
     const p = await ownProject(u, req.params.id);
+    await assertOrgActive(p.developerId);
     const unitInput = z.object({
       number: z.string().max(32),
       section: z.number().int().min(1).default(1),

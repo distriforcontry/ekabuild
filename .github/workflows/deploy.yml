@@ -1,0 +1,32 @@
+name: Deploy
+
+# Push-to-deploy over SSH. Repository secrets required:
+#   SSH_HOST (89.39.95.156) · SSH_USER (root or deploy) · SSH_KEY (private key) · SSH_PORT (optional, 22)
+on:
+  workflow_dispatch:
+    inputs:
+      ref: { description: "Git ref to deploy", default: "main", required: true }
+  push:
+    branches: [main]
+
+concurrency: { group: deploy-production, cancel-in-progress: false }
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: production
+    steps:
+      - name: Deploy over SSH (zero-downtime rolling update)
+        uses: appleboy/ssh-action@v1.2.2
+        with:
+          host: ${{ secrets.SSH_HOST }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT || 22 }}
+          command_timeout: 40m
+          script: |
+            set -e
+            cd /opt/ekabuild
+            git fetch --all --prune
+            ./deploy/scripts/deploy.sh "${{ github.event.inputs.ref || github.sha }}"
+            curl -fsS https://ekabuild.uz/api/v1/health

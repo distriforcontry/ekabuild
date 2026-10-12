@@ -52,12 +52,18 @@ export function orgDto(o: Prisma.OrganizationGetPayload<object>) {
     status: o.status,
     verifiedAt: o.verifiedAt,
     rejectReason: o.rejectReason,
+    blockedAt: o.blockedAt,
+    blockReason: o.blockReason,
+    archivedAt: o.archivedAt,
     createdAt: o.createdAt,
   };
 }
 
+/** A project visible in the public catalog: published, not archived, developer not blocked. */
+export const listedProject = { published: true, archivedAt: null, developer: { blockedAt: null } } satisfies Prisma.ProjectWhereInput;
+
 export const projectCardInclude = {
-  developer: { select: { id: true, name: true, logoUrl: true, status: true } },
+  developer: { select: { id: true, name: true, logoUrl: true, status: true, blockedAt: true } },
   _count: { select: { units: { where: { status: "AVAILABLE" } } } },
 } satisfies Prisma.ProjectInclude;
 
@@ -90,6 +96,7 @@ export function projectCard(p: ProjectCardRow) {
     developer: p.developer,
     published: p.published,
     featured: p.featured,
+    archivedAt: p.archivedAt,
     createdAt: p.createdAt,
   };
 }
@@ -128,6 +135,7 @@ export function documentDto(d: DocRow, canAccess: boolean) {
     verifiedAt: d.verifiedAt,
     rejectReason: d.rejectReason,
     version: d.version,
+    archivedAt: d.archivedAt,
     createdAt: d.createdAt,
     locked,
     // the hash is always public: anyone can prove a file they hold is the registered original
@@ -173,6 +181,10 @@ export function purchaseDto(p: PurchaseRow) {
     currency: p.currency,
     paidAt: p.paidAt,
     createdAt: p.createdAt,
+    planType: p.planType,
+    downPercent: p.downPercent,
+    months: p.months,
+    reservationUntil: p.reservationUntil,
     project,
     unit: p.unit ? unitDto(p.unit) : null,
     buyer: p.buyer,

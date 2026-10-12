@@ -9,7 +9,7 @@ chizmalarni tekshiradi; shartnoma E-IMZO bilan imzolanadi, qurilish va topshiril
 | | |
 |---|---|
 | 🌐 Landing | `ekabuild.uz` — splash, hero (Cycles render + interaktiv 3D), tekshirish vidjeti, katalog, quruvchilar, qoidalar |
-| 🏠 Kabinet | `app.ekabuild.uz` — xaridor / yuridik shaxs / quruvchi / nazoratchi panellari |
+| 🏠 Kabinet | `cabinet.ekabuild.uz` — xaridor / yuridik shaxs / quruvchi / nazoratchi panellari |
 | 🛡 Admin | `admin.ekabuild.uz` — moderatsiya, real-time support inbox, shablonlar, audit (hash-zanjir) |
 | 🔌 API | `api.ekabuild.uz/api/v1` — [docs/API.md](docs/API.md) |
 
