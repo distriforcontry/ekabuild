@@ -264,7 +264,7 @@ export default async function adminRoutes(app: FastifyInstance) {
       prisma.purchase.findMany({ where, skip, take, include: purchaseInclude, orderBy: orderBy(q, ["number", "amount", "status", "createdAt", "paidAt"], { createdAt: "desc" } as Prisma.PurchaseOrderByWithRelationInput) }),
       prisma.purchase.count({ where }),
     ]);
-    return { items: rows.map(purchaseDto), total, page, pageSize };
+    return { items: rows.map((r) => purchaseDto(r)), total, page, pageSize };
   });
 
   // ── complaints

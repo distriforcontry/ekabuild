@@ -12,7 +12,7 @@ import { contractContext, renderTemplate, signingPayload } from "../lib/contract
 import { verifyPkcs7 } from "../lib/eimzo";
 import { badRequest, conflict, forbidden, notFound } from "../lib/errors";
 import { notify, notifyOrgMembers } from "../lib/notify";
-import { documentDto, fileRef, purchaseDto, purchaseInclude } from "../lib/serializers";
+import { canSignContract, documentDto, fileRef, purchaseDto, purchaseInclude } from "../lib/serializers";
 import { PLAN_LIMITS, buildSchedule, dec, summarize } from "../lib/finance";
 import { contractDocx } from "../lib/docx";
 import { isAdminRole, requireUser, type AuthUser } from "../plugins/auth";
@@ -45,7 +45,7 @@ async function loadContract(id: string, user: AuthUser) {
   return { c, viewerRole };
 }
 
-function contractDto(c: Awaited<ReturnType<typeof loadContract>>["c"], viewerRole: SignerRole | null) {
+function contractDto(c: Awaited<ReturnType<typeof loadContract>>["c"], viewerRole: SignerRole | null, viewerUser?: AuthUser) {
   const signedRoles = new Set(c.signatures.map((s) => s.role));
   return {
     id: c.id,
@@ -56,7 +56,7 @@ function contractDto(c: Awaited<ReturnType<typeof loadContract>>["c"], viewerRol
     status: c.status,
     signedAt: c.signedAt,
     createdAt: c.createdAt,
-    purchase: purchaseDto(c.purchase),
+    purchase: purchaseDto(c.purchase, viewerUser),
     signatures: c.signatures.map((s) => ({
       id: s.id,
       role: s.role,
@@ -70,7 +70,7 @@ function contractDto(c: Awaited<ReturnType<typeof loadContract>>["c"], viewerRol
       signedAt: s.signedAt,
     })),
     viewerRole,
-    canSign: !!viewerRole && !signedRoles.has(viewerRole) && ["PENDING", "PARTIALLY_SIGNED"].includes(c.status) && c.purchase.status === "PENDING_SIGNATURES",
+    canSign: canSignContract(c.status, c.purchase.status, signedRoles, viewerRole),
   };
 }
 
@@ -196,7 +196,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
       body: `${buyer.fullName}: ${project.name}${unit ? ` — №${unit.number}` : " — hujjatlar paketi"}. Shartnomani imzolang.`,
       link: `/app/contracts/${purchase.contract!.id}`,
     });
-    return { purchase: purchaseDto(purchase) };
+    return { purchase: purchaseDto(purchase, u) };
   });
 
   app.get("/purchases", async (req) => {
@@ -206,14 +206,14 @@ export default async function buyerRoutes(app: FastifyInstance) {
       include: purchaseInclude,
       orderBy: { createdAt: "desc" },
     });
-    return rows.map(purchaseDto);
+    return rows.map((r) => purchaseDto(r, u));
   });
 
   app.get<{ Params: { id: string } }>("/purchases/:id", async (req) => {
     const u = requireUser(req);
     const p = await prisma.purchase.findFirst({ where: { id: req.params.id, ...purchaseVisibleTo(u) }, include: purchaseInclude });
     if (!p) throw notFound();
-    return purchaseDto(p);
+    return purchaseDto(p, u);
   });
 
   app.post<{ Params: { id: string } }>("/purchases/:id/cancel", async (req) => {
@@ -296,7 +296,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
       sms: true,
     });
     const updated = await prisma.purchase.findUniqueOrThrow({ where: { id: p.id }, include: purchaseInclude });
-    return purchaseDto(updated);
+    return purchaseDto(updated, u);
   });
 
   // instalment calculator (public — used on project pages before buying)
@@ -388,7 +388,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
   app.get<{ Params: { id: string } }>("/contracts/:id", async (req) => {
     const u = requireUser(req);
     const { c, viewerRole } = await loadContract(req.params.id, u);
-    return contractDto(c, viewerRole);
+    return contractDto(c, viewerRole, u);
   });
 
   app.get<{ Params: { id: string } }>("/contracts/:id/challenge", async (req) => {
@@ -472,7 +472,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
       });
     }
     const fresh = await loadContract(c.id, u);
-    return contractDto(fresh.c, fresh.viewerRole);
+    return contractDto(fresh.c, fresh.viewerRole, u);
   });
 
   // ── my files / feed / notifications

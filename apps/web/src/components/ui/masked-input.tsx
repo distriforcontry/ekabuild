@@ -4,8 +4,9 @@ import { cn } from "@/lib/utils";
 
 /**
  * Masked inputs for Uzbek business data. Each control keeps a *raw* value (digits only or a number)
- * in `value` / `onChange`, and shows a formatted string while typing. Caret stays at the end of the
- * typed digits, paste of any formatting works, and `aria-invalid` turns on when the value is incomplete.
+ * in `value` / `onChange`, and shows a formatted string while typing. Editing works anywhere in the
+ * value (the caret is kept next to the digit it was at, Backspace/Delete over a literal removes the
+ * neighbouring digit), paste of any formatting works, and `aria-invalid` turns on when incomplete.
  *
  *   <MaskedInput mask="phone" value={phone} onChange={setPhone} />            // "+998901234567"
  *   <MaskedInput mask="tin" value={tin} onChange={setTin} />                  // "301234567"
@@ -73,6 +74,17 @@ function extractRaw(text: string, def: MaskDef, kind: MaskKind): string {
   return raw.slice(0, def.maxRaw);
 }
 
+/** Index in the formatted string right after the `count`-th raw character. */
+function caretForRaw(count: number, pattern: string, prefixLen: number): number {
+  if (count <= 0) return prefixLen;
+  let placed = 0;
+  for (let i = 0; i < pattern.length; i++) {
+    const ch = pattern[i];
+    if ((ch === "#" || ch === "A") && ++placed === count) return i + 1;
+  }
+  return pattern.length;
+}
+
 /** Human formatting helpers (display only) */
 export const formatMasked = (kind: MaskKind, value: string | null | undefined) => {
   if (!value) return "";
@@ -117,11 +129,29 @@ export const MaskedInput = React.forwardRef<HTMLInputElement, MaskedInputProps>(
           rest.onFocus?.(e);
         }}
         onChange={(e) => {
-          const next = extractRaw(e.target.value, def, mask);
-          // backspace over a literal: drop the previous digit as well
-          const isDelete = (e.nativeEvent as InputEvent).inputType?.startsWith("delete");
-          const finalRaw = isDelete && next === raw ? raw.slice(0, -1) : next;
-          onChange(def.toValue ? def.toValue(finalRaw) : finalRaw);
+          const el = e.target;
+          const text = el.value;
+          const caret = el.selectionStart ?? text.length;
+          let next = extractRaw(text, def, mask);
+          // how many raw characters sit before the caret (the "+998 (" prefix of a phone is not raw)
+          const prefixLen = mask === "phone" ? 6 : 0;
+          let rawCaret = mask === "phone" && text.startsWith("+998") && caret <= prefixLen ? 0 : extractRaw(text.slice(0, caret), def, mask).length;
+          const inputType = (e.nativeEvent as InputEvent).inputType ?? "";
+          if (inputType.startsWith("delete") && next === raw) {
+            // only a literal ("-", ")", " ") was removed: delete the neighbouring digit instead
+            if (inputType === "deleteContentForward") next = raw.slice(0, rawCaret) + raw.slice(rawCaret + 1);
+            else if (rawCaret > 0) {
+              next = raw.slice(0, rawCaret - 1) + raw.slice(rawCaret);
+              rawCaret -= 1;
+            }
+          }
+          rawCaret = Math.min(rawCaret, next.length);
+          onChange(def.toValue ? def.toValue(next) : next);
+          // restore the caret after React re-renders the formatted value (mid-string edits stay in place)
+          const pos = caretForRaw(rawCaret, def.pattern, next.length ? prefixLen : 0);
+          requestAnimationFrame(() => {
+            if (document.activeElement === el) el.setSelectionRange(pos, pos);
+          });
         }}
         onBlur={(e) => {
           setTouched(true);

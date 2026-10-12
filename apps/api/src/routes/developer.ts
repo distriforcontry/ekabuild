@@ -100,19 +100,24 @@ export default async function developerRoutes(app: FastifyInstance) {
   app.get("/dev/stats", async (req) => {
     const u = devUser(req);
     const where = isAdminRole(u.role) && !u.orgId ? {} : { developerId: u.orgId! };
-    const [projects, sold, available, revenue, pending, avg] = await Promise.all([
+    const [projects, units, contracted, collected, pending, avg] = await Promise.all([
       prisma.project.count({ where }),
-      prisma.unit.count({ where: { project: where, status: "SOLD" } }),
-      prisma.unit.count({ where: { project: where, status: "AVAILABLE" } }),
-      prisma.purchase.aggregate({ where: { project: where, status: { in: ["PAID", "COMPLETED"] } }, _sum: { amount: true } }),
+      prisma.unit.groupBy({ by: ["status"], where: { project: where }, _count: true }),
+      prisma.purchase.aggregate({ where: { project: where, status: { in: ["SIGNED", "PAID", "COMPLETED"] } }, _sum: { amount: true } }),
+      // revenue = money actually received (instalment plans are paid over time)
+      prisma.payment.aggregate({ where: { status: "PAID", purchase: { project: where } }, _sum: { amount: true } }),
       prisma.contract.count({ where: { purchase: { project: where }, status: { in: ["PENDING", "PARTIALLY_SIGNED"] } } }),
       prisma.project.aggregate({ where, _avg: { trustScore: true } }),
     ]);
+    const unitCount = (st: string) => units.find((x) => x.status === st)?._count ?? 0;
     return {
       projects,
-      unitsSold: sold,
-      unitsAvailable: available,
-      revenue: dec(revenue._sum.amount) ?? "0.00",
+      unitsSold: unitCount("SOLD"),
+      unitsAvailable: unitCount("AVAILABLE"),
+      unitsReserved: unitCount("RESERVED"),
+      unitsTotal: units.reduce((t, x) => t + x._count, 0),
+      revenue: dec(collected._sum.amount) ?? "0.00",
+      contracted: dec(contracted._sum.amount) ?? "0.00",
       pendingSignatures: pending,
       avgTrust: Math.round(avg._avg.trustScore ?? 0),
     };
@@ -376,6 +381,6 @@ export default async function developerRoutes(app: FastifyInstance) {
       orderBy: { createdAt: "desc" },
       take: 500,
     });
-    return rows.map(purchaseDto);
+    return rows.map((r) => purchaseDto(r, u));
   });
 }

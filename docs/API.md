@@ -104,7 +104,7 @@ Demo accounts (seed, password **`Eka12345!`**, phone login):
 | | Path | Notes |
 |---|---|---|
 | 🌐 GET | `/stats/public` | `{ projects, developers, verifiedCertificates, inspections, unitsSold, avgTrust, regions }` |
-| 🌐 GET | `/projects` | query `q, region, status, type, developerId, minPrice, maxPrice, featured, sort=trust\|new\|price_asc\|price_desc\|progress, page, pageSize` → `Paginated<ProjectCard>` (only published) |
+| 🌐 GET | `/projects` | query `q, region, status, type, developerId, minPrice, maxPrice, featured, verified, has3d, sort=trust\|new\|price_asc\|price_desc\|progress, page, pageSize` → `Paginated<ProjectCard>` (published, not archived, developer not blocked). `ProjectCard.model3d: FileRef\|null` |
 | 🌐 GET | `/projects/map` | `{ id, slug, name, lat, lng, trustScore, status, coverUrl }[]` |
 | 🌐 GET | `/projects/:slug` | `ProjectDetail` (owner/admin can see unpublished) |
 | 🌐 GET | `/projects/:slug/units` | `UnitItem[]` sorted by section, floor, number |
@@ -132,7 +132,7 @@ Demo accounts (seed, password **`Eka12345!`**, phone login):
 | | Path | Notes |
 |---|---|---|
 | 🔐 POST | `/purchases` | `{ projectId, kind: 'UNIT'\|'DOCUMENT_PACKAGE', unitId?, plan?: { planType: 'FULL'\|'INSTALLMENT', downPercent?: 20–90 (30), months?: 3–60 (12) } }` → `{ purchase: PurchaseItem }` — reserves the unit for 7 days (`reservationUntil`), creates the contract (payment table rendered into it) and the `Payment` schedule. 400 `PROJECT_ARCHIVED` / `DEVELOPER_BLOCKED` |
-| 🔐 GET | `/purchases` | my purchases → `PurchaseItem[]` |
+| 🔐 GET | `/purchases` | my purchases → `PurchaseItem[]` — `contract` carries `{ id, number, status, signedAt, signedRoles, viewerRole: 'BUYER'\|'SELLER'\|null, canSign }` so lists never need the contract detail |
 | 🔐 GET | `/purchases/:id` | `PurchaseItem` |
 | 🔐 POST | `/purchases/:id/cancel` | only DRAFT / PENDING_SIGNATURES |
 | 🔐 POST | `/purchases/:id/pay` | demo gateway: pays the **next due instalment** (requires SIGNED). First payment → PAID, unit SOLD, files unlocked; last instalment of a plan → COMPLETED. 400 `NOTHING_DUE` |
@@ -153,7 +153,7 @@ Demo accounts (seed, password **`Eka12345!`**, phone login):
 
 | | Path | Notes |
 |---|---|---|
-| GET | `/dev/stats` | `{ projects, unitsSold, unitsAvailable, revenue, pendingSignatures, avgTrust }` |
+| GET | `/dev/stats` | `{ projects, unitsSold, unitsAvailable, unitsReserved, unitsTotal, revenue (collected), contracted, pendingSignatures, avgTrust }` |
 | GET | `/dev/projects` | own projects (`ProjectCard & { published, verificationStatus }`) |
 | POST | `/dev/projects` | create: `{ name, tagline?, description?, type, status, region, district?, address, lat, lng, cadastreNumber?, landArea?, totalArea?, floors, sections, priceFrom?, pricePerSqm?, packagePrice?, startDate?, plannedEndDate?, coverUrl?, massing? }` |
 | PATCH | `/dev/projects/:id` | partial of the above + `progress` |

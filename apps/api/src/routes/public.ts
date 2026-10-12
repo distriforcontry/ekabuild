@@ -43,6 +43,11 @@ const listQuery = z.object({
     .optional()
     .transform((v) => v === "true" || v === "1"),
   sort: z.enum(["trust", "new", "price_asc", "price_desc", "progress"]).optional(),
+  /** only projects with a 3D model (3D Studio gallery) */
+  has3d: z
+    .string()
+    .optional()
+    .transform((v) => v === "true" || v === "1"),
   /** "all" includes unpublished projects — staff only (inspectors searching for any object) */
   scope: z.enum(["published", "all"]).optional(),
   page: z.coerce.number().optional(),
@@ -78,6 +83,7 @@ export default async function publicRoutes(app: FastifyInstance) {
     if (q.developerId) where.developerId = q.developerId;
     if (q.featured) where.featured = true;
     if (q.verified) where.verificationStatus = "VERIFIED";
+    if (q.has3d) where.model3dId = { not: null };
     if (q.minPrice != null || q.maxPrice != null) where.priceFrom = { ...(q.minPrice != null ? { gte: q.minPrice } : {}), ...(q.maxPrice != null ? { lte: q.maxPrice } : {}) };
     const orderBy: Prisma.ProjectOrderByWithRelationInput[] =
       q.sort === "new"

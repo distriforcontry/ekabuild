@@ -64,6 +64,7 @@ export const listedProject = { published: true, archivedAt: null, developer: { b
 
 export const projectCardInclude = {
   developer: { select: { id: true, name: true, logoUrl: true, status: true, blockedAt: true } },
+  model3d: { select: { id: true, originalName: true, mime: true, size: true, sha256: true } },
   _count: { select: { units: { where: { status: "AVAILABLE" } } } },
 } satisfies Prisma.ProjectInclude;
 
@@ -97,6 +98,8 @@ export function projectCard(p: ProjectCardRow) {
     published: p.published,
     featured: p.featured,
     archivedAt: p.archivedAt,
+    /** 3D model reference (lets the 3D Studio list models without loading every project detail) */
+    model3d: fileRef(p.model3d),
     createdAt: p.createdAt,
   };
 }
@@ -165,12 +168,27 @@ export const purchaseInclude = {
   unit: true,
   buyer: { select: { id: true, fullName: true, phone: true } },
   buyerOrg: { select: { id: true, name: true, tin: true } },
-  contract: { select: { id: true, number: true, status: true, signedAt: true } },
+  contract: { select: { id: true, number: true, status: true, signedAt: true, signatures: { select: { role: true } } } },
 } satisfies Prisma.PurchaseInclude;
+
+type SignerRoleName = "BUYER" | "SELLER" | "WITNESS";
+
+/** Which side of the deal the viewer is on (null for staff / outsiders). */
+export function viewerRoleFor(p: { buyerId: string; buyerOrgId: string | null; project: { developerId: string } }, viewer?: { id: string; orgId?: string | null } | null): SignerRoleName | null {
+  if (!viewer) return null;
+  if (p.buyerId === viewer.id || (!!viewer.orgId && p.buyerOrgId === viewer.orgId)) return "BUYER";
+  if (viewer.orgId && p.project.developerId === viewer.orgId) return "SELLER";
+  return null;
+}
+
+/** Single source of truth for "can this viewer sign now" — used by list and detail DTOs. */
+export function canSignContract(contractStatus: string, purchaseStatus: string, signedRoles: Iterable<string>, viewerRole: SignerRoleName | null) {
+  return !!viewerRole && !new Set(signedRoles).has(viewerRole) && ["PENDING", "PARTIALLY_SIGNED"].includes(contractStatus) && purchaseStatus === "PENDING_SIGNATURES";
+}
 
 export type PurchaseRow = Prisma.PurchaseGetPayload<{ include: typeof purchaseInclude }>;
 
-export function purchaseDto(p: PurchaseRow) {
+export function purchaseDto(p: PurchaseRow, viewer?: { id: string; orgId?: string | null } | null) {
   const { developerId: _d, ...project } = p.project;
   return {
     id: p.id,
@@ -189,7 +207,14 @@ export function purchaseDto(p: PurchaseRow) {
     unit: p.unit ? unitDto(p.unit) : null,
     buyer: p.buyer,
     buyerOrg: p.buyerOrg,
-    contract: p.contract,
+    contract: p.contract
+      ? (() => {
+          const { signatures, ...c } = p.contract;
+          const signedRoles = signatures.map((x) => x.role);
+          const viewerRole = viewerRoleFor(p, viewer);
+          return { ...c, signedRoles, viewerRole, canSign: canSignContract(c.status, p.status, signedRoles, viewerRole) };
+        })()
+      : null,
   };
 }
 

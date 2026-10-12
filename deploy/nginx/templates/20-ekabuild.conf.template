@@ -36,22 +36,19 @@ server {
   ssl_protocols TLSv1.2 TLSv1.3;
   ssl_prefer_server_ciphers off;
 
-  add_header Strict-Transport-Security $eka_hsts always;
-  add_header X-Content-Type-Options nosniff always;
-  add_header X-Frame-Options SAMEORIGIN always;
-  add_header Referrer-Policy strict-origin-when-cross-origin always;
-  add_header Permissions-Policy "camera=(), microphone=(), geolocation=(self)" always;
+  include /etc/nginx/snippets/security-headers.conf;
 
   limit_conn conn 50;
 
-  # auth endpoints: stricter limit (OTP / login brute force)
-  location ~ ^/api/v1/auth/ {
+  # auth endpoints: stricter limit (OTP / login brute force). Prefix (^~) locations: the longest one wins and
+  # regex locations are skipped, so API traffic never reaches the static-file rule below.
+  location ^~ /api/v1/auth/ {
     limit_req zone=auth burst=10 nodelay;
     proxy_pass http://api_pool;
   }
 
   # realtime support chat (WebSocket, long-lived)
-  location /api/v1/support/ws {
+  location ^~ /api/v1/support/ws {
     proxy_pass http://api_pool;
     proxy_read_timeout 3600s;
     proxy_send_timeout 3600s;
@@ -70,20 +67,27 @@ server {
   location = /api/v1/metrics { return 404; }
   location = /metrics { return 404; }
 
-  location /api/ {
+  # ^~ : API paths never fall through to the static-file regex below
+  location ^~ /api/ {
     limit_req zone=api burst=60 nodelay;
     proxy_pass http://api_pool;
   }
 
-  # immutable Next.js assets
-  location /_next/static/ {
+  # content-hashed Next.js bundles — cache forever
+  location ^~ /_next/static/ {
     proxy_pass http://web_pool;
-    add_header Cache-Control "public, max-age=31536000, immutable";
+    include /etc/nginx/snippets/static-cache.conf;
+    add_header Cache-Control "public, max-age=31536000, immutable" always;
+    include /etc/nginx/snippets/security-headers.conf;
   }
 
-  location ~* \.(?:exr|hdr|glb|gltf|woff2?)$ {
+  # renders, images, fonts, 3D models, HDRIs from /public — not content-hashed, so a long max-age plus
+  # stale-while-revalidate (browsers re-check in the background after 7 days)
+  location ~* \.(?:webp|avif|jpe?g|png|gif|svg|ico|woff2?|ttf|exr|hdr|glb|gltf)$ {
     proxy_pass http://web_pool;
-    add_header Cache-Control "public, max-age=2592000";
+    include /etc/nginx/snippets/static-cache.conf;
+    add_header Cache-Control "public, max-age=604800, stale-while-revalidate=2592000" always;
+    include /etc/nginx/snippets/security-headers.conf;
   }
 
   location / {
@@ -100,7 +104,7 @@ server {
   ssl_certificate     /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
   ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
   ssl_protocols TLSv1.2 TLSv1.3;
-  add_header Strict-Transport-Security $eka_hsts always;
+  include /etc/nginx/snippets/security-headers.conf;
 
   location /api/v1/support/ws {
     proxy_pass http://api_pool;

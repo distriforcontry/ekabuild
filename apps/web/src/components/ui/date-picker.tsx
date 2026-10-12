@@ -54,15 +54,20 @@ export function DatePicker({
   const [view, setView] = React.useState(() => selected ?? new Date());
   const [text, setText] = React.useState(display(selected));
   const [pickYear, setPickYear] = React.useState(false);
+  /** a complete but impossible / out-of-range date was typed */
+  const [invalid, setInvalid] = React.useState(false);
 
-  React.useEffect(() => setText(display(fromIso(value))), [value]);
+  React.useEffect(() => {
+    setText(display(fromIso(value)));
+    setInvalid(false);
+  }, [value]);
   React.useEffect(() => {
     if (open) setView(fromIso(value) ?? new Date());
   }, [open, value]);
 
   const minD = fromIso(min);
   const maxD = fromIso(max);
-  const outOfRange = (d: Date) => (minD && d < minD) || (maxD && d > maxD);
+  const outOfRange = (d: Date) => !!((minD && d < minD) || (maxD && d > maxD));
 
   const first = new Date(view.getFullYear(), view.getMonth(), 1);
   const offset = (first.getDay() + 6) % 7; // Monday first
@@ -72,6 +77,7 @@ export function DatePicker({
     return { d, inMonth: i >= offset && i < offset + days };
   });
   const today = toIso(new Date());
+  const todayDisabled = outOfRange(fromIso(today)!);
 
   const onType = (s: string) => {
     const digits = s.replace(/\D/g, "").slice(0, 8);
@@ -81,11 +87,17 @@ export function DatePicker({
     setText(out);
     if (digits.length === 8) {
       const d = new Date(Number(digits.slice(4)), Number(digits.slice(2, 4)) - 1, Number(digits.slice(0, 2)));
-      if (!Number.isNaN(d.getTime()) && d.getDate() === Number(digits.slice(0, 2)) && !outOfRange(d)) {
+      const ok = !Number.isNaN(d.getTime()) && d.getDate() === Number(digits.slice(0, 2)) && !outOfRange(d);
+      setInvalid(!ok);
+      if (ok) {
         onChange(toIso(d));
         setView(d);
       }
-    } else if (!digits.length) onChange(null);
+    } else {
+      setInvalid(false);
+      // required fields (clearable=false) keep their value; the text snaps back on blur
+      if (!digits.length && clearable) onChange(null);
+    }
   };
 
   const years = Array.from({ length: 21 }, (_, i) => view.getFullYear() - 10 + i);
@@ -100,9 +112,13 @@ export function DatePicker({
           aria-label={ariaLabel}
           placeholder={placeholder}
           value={text}
+          aria-invalid={invalid || undefined}
           onChange={(e) => onType(e.target.value)}
-          onBlur={() => setText(display(fromIso(value)))}
-          className="h-11 w-full rounded-xl border border-line bg-ink-850 pl-3.5 pr-20 font-mono text-sm tracking-wide text-stone-100 placeholder:text-ink-400 transition-colors hover:border-line-strong focus:border-gold-500/60 focus:outline-none focus:ring-4 focus:ring-gold-500/10 disabled:opacity-50"
+          onBlur={() => {
+            setText(display(fromIso(value)));
+            setInvalid(false);
+          }}
+          className="h-11 w-full rounded-xl border border-line bg-ink-850 pl-3.5 pr-20 font-mono text-sm tracking-wide text-stone-100 placeholder:text-ink-400 transition-colors hover:border-line-strong focus:border-gold-500/60 focus:outline-none focus:ring-4 focus:ring-gold-500/10 disabled:opacity-50 aria-[invalid=true]:border-danger/60 aria-[invalid=true]:focus:ring-danger/10"
         />
         <div className="absolute right-1.5 top-1/2 flex -translate-y-1/2 items-center gap-0.5">
           {clearable && value && !disabled && (
@@ -163,7 +179,7 @@ export function DatePicker({
                     <button
                       key={iso}
                       type="button"
-                      disabled={!!dis}
+                      disabled={dis}
                       onClick={() => (onChange(iso), setOpen(false))}
                       className={cn(
                         "relative h-9 cursor-pointer rounded-lg font-mono text-[13px] transition",
@@ -182,7 +198,12 @@ export function DatePicker({
             </>
           )}
           <div className="mt-2 flex justify-between border-t border-line pt-2">
-            <button type="button" onClick={() => (onChange(today), setOpen(false))} className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gold-300 hover:bg-gold-500/10">
+            <button
+              type="button"
+              disabled={todayDisabled}
+              onClick={() => (onChange(today), setOpen(false))}
+              className="cursor-pointer rounded-lg px-2.5 py-1.5 text-xs font-semibold text-gold-300 hover:bg-gold-500/10 disabled:cursor-not-allowed disabled:opacity-40 disabled:hover:bg-transparent"
+            >
               {lang === "ru" ? "Сегодня" : tr("Bugun")}
             </button>
             {clearable && (
