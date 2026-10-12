@@ -1,0 +1,28 @@
+# Load-balanced pools. `resolve` re-resolves container names via Docker DNS, so nginx starts even if a
+# replica is down and follows it when it comes back. Add api-3 / web-3 here after adding them to compose.
+
+upstream api_pool {
+  zone api_pool 128k;
+  least_conn;
+  server api-1:4000 resolve max_fails=3 fail_timeout=10s;
+  server api-2:4000 resolve max_fails=3 fail_timeout=10s;
+  keepalive 64;
+}
+
+upstream web_pool {
+  zone web_pool 128k;
+  least_conn;
+  server web-1:3000 resolve max_fails=3 fail_timeout=10s;
+  server web-2:3000 resolve max_fails=3 fail_timeout=10s;
+  keepalive 64;
+}
+
+# Internal entry point for server-side calls from the web pool (not published to the host)
+server {
+  listen 8081;
+  server_name _;
+  access_log off;
+  location / {
+    proxy_pass http://api_pool;
+  }
+}

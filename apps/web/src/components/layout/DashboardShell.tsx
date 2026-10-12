@@ -49,8 +49,11 @@ export function DashboardShell({
   user,
   defaultCollapsed = false,
   topbar,
+  settingsHref = "/app/settings",
   children,
 }: {
+  /** where the user menu's "Settings" item points */
+  settingsHref?: string;
   /** small label under the logo, e.g. "Admin" */
   area: string;
   nav: NavSection[];
@@ -140,7 +143,7 @@ export function DashboardShell({
           {topbar}
           <LanguageSwitcher />
           <ThemeToggle />
-          <UserMenu user={user} />
+          <UserMenu user={user} settingsHref={settingsHref} />
         </header>
         <main className="mx-auto w-full max-w-[1480px] px-4 py-6 md:px-8 md:py-8">
           <motion.div key={pathname} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, ease: [0.16, 1, 0.3, 1] }}>
@@ -261,7 +264,7 @@ function SidebarInner({ area, nav, collapsed, onToggle }: { area: string; nav: N
   );
 }
 
-function UserMenu({ user }: { user: ShellUser }) {
+function UserMenu({ user, settingsHref }: { user: ShellUser; settingsHref: string }) {
   const router = useRouter();
   const { t, label } = useI18n();
   const logout = async () => {
@@ -296,7 +299,7 @@ function UserMenu({ user }: { user: ShellUser }) {
         <DropdownMenuItem onSelect={() => router.push("/")}>
           <Home2 /> {t("common.nav.home")}
         </DropdownMenuItem>
-        <DropdownMenuItem onSelect={() => router.push("/app/settings")}>
+        <DropdownMenuItem onSelect={() => router.push(settingsHref)}>
           <Setting2 /> {t("common.nav.settings")}
         </DropdownMenuItem>
         <DropdownMenuSeparator />

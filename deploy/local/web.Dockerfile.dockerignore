@@ -1,0 +1,4 @@
+**
+!apps/web/.next/standalone
+!apps/web/.next/static
+!apps/web/public

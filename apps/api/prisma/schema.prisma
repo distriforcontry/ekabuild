@@ -177,6 +177,24 @@ enum ComplaintStatus {
   DISMISSED
 }
 
+enum OtpPurpose {
+  REGISTER
+  LOGIN
+  RESET
+}
+
+enum SupportStatus {
+  OPEN
+  PENDING
+  CLOSED
+}
+
+enum SupportSender {
+  USER
+  AGENT
+  SYSTEM
+}
+
 enum NotificationType {
   INFO
   SUCCESS
@@ -187,34 +205,38 @@ enum NotificationType {
 // ───────────────────────────── Identity ─────────────────────────────
 
 model User {
-  id           String     @id @default(cuid())
-  email        String     @unique @db.VarChar(191)
-  phone        String?    @unique @db.VarChar(32)
-  passwordHash String     @db.VarChar(255)
-  fullName     String     @db.VarChar(191)
-  pinfl        String?    @db.VarChar(14)
-  avatarUrl    String?    @db.VarChar(512)
-  role         Role       @default(BUYER)
-  status       UserStatus @default(ACTIVE)
-  locale       String     @default("uz") @db.VarChar(5)
-  lastLoginAt  DateTime?
+  id              String     @id @default(cuid())
+  phone           String     @unique @db.VarChar(16) // E.164, +998XXXXXXXXX
+  phoneVerifiedAt DateTime?
+  email           String?    @unique @db.VarChar(191)
+  passwordHash    String     @db.VarChar(255)
+  fullName        String     @db.VarChar(191)
+  pinfl           String?    @db.VarChar(14)
+  avatarUrl       String?    @db.VarChar(512)
+  role            Role       @default(BUYER)
+  status          UserStatus @default(ACTIVE)
+  locale          String     @default("uz") @db.VarChar(5)
+  lastLoginAt     DateTime?
 
   organizationId String?
   organization   Organization? @relation(fields: [organizationId], references: [id], onDelete: SetNull)
 
-  sessions       Session[]
-  purchases      Purchase[]       @relation("PurchaseBuyer")
-  signatures     Signature[]
-  inspections    Inspection[]
-  notifications  Notification[]
-  complaints     Complaint[]
-  uploadedFiles  FileObject[]
-  progressPosts  ProgressUpdate[]
-  favorites      Favorite[]
-  auditLogs      AuditLog[]
-  certVerified   Certificate[]    @relation("CertVerifier")
-  docVerified    Document[]       @relation("DocVerifier")
-  cadastreChecks CadastreCheck[]
+  sessions        Session[]
+  purchases       Purchase[]       @relation("PurchaseBuyer")
+  signatures      Signature[]
+  inspections     Inspection[]
+  notifications   Notification[]
+  complaints      Complaint[]
+  uploadedFiles   FileObject[]
+  progressPosts   ProgressUpdate[]
+  favorites       Favorite[]
+  auditLogs       AuditLog[]
+  certVerified    Certificate[]    @relation("CertVerifier")
+  docVerified     Document[]       @relation("DocVerifier")
+  cadastreChecks  CadastreCheck[]
+  supportThreads  SupportThread[]  @relation("SupportThreadUser")
+  supportAssigned SupportThread[]  @relation("SupportThreadAgent")
+  supportMessages SupportMessage[]
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -238,24 +260,24 @@ model Session {
 }
 
 model Organization {
-  id             String             @id @default(cuid())
-  type           OrgType
-  name           String             @db.VarChar(191)
-  legalName      String?            @db.VarChar(255)
-  tin            String             @unique @db.VarChar(9) // STIR / INN
-  director       String?            @db.VarChar(191)
-  phone          String?            @db.VarChar(32)
-  email          String?            @db.VarChar(191)
-  website        String?            @db.VarChar(255)
-  address        String?            @db.VarChar(512)
-  region         String?            @db.VarChar(128)
-  licenseNumber  String?            @db.VarChar(64)
-  logoUrl        String?            @db.VarChar(512)
-  description    String?            @db.Text
-  foundedYear    Int?
-  status         VerificationStatus @default(PENDING)
-  rejectReason   String?            @db.VarChar(512)
-  verifiedAt     DateTime?
+  id            String             @id @default(cuid())
+  type          OrgType
+  name          String             @db.VarChar(191)
+  legalName     String?            @db.VarChar(255)
+  tin           String             @unique @db.VarChar(9) // STIR / INN
+  director      String?            @db.VarChar(191)
+  phone         String?            @db.VarChar(32)
+  email         String?            @db.VarChar(191)
+  website       String?            @db.VarChar(255)
+  address       String?            @db.VarChar(512)
+  region        String?            @db.VarChar(128)
+  licenseNumber String?            @db.VarChar(64)
+  logoUrl       String?            @db.VarChar(512)
+  description   String?            @db.Text
+  foundedYear   Int?
+  status        VerificationStatus @default(PENDING)
+  rejectReason  String?            @db.VarChar(512)
+  verifiedAt    DateTime?
 
   members   User[]
   projects  Project[]
@@ -270,13 +292,13 @@ model Organization {
 // ───────────────────────────── Projects ─────────────────────────────
 
 model Project {
-  id              String        @id @default(cuid())
-  slug            String        @unique @db.VarChar(191)
-  name            String        @db.VarChar(191)
-  tagline         String?       @db.VarChar(255)
-  description     String?       @db.Text
-  type            ProjectType   @default(RESIDENTIAL)
-  status          ProjectStatus @default(PLANNING)
+  id          String        @id @default(cuid())
+  slug        String        @unique @db.VarChar(191)
+  name        String        @db.VarChar(191)
+  tagline     String?       @db.VarChar(255)
+  description String?       @db.Text
+  type        ProjectType   @default(RESIDENTIAL)
+  status      ProjectStatus @default(PLANNING)
 
   developerId String
   developer   Organization @relation(fields: [developerId], references: [id], onDelete: Restrict)
@@ -301,12 +323,12 @@ model Project {
   actualEndDate  DateTime?
   progress       Int       @default(0) // 0..100
 
-  coverUrl    String? @db.VarChar(512)
-  gallery     Json? // string[] of file urls
+  coverUrl  String?     @db.VarChar(512)
+  gallery   Json? // string[] of file urls
   // Procedural 3D massing parameters used when no GLB model is uploaded
-  massing     Json?
-  model3dId   String? @unique
-  model3d     FileObject? @relation("ProjectModel", fields: [model3dId], references: [id], onDelete: SetNull)
+  massing   Json?
+  model3dId String?     @unique
+  model3d   FileObject? @relation("ProjectModel", fields: [model3dId], references: [id], onDelete: SetNull)
 
   // Document package price (drawings + technical docs) for legal entities
   packagePrice Decimal? @db.Decimal(16, 2)
@@ -372,7 +394,7 @@ model FileObject {
   createdAt    DateTime @default(now())
 
   document       Document?
-  projectModel   Project?        @relation("ProjectModel")
+  projectModel   Project?         @relation("ProjectModel")
   progressMedia  ProgressMedia[]
   inspectionFile InspectionFile[]
 
@@ -410,20 +432,20 @@ model Document {
 }
 
 model Certificate {
-  id         String            @id @default(cuid())
-  code       String            @unique @db.VarChar(32) // public verification code (QR)
-  projectId  String
-  project    Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  documentId String?           @unique
-  document   Document?         @relation(fields: [documentId], references: [id], onDelete: SetNull)
-  type       CertificateType
-  number     String            @db.VarChar(128)
-  issuer     String            @db.VarChar(255)
-  issuedAt   DateTime
-  validUntil DateTime?
-  status     CertificateStatus @default(PENDING)
-  note       String?           @db.VarChar(512)
-  registryRef String?          @db.VarChar(255) // reference in an official registry
+  id          String            @id @default(cuid())
+  code        String            @unique @db.VarChar(32) // public verification code (QR)
+  projectId   String
+  project     Project           @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  documentId  String?           @unique
+  document    Document?         @relation(fields: [documentId], references: [id], onDelete: SetNull)
+  type        CertificateType
+  number      String            @db.VarChar(128)
+  issuer      String            @db.VarChar(255)
+  issuedAt    DateTime
+  validUntil  DateTime?
+  status      CertificateStatus @default(PENDING)
+  note        String?           @db.VarChar(512)
+  registryRef String?           @db.VarChar(255) // reference in an official registry
 
   verifiedById String?
   verifiedBy   User?     @relation("CertVerifier", fields: [verifiedById], references: [id], onDelete: SetNull)
@@ -481,19 +503,19 @@ model InspectionFile {
 }
 
 model ProgressUpdate {
-  id          String          @id @default(cuid())
-  projectId   String
-  project     Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
-  authorId    String?
-  author      User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
-  phase       ProgressPhase   @default(CONSTRUCTION)
-  title       String          @db.VarChar(255)
-  body        String?         @db.Text
-  stage       String?         @db.VarChar(128)
-  percent     Int? // project progress after this update
-  date        DateTime
-  media       ProgressMedia[]
-  createdAt   DateTime        @default(now())
+  id        String          @id @default(cuid())
+  projectId String
+  project   Project         @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  authorId  String?
+  author    User?           @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  phase     ProgressPhase   @default(CONSTRUCTION)
+  title     String          @db.VarChar(255)
+  body      String?         @db.Text
+  stage     String?         @db.VarChar(128)
+  percent   Int? // project progress after this update
+  date      DateTime
+  media     ProgressMedia[]
+  createdAt DateTime        @default(now())
 
   @@index([projectId, date])
 }
@@ -510,26 +532,26 @@ model ProgressMedia {
 // ───────────────────────────── Deals ─────────────────────────────
 
 model Purchase {
-  id        String         @id @default(cuid())
-  number    String         @unique @db.VarChar(32)
-  kind      PurchaseKind
-  status    PurchaseStatus @default(DRAFT)
-  projectId String
-  project   Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
-  unitId    String?
-  unit      Unit?          @relation(fields: [unitId], references: [id], onDelete: Restrict)
+  id             String         @id @default(cuid())
+  number         String         @unique @db.VarChar(32)
+  kind           PurchaseKind
+  status         PurchaseStatus @default(DRAFT)
+  projectId      String
+  project        Project        @relation(fields: [projectId], references: [id], onDelete: Restrict)
+  unitId         String?
+  unit           Unit?          @relation(fields: [unitId], references: [id], onDelete: Restrict)
   // Guarantees a unit cannot be sold twice: set to unitId while the deal is active, null otherwise
-  activeUnitLock String? @unique @db.VarChar(64)
+  activeUnitLock String?        @unique @db.VarChar(64)
 
   buyerId    String
   buyer      User          @relation("PurchaseBuyer", fields: [buyerId], references: [id], onDelete: Restrict)
   buyerOrgId String?
   buyerOrg   Organization? @relation("PurchaseBuyerOrg", fields: [buyerOrgId], references: [id], onDelete: SetNull)
 
-  amount   Decimal @db.Decimal(16, 2)
-  currency String  @default("UZS") @db.VarChar(3)
+  amount   Decimal   @db.Decimal(16, 2)
+  currency String    @default("UZS") @db.VarChar(3)
   paidAt   DateTime?
-  note     String? @db.VarChar(512)
+  note     String?   @db.VarChar(512)
 
   contract Contract?
 
@@ -541,33 +563,33 @@ model Purchase {
 }
 
 model ContractTemplate {
-  id        String   @id @default(cuid())
-  key       String   @unique @db.VarChar(64)
-  name      String   @db.VarChar(191)
+  id        String       @id @default(cuid())
+  key       String       @unique @db.VarChar(64)
+  name      String       @db.VarChar(191)
   kind      PurchaseKind
-  body      String   @db.LongText // Markdown with {{placeholders}}
-  version   Int      @default(1)
-  active    Boolean  @default(true)
+  body      String       @db.LongText // Markdown with {{placeholders}}
+  version   Int          @default(1)
+  active    Boolean      @default(true)
   contracts Contract[]
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime     @default(now())
+  updatedAt DateTime     @updatedAt
 }
 
 model Contract {
-  id          String         @id @default(cuid())
-  number      String         @unique @db.VarChar(32)
-  purchaseId  String         @unique
-  purchase    Purchase       @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
-  templateId  String?
-  template    ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
-  title       String         @db.VarChar(255)
-  body        String         @db.LongText // rendered markdown — immutable once pending
-  bodyHash    String         @db.VarChar(64) // sha256 of body
-  status      ContractStatus @default(DRAFT)
-  signedAt    DateTime?
-  signatures  Signature[]
-  createdAt   DateTime       @default(now())
-  updatedAt   DateTime       @updatedAt
+  id         String            @id @default(cuid())
+  number     String            @unique @db.VarChar(32)
+  purchaseId String            @unique
+  purchase   Purchase          @relation(fields: [purchaseId], references: [id], onDelete: Cascade)
+  templateId String?
+  template   ContractTemplate? @relation(fields: [templateId], references: [id], onDelete: SetNull)
+  title      String            @db.VarChar(255)
+  body       String            @db.LongText // rendered markdown — immutable once pending
+  bodyHash   String            @db.VarChar(64) // sha256 of body
+  status     ContractStatus    @default(DRAFT)
+  signedAt   DateTime?
+  signatures Signature[]
+  createdAt  DateTime          @default(now())
+  updatedAt  DateTime          @updatedAt
 }
 
 model Signature {
@@ -665,4 +687,58 @@ model AuditLog {
 
   @@index([entity, entityId])
   @@index([actorId])
+}
+
+// SMS one-time codes (hashed). Rate limits are enforced per phone in the auth service.
+model PhoneOtp {
+  id         String     @id @default(cuid())
+  phone      String     @db.VarChar(16)
+  purpose    OtpPurpose
+  codeHash   String     @db.VarChar(128)
+  attempts   Int        @default(0)
+  expiresAt  DateTime
+  consumedAt DateTime?
+  ip         String?    @db.VarChar(64)
+  createdAt  DateTime   @default(now())
+
+  @@index([phone, purpose, createdAt])
+}
+
+// ───────────────────────────── Support chat ─────────────────────────────
+
+model SupportThread {
+  id              String           @id @default(cuid())
+  subject         String?          @db.VarChar(255)
+  status          SupportStatus    @default(OPEN)
+  userId          String?
+  user            User?            @relation("SupportThreadUser", fields: [userId], references: [id], onDelete: SetNull)
+  guestName       String?          @db.VarChar(128)
+  guestPhone      String?          @db.VarChar(32)
+  guestTokenHash  String?          @unique @db.VarChar(128)
+  assignedToId    String?
+  assignedTo      User?            @relation("SupportThreadAgent", fields: [assignedToId], references: [id], onDelete: SetNull)
+  unreadForAgent  Int              @default(0)
+  unreadForUser   Int              @default(0)
+  firstResponseAt DateTime?
+  lastMessageAt   DateTime         @default(now())
+  closedAt        DateTime?
+  messages        SupportMessage[]
+  createdAt       DateTime         @default(now())
+  updatedAt       DateTime         @updatedAt
+
+  @@index([status, lastMessageAt])
+  @@index([userId])
+}
+
+model SupportMessage {
+  id         String        @id @default(cuid())
+  threadId   String
+  thread     SupportThread @relation(fields: [threadId], references: [id], onDelete: Cascade)
+  senderType SupportSender
+  senderId   String?
+  sender     User?         @relation(fields: [senderId], references: [id], onDelete: SetNull)
+  body       String        @db.Text
+  createdAt  DateTime      @default(now())
+
+  @@index([threadId, createdAt])
 }

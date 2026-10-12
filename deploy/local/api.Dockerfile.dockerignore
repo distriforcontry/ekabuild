@@ -1,0 +1,8 @@
+**/.next
+**/.env
+**/.env.*
+.git
+.preview
+**/.data
+apps/web
+deploy/certbot

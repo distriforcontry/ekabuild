@@ -3,6 +3,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { CloseCircle } from "iconsax-reactjs";
 import { cn } from "@/lib/utils";
+import { useI18n } from "@/i18n/client";
 
 export const Dialog = DialogPrimitive.Root;
 export const DialogTrigger = DialogPrimitive.Trigger;
@@ -14,6 +15,7 @@ export function DialogContent({
   size = "md",
   ...props
 }: React.ComponentProps<typeof DialogPrimitive.Content> & { size?: "sm" | "md" | "lg" | "xl" | "full" }) {
+  const { t } = useI18n();
   const sizes = { sm: "max-w-md", md: "max-w-lg", lg: "max-w-2xl", xl: "max-w-4xl", full: "max-w-[96vw] h-[92vh]" };
   return (
     <DialogPrimitive.Portal>
@@ -29,7 +31,7 @@ export function DialogContent({
         {children}
         <DialogPrimitive.Close className="absolute right-4 top-4 cursor-pointer rounded-lg p-1.5 text-ink-300 transition hover:bg-fg/5 hover:text-stone-100">
           <CloseCircle size={20} />
-          <span className="sr-only">Yopish</span>
+          <span className="sr-only">{t("common.actions.close")}</span>
         </DialogPrimitive.Close>
       </DialogPrimitive.Content>
     </DialogPrimitive.Portal>

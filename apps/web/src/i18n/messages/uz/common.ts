@@ -60,6 +60,7 @@ const common = {
     reject: "Rad etish",
     submit: "Yuborish",
   },
+  trust: { score: "Ishonch bali" },
   theme: { label: "Mavzu", dark: "Tungi", light: "Kunduzgi", system: "Tizim" },
   language: { label: "Til" },
   table: {

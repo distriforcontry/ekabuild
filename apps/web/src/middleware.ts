@@ -2,17 +2,15 @@ import { NextResponse, type NextRequest } from "next/server";
 
 /**
  * 1. Subdomain routing (one Next app serves every host):
- *      admin.ekabuild.uz/*  → /admin/*        app.ekabuild.uz/* → /app/*
- *    Paths that already carry the prefix (or shared routes like /login, /api) pass through untouched,
- *    so links like <Link href="/admin/users"> work on every host and in local dev.
+ *      admin.ekabuild.uz/  → /admin           app.ekabuild.uz/ → /app
+ *    Only the root is rewritten; every other path is served as-is, so links like <Link href="/admin/users">
+ *    or /projects/… work identically on every host and in local dev.
  * 2. Session refresh: when the short-lived access cookie is gone but a refresh cookie exists,
  *    refresh against the API and hand the new cookies to both the browser and this render.
  * 3. Guard: /app and /admin require a session (role checks happen in their layouts).
  */
 
 const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:4000";
-const SHARED_PREFIXES = ["/api", "/_next", "/login", "/register", "/forgot", "/brand", "/icon", "/favicon", "/robots", "/sitemap", "/verify", "/projects", "/models", "/textures"];
-
 function areaForHost(host: string): "admin" | "app" | null {
   const sub = host.split(":")[0]!.split(".")[0];
   if (sub === "admin") return "admin";
@@ -42,10 +40,7 @@ export async function middleware(req: NextRequest) {
   const area = areaForHost(host);
 
   // ── subdomain rewrite
-  let rewriteTo: string | null = null;
-  if (area && !pathname.startsWith(`/${area}`) && !SHARED_PREFIXES.some((p) => pathname.startsWith(p))) {
-    rewriteTo = `/${area}${pathname === "/" ? "" : pathname}${search}`;
-  }
+  const rewriteTo = area && pathname === "/" ? `/${area}${search}` : null;
   const effectivePath = rewriteTo ? rewriteTo.split("?")[0]! : pathname;
   const protectedArea = effectivePath.startsWith("/app") || effectivePath.startsWith("/admin");
 
@@ -83,5 +78,5 @@ export async function middleware(req: NextRequest) {
 }
 
 export const config = {
-  matcher: ["/((?!_next/static|_next/image|api/|.*\\.(?:svg|png|jpg|jpeg|webp|gif|ico|glb|gltf|woff2?)$).*)"],
+  matcher: ["/((?!_next/static|_next/image|api/|.*\\.(?:svg|png|jpg|jpeg|webp|gif|ico|glb|gltf|exr|hdr|woff2?)$).*)"],
 };

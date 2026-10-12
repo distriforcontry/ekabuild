@@ -1,0 +1,12 @@
+**/node_modules
+**/.next
+**/dist
+**/.data
+**/.env
+**/.env.*
+!.env.example
+.git
+.preview
+deploy/certbot
+tools/blender/.venv
+*.log

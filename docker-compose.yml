@@ -1,0 +1,216 @@
+# EKA BUILD — production stack
+#
+#   cp .env.example .env   # fill secrets
+#   docker compose up -d --build
+#
+# Topology: nginx (TLS, load balancer) → web-1/web-2 (Next.js) and api-1/api-2 (Fastify)
+#           api ↔ MySQL · Redis (rate-limit, cache, realtime fan-out) · RabbitMQ (events) → worker-1/worker-2
+# Scale out by adding api-N / web-N / worker-N services (copy a block) and listing them in deploy/nginx/templates/upstreams.conf.template.
+
+name: ekabuild
+
+x-api-env: &api-env
+  NODE_ENV: production
+  PORT: "4000"
+  PUBLIC_URL: ${PUBLIC_URL:-https://ekabuild.uz}
+  COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.ekabuild.uz}
+  DATABASE_URL: mysql://${MYSQL_USER:-eka}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-ekabuild}
+  REDIS_URL: redis://redis:6379
+  RABBITMQ_URL: amqp://${RABBITMQ_USER:-eka}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
+  JWT_SECRET: ${JWT_SECRET:?set JWT_SECRET}
+  ACCESS_TTL_MIN: ${ACCESS_TTL_MIN:-60}
+  REFRESH_TTL_DAYS: ${REFRESH_TTL_DAYS:-30}
+  STORAGE_DRIVER: ${STORAGE_DRIVER:-local}
+  STORAGE_DIR: /data/uploads
+  S3_ENDPOINT: ${S3_ENDPOINT:-}
+  S3_REGION: ${S3_REGION:-us-east-1}
+  S3_BUCKET: ${S3_BUCKET:-ekabuild}
+  S3_ACCESS_KEY: ${S3_ACCESS_KEY:-}
+  S3_SECRET_KEY: ${S3_SECRET_KEY:-}
+  SMS_PROVIDER: ${SMS_PROVIDER:-mock}
+  ESKIZ_EMAIL: ${ESKIZ_EMAIL:-}
+  ESKIZ_PASSWORD: ${ESKIZ_PASSWORD:-}
+  ESKIZ_FROM: ${ESKIZ_FROM:-4546}
+  EIMZO_MODE: ${EIMZO_MODE:-mock}
+  EIMZO_SERVER_URL: ${EIMZO_SERVER_URL:-http://eimzo-server:8080}
+  CADASTRE_PROVIDER: ${CADASTRE_PROVIDER:-mock}
+  TRUST_PROXY: "true"
+
+x-api: &api
+  image: ekabuild/api:${TAG:-latest}
+  pull_policy: never # built locally by the `migrate` service
+  restart: unless-stopped
+  environment:
+    <<: *api-env
+  volumes:
+    - uploads:/data/uploads
+  depends_on:
+    migrate: { condition: service_completed_successfully }
+    redis: { condition: service_healthy }
+    rabbitmq: { condition: service_healthy }
+  networks: [backend]
+  logging: &logging
+    driver: json-file
+    options: { max-size: "20m", max-file: "5" }
+
+x-worker: &worker
+  <<: *api
+  command: ["node", "dist/worker.js"]
+  healthcheck: { disable: true }
+
+x-web: &web
+  image: ekabuild/web:${TAG:-latest}
+  pull_policy: never # built locally by `web-1`
+  restart: unless-stopped
+  environment:
+    API_INTERNAL_URL: http://nginx:8081
+    NEXT_PUBLIC_SITE_URL: ${PUBLIC_URL:-https://ekabuild.uz}
+  networks: [backend]
+  logging: *logging
+
+services:
+  # ───────────── data ─────────────
+  mysql:
+    image: mysql:8.4
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:?set MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ekabuild}
+      MYSQL_USER: ${MYSQL_USER:-eka}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD}
+    volumes:
+      - mysql:/var/lib/mysql
+      - ./deploy/mysql/my.cnf:/etc/mysql/conf.d/eka.cnf:ro
+    healthcheck:
+      test: ["CMD-SHELL", "mysqladmin ping -h 127.0.0.1 -uroot -p$$MYSQL_ROOT_PASSWORD --silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 20
+      start_period: 30s
+    networks: [backend]
+    logging: *logging
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    command: ["redis-server", "--appendonly", "yes", "--maxmemory", "512mb", "--maxmemory-policy", "allkeys-lru"]
+    volumes: [redis:/data]
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 3s
+      retries: 10
+    networks: [backend]
+    logging: *logging
+
+  rabbitmq:
+    image: rabbitmq:4-management-alpine
+    restart: unless-stopped
+    hostname: rabbitmq
+    environment:
+      RABBITMQ_DEFAULT_USER: ${RABBITMQ_USER:-eka}
+      RABBITMQ_DEFAULT_PASS: ${RABBITMQ_PASSWORD}
+    volumes: [rabbitmq:/var/lib/rabbitmq]
+    # management UI only on the host loopback — reach it through an SSH tunnel
+    ports: ["127.0.0.1:15672:15672"]
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+      start_period: 30s
+    networks: [backend]
+    logging: *logging
+
+  # ───────────── one-shot: migrations + seed ─────────────
+  migrate:
+    image: ekabuild/api:${TAG:-latest}
+    build: { context: ., dockerfile: apps/api/Dockerfile }
+    environment:
+      <<: *api-env
+      SEED_DEMO: ${SEED_DEMO:-true}
+      SUPERADMIN_PHONE: ${SUPERADMIN_PHONE:-}
+      SUPERADMIN_PASSWORD: ${SUPERADMIN_PASSWORD:-}
+    command: ["sh", "-c", "./node_modules/.bin/prisma migrate deploy && node dist/seed.js"]
+    volumes: [uploads:/data/uploads]
+    depends_on:
+      mysql: { condition: service_healthy }
+      rabbitmq: { condition: service_healthy }
+    networks: [backend]
+    restart: "no"
+    logging: *logging
+
+  # ───────────── API pool ─────────────
+  api-1:
+    <<: *api
+    environment: { <<: *api-env, INSTANCE_ID: api-1 }
+  api-2:
+    <<: *api
+    environment: { <<: *api-env, INSTANCE_ID: api-2 }
+
+  # ───────────── workers (RabbitMQ consumers) ─────────────
+  worker-1:
+    <<: *worker
+    environment: { <<: *api-env, INSTANCE_ID: worker-1 }
+  worker-2:
+    <<: *worker
+    environment: { <<: *api-env, INSTANCE_ID: worker-2 }
+
+  # ───────────── web pool ─────────────
+  web-1:
+    <<: *web
+    build:
+      context: .
+      dockerfile: apps/web/Dockerfile
+      args:
+        API_INTERNAL_URL: http://nginx:8081
+        NEXT_PUBLIC_SITE_URL: ${PUBLIC_URL:-https://ekabuild.uz}
+        NEXT_PUBLIC_EIMZO_API_KEYS: ${NEXT_PUBLIC_EIMZO_API_KEYS:-}
+  web-2:
+    <<: *web
+
+  # ───────────── edge: TLS + load balancer ─────────────
+  nginx:
+    image: nginx:1.27-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${APP_DOMAIN:-ekabuild.uz}
+      NGINX_ENVSUBST_OUTPUT_DIR: /etc/nginx/conf.d
+    ports: ["80:80", "443:443"]
+    volumes:
+      - ./deploy/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./deploy/nginx/templates:/etc/nginx/templates:ro
+      - ./deploy/certbot/conf:/etc/letsencrypt:ro
+      - ./deploy/certbot/www:/var/www/certbot:ro
+    depends_on:
+      api-1: { condition: service_healthy }
+      api-2: { condition: service_healthy }
+      web-1: { condition: service_healthy }
+      web-2: { condition: service_healthy }
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1:8081/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 5
+    networks: [backend]
+    logging: *logging
+
+  # Let's Encrypt renewals (enabled with: docker compose --profile tls up -d)
+  certbot:
+    image: certbot/certbot:latest
+    profiles: ["tls"]
+    volumes:
+      - ./deploy/certbot/conf:/etc/letsencrypt
+      - ./deploy/certbot/www:/var/www/certbot
+    entrypoint: ["/bin/sh", "-c", "trap exit TERM; while :; do certbot renew --webroot -w /var/www/certbot --quiet; sleep 12h & wait $${!}; done"]
+    restart: unless-stopped
+
+volumes:
+  mysql:
+  redis:
+  rabbitmq:
+  uploads:
+
+networks:
+  backend:
+    driver: bridge

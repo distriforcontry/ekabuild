@@ -74,6 +74,8 @@ export type DataTableProps<T> = {
   /** compact row height */
   dense?: boolean;
   initialSort?: Sort;
+  /** initial value of the built-in search box (e.g. `q` from the URL) */
+  initialQuery?: string;
 };
 
 const PAGE_SIZES = [10, 20, 50, 100];
@@ -110,18 +112,24 @@ export function DataTable<T>({
   className,
   dense,
   initialSort = null,
+  initialQuery = "",
 }: DataTableProps<T>) {
   const { t } = useI18n();
-  const [query, setQuery] = React.useState("");
+  const [query, setQuery] = React.useState(initialQuery);
   const [sort, setSort] = React.useState<Sort>(initialSort);
   const [page, setPage] = React.useState(1);
   const [pageSize, setPageSize] = React.useState(initialPageSize);
   const [hidden, setHidden] = React.useState<Set<string>>(new Set());
   const [selected, setSelected] = React.useState<Set<string>>(new Set());
 
-  // debounce server search
+  // debounce server search (skip the initial value — the caller already fetched with it)
+  const firstQuery = React.useRef(true);
   React.useEffect(() => {
     if (!server?.onSearchChange) return;
+    if (firstQuery.current) {
+      firstQuery.current = false;
+      if (query === initialQuery) return;
+    }
     const id = setTimeout(() => server.onSearchChange?.(query), 300);
     return () => clearTimeout(id);
     // eslint-disable-next-line react-hooks/exhaustive-deps

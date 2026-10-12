@@ -63,6 +63,7 @@ const common: Shape<typeof uz> = {
     reject: "Отклонить",
     submit: "Отправить",
   },
+  trust: { score: "Индекс доверия" },
   theme: { label: "Тема", dark: "Тёмная", light: "Светлая", system: "Системная" },
   language: { label: "Язык" },
   table: {

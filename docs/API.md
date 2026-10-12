@@ -212,3 +212,7 @@ Types: see `SupportThread` / `SupportMessage` in `apps/web/src/lib/types.ts`.
 ## Health
 
 `GET /health` → `{ status: 'ok', instance, uptime, db: 'up' }` (used by nginx / docker healthchecks; also at `/api/v1/health`).
+
+## Inspector queue
+
+`GET /inspector/queue` 🔎 → `{ certificates: (CertificateItem & { project: { slug, name } })[], documents: { id, type, title, number, issuer, status, createdAt, project: { slug, name }, file: FileRef }[] }` — pending items awaiting verification.

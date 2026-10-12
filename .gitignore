@@ -12,3 +12,5 @@ deploy/certbot/conf
 deploy/certbot/www
 .DS_Store
 *.tsbuildinfo
+.data
+.preview

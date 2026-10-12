@@ -115,6 +115,9 @@ export interface DocumentItem {
   version: number;
   createdAt: string;
   locked: boolean;
+  /** always present, even when locked — lets anyone prove a file is the registered original */
+  sha256: string;
+  rejectReason?: string | null;
   file: FileRef | null;
 }
 
