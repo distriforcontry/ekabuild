@@ -51,12 +51,12 @@ export function TemplatesView() {
             <Link href={`/admin/templates/${x.id}`} onClick={(e) => e.stopPropagation()} className="block truncate font-semibold text-stone-100 hover:text-gold-300">
               {tr(x.name)}
             </Link>
-            <div className="line-clamp-1 text-xs text-ink-400">{x.body.replace(/[#*_>|`-]/g, "").slice(0, 90)}</div>
+            <div className="line-clamp-1 text-xs text-ink-400">{x.body.replace(/\{\{\s*[\w.]+\s*\}\}/g, "…").replace(/[#*_>|`-]/g, "").slice(0, 90)}</div>
           </div>
         </div>
       ),
     },
-    { key: "key", header: t("admin.templates.columns.key"), sortValue: (x) => x.key, exportValue: (x) => x.key, cell: (x) => <span className="font-mono text-xs text-ink-200">{x.key}</span> },
+    { key: "key", header: t("admin.templates.columns.key"), sortValue: (x) => x.key, exportValue: (x) => x.key, cell: (x) => <span className="whitespace-nowrap font-mono text-xs text-ink-200">{x.key}</span> },
     {
       key: "kind",
       header: t("admin.templates.columns.kind"),

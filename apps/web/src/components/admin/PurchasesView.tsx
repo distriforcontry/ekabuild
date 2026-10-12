@@ -9,6 +9,7 @@ import { useI18n } from "@/i18n/client";
 import type { PurchaseItem } from "@/lib/types";
 import { ContractDialog } from "./ContractDialog";
 import { useFormat } from "./format";
+import { ExcelButton } from "@/components/control/ExportButton";
 import { useApiList, useListState } from "./hooks";
 import { Avatar, Dim, ErrorNotice, FilterSelect, ResetFilters, RowActions, SearchBox } from "./primitives";
 
@@ -186,6 +187,7 @@ export function PurchasesView() {
                 options={PURCHASE_KINDS.map((v) => ({ value: v, label: label("purchaseKind", v) }))}
               />
               <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />
+              <ExcelButton area="admin" entity="purchases" filters={{ q: list.q, status: list.filters.status }} className="sm:ml-auto" />
             </>
           }
         />

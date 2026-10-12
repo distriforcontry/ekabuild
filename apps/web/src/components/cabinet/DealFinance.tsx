@@ -137,7 +137,7 @@ export function PaymentSchedule({
   const nextLabel = d.next ? seqLabel(d.next.seq, d.planType) : "";
 
   return (
-    <section className={cn("relative overflow-hidden rounded-2xl border border-line bg-ink-900/80 shadow-card backdrop-blur-sm", className)} aria-labelledby={`sched-${purchase.id}`}>
+    <section className={cn("@container relative overflow-hidden rounded-2xl border border-line bg-ink-900/80 shadow-card backdrop-blur-sm", className)} aria-labelledby={`sched-${purchase.id}`}>
       <header className="flex items-center gap-3 px-5 pt-5 md:px-6 md:pt-6">
         <span className="grid size-9 shrink-0 place-items-center rounded-xl border border-gold-500/20 bg-gold-500/10 text-gold-300">
           <Calendar size={18} variant="Bulk" />
@@ -174,8 +174,8 @@ export function PaymentSchedule({
               </motion.div>
             )}
 
-            {/* summary: ring + numbers + next */}
-            <div className="grid gap-5 md:grid-cols-[auto_1fr] md:items-center">
+            {/* summary: ring + numbers + next (container-query layout: works in the page and in the seller drawer) */}
+            <div className="grid gap-5 @3xl:grid-cols-[auto_1fr] @3xl:items-center">
               <div className="flex items-center gap-5">
                 <ProgressRing value={d.progress}>
                   <div>
@@ -183,13 +183,14 @@ export function PaymentSchedule({
                     <div className="mt-0.5 text-[10px] uppercase tracking-wider text-ink-400">{t("app.finance.schedule.paid")}</div>
                   </div>
                 </ProgressRing>
-                <dl className="space-y-2.5 md:hidden">
-                  <Stat label={t("app.finance.schedule.paid")} value={fmt.money(d.paid, cur)} tone="success" />
-                  <Stat label={t("app.finance.schedule.balance")} value={fmt.money(d.balance, cur)} />
+                <dl className="min-w-0 flex-1 space-y-2.5 @3xl:hidden">
+                  <Stat label={t("app.finance.schedule.paid")} value={fmt.money(d.paid, cur)} compact={fmt.compact(d.paid)} tone="success" />
+                  <Stat label={t("app.finance.schedule.balance")} value={fmt.money(d.balance, cur)} compact={fmt.compact(d.balance)} />
+                  <Stat label={t("app.finance.schedule.total")} value={fmt.money(d.total, cur)} compact={fmt.compact(d.total)} muted />
                 </dl>
               </div>
-              <div className="grid gap-3 sm:grid-cols-2">
-                <dl className="hidden space-y-2.5 rounded-xl border border-line bg-ink-850/60 p-3.5 md:block">
+              <div className="grid gap-3 @3xl:grid-cols-2">
+                <dl className="hidden space-y-2.5 rounded-xl border border-line bg-ink-850/60 p-3.5 @3xl:block">
                   <Stat label={t("app.finance.schedule.paid")} value={fmt.money(d.paid, cur)} tone="success" />
                   <Stat label={t("app.finance.schedule.balance")} value={fmt.money(d.balance, cur)} />
                   <Stat label={t("app.finance.schedule.total")} value={fmt.money(d.total, cur)} muted />
@@ -197,7 +198,7 @@ export function PaymentSchedule({
                 {d.next ? (
                   <div
                     className={cn(
-                      "relative overflow-hidden rounded-xl border p-3.5 sm:col-span-1",
+                      "relative overflow-hidden rounded-xl border p-3.5",
                       d.next.status === "OVERDUE" ? "border-danger/35 bg-danger/[0.06]" : "border-gold-500/35 bg-gradient-to-br from-gold-500/[0.1] to-transparent shadow-glow",
                     )}
                   >
@@ -232,9 +233,31 @@ export function PaymentSchedule({
               </div>
             </div>
 
-            {/* schedule table */}
-            <div className="mt-6 overflow-x-auto rounded-xl border border-line">
-              <table className="w-full min-w-[520px] border-collapse text-sm">
+            {/* schedule: stacked rows on phones, table from sm */}
+            <ul className="mt-6 divide-y divide-line overflow-hidden rounded-xl border border-line @lg:hidden">
+              {shown.map((p) => {
+                const isNext = p.id === d.next?.id;
+                const late = p.status === "OVERDUE";
+                return (
+                  <li key={p.id} className={cn("flex items-center gap-3 px-3 py-2.5", isNext && !late && "bg-gold-500/[0.07]", late && "bg-danger/[0.05]")}>
+                    <span className="w-5 shrink-0 font-mono text-[11px] text-ink-500">{p.seq + 1}</span>
+                    <div className="min-w-0 flex-1">
+                      <div className={cn("truncate text-sm", isNext ? "font-semibold text-stone-100" : "text-ink-100")}>{seqLabel(p.seq, d.planType)}</div>
+                      <div className="text-[11px] text-ink-400">
+                        {fmt.date(p.dueDate)}
+                        {p.paidAt && <span className="text-ink-500"> · ✓ {fmt.date(p.paidAt)}</span>}
+                      </div>
+                    </div>
+                    <div className="flex shrink-0 flex-col items-end gap-1">
+                      <span className={cn("whitespace-nowrap font-mono text-[13px]", late ? "font-semibold text-danger" : "text-stone-100")}>{fmt.money(p.amount, cur)}</span>
+                      <StatusBadge kind="paymentStatus" value={p.status} className="px-1.5 py-0 text-[10px]" />
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+            <div className="mt-6 hidden overflow-x-auto rounded-xl border border-line @lg:block">
+              <table className="w-full border-collapse text-sm">
                 <thead>
                   <tr className="border-b border-line bg-fg/[0.02] text-left text-[10.5px] font-semibold uppercase tracking-wider text-ink-400">
                     <th className="w-10 px-3 py-2.5">{t("app.finance.schedule.columns.n")}</th>
@@ -298,11 +321,20 @@ export function PaymentSchedule({
   );
 }
 
-function Stat({ label, value, tone, muted }: { label: string; value: string; tone?: "success"; muted?: boolean }) {
+function Stat({ label, value, compact, tone, muted }: { label: string; value: string; compact?: string; tone?: "success"; muted?: boolean }) {
   return (
     <div className="flex items-baseline justify-between gap-3">
       <dt className="text-xs text-ink-400">{label}</dt>
-      <dd className={cn("font-mono text-sm font-semibold", tone === "success" ? "text-success" : muted ? "text-ink-300" : "text-stone-100")}>{value}</dd>
+      <dd className={cn("whitespace-nowrap font-mono text-sm font-semibold", tone === "success" ? "text-success" : muted ? "text-ink-300" : "text-stone-100")}>
+        {compact ? (
+          <>
+            <span className="@md:hidden">{compact}</span>
+            <span className="hidden @md:inline">{value}</span>
+          </>
+        ) : (
+          value
+        )}
+      </dd>
     </div>
   );
 }

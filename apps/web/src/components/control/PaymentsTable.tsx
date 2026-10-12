@@ -237,7 +237,7 @@ export function MarkPaidDialog({
   onClose: () => void;
   onDone: (id: string, body: { reference: string; method: Method; paidAt?: string }) => void;
 }) {
-  const { t, tr } = useI18n();
+  const { t, tr, locale } = useI18n();
   const f = useFormat();
   const seqLabel = useSeqLabel();
   const [reference, setReference] = React.useState("");
@@ -343,7 +343,7 @@ export function MarkPaidDialog({
                 />
               </Field>
               <Field label={t("admin.control.payments.mark.paidAt")} hint={t("admin.control.payments.mark.paidAtHint")}>
-                <DatePicker value={paidAt} onChange={setPaidAt} max={today} aria-label={t("admin.control.payments.mark.paidAt")} />
+                <DatePicker value={paidAt} onChange={setPaidAt} max={today} aria-label={t("admin.control.payments.mark.paidAt")} placeholder={locale === "ru" ? "дд.мм.гггг" : tr("kk.oo.yyyy")} />
               </Field>
             </div>
           </DialogBody>

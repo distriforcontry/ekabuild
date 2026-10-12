@@ -49,7 +49,7 @@ export function DevProjectsView() {
           toast.success(archiving ? t("admin.control.archive.archived") : t("admin.control.archive.unarchived"), { description: tr(p.name) });
         } catch (e) {
           if (e instanceof ApiError && e.code === "OPEN_DEALS") {
-            toast.error(t("admin.control.archive.openDeals"), { description: e.message });
+            toast.error(e.message || t("admin.control.archive.openDeals"));
             return;
           }
           throw e;

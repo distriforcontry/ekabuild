@@ -183,8 +183,8 @@ export function CalcResult({ calc, loading, error, currency = "UZS", compact }: 
                 <li key={r.seq} className={cn("flex items-center gap-3 px-3 py-2", r.seq === 0 && "bg-gold-500/[0.06]")}>
                   <span className="w-5 font-mono text-ink-500">{r.seq + 1}</span>
                   <span className="min-w-0 flex-1 truncate text-ink-200">{r.seq === 0 ? t("app.finance.calc.down") : t("app.finance.calc.monthsN", { n: r.seq })}</span>
-                  <span className="whitespace-nowrap text-ink-400">{fmt.date(r.dueDate)}</span>
-                  <span className="w-28 whitespace-nowrap text-right font-mono font-semibold text-stone-100">{fmt.compactMoney(r.amount, currency)}</span>
+                  <span className="hidden whitespace-nowrap text-ink-400 sm:inline">{fmt.date(r.dueDate)}</span>
+                  <span className="shrink-0 whitespace-nowrap text-right font-mono font-semibold text-stone-100 sm:w-28">{fmt.compactMoney(r.amount, currency)}</span>
                 </li>
               ) : (
                 <li key={`gap-${i}`} className="px-3 py-1.5 text-center text-[11px] text-ink-500">
@@ -264,7 +264,7 @@ export function PlanPicker({ amount, currency, value, onChange }: { amount: numb
             transition={{ duration: 0.35, ease: [0.16, 1, 0.3, 1] }}
             className="overflow-hidden"
           >
-            <div className="mt-4 grid gap-4 md:grid-cols-[1fr_1.1fr]">
+            <div className="mt-4 grid grid-cols-[minmax(0,1fr)] gap-4 md:grid-cols-[minmax(0,1fr)_minmax(0,1.1fr)]">
               <PlanControls value={value} onChange={onChange} idPrefix="buy" />
               <CalcResult calc={calc.data} loading={calc.loading} error={calc.error} currency={currency} />
             </div>
@@ -309,11 +309,11 @@ export function InstallmentCalculatorCard({
           <p className="mt-0.5 text-sm text-ink-400">{t("app.finance.calc.subtitle")}</p>
         </div>
       </header>
-      <div className="relative grid gap-6 lg:grid-cols-[1fr_1.15fr]">
-        <div className="space-y-4">
+      <div className="relative grid grid-cols-[minmax(0,1fr)] gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)]">
+        <div className="min-w-0 space-y-4">
           <div>
-            <div className="mb-1.5 flex items-baseline justify-between gap-2">
-              <label htmlFor="calc-amount" className="text-xs font-semibold text-ink-200">
+            <div className="mb-1.5 flex min-w-0 items-baseline justify-between gap-2">
+              <label htmlFor="calc-amount" className="shrink-0 text-xs font-semibold text-ink-200">
                 {t("app.finance.calc.amount")}
               </label>
               {unitHint && <span className="truncate text-[11px] text-gold-300">{unitHint}</span>}

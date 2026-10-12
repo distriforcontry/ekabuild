@@ -50,6 +50,24 @@ export function useMonthShort() {
   return React.useCallback((d: Date) => (locale === "ru" ? RU_MONTHS[d.getMonth()]! : tr(UZ_MONTHS[d.getMonth()]!)), [locale, tr]);
 }
 
+/** Code-like tokens (deal / contract / certificate numbers: P-2026-PCC4CH, BUI-2024-1222) must never be transliterated. */
+const CODE_TOKEN = /(\b(?=[A-Z0-9-]*\d)[A-Z0-9]+(?:-[A-Z0-9]+)+\b)/;
+
+/** `tr()` for free-form DB text that may embed document numbers: transliterates everything except the codes. */
+export function useTrSafe() {
+  const { tr, locale } = useI18n();
+  return React.useCallback(
+    (text: string | null | undefined) =>
+      !text || locale !== "oz"
+        ? (text ?? "")
+        : text
+            .split(CODE_TOKEN)
+            .map((part, i) => (i % 2 === 1 ? part : tr(part)))
+            .join(""),
+    [tr, locale],
+  );
+}
+
 /** "Boshlang'ich to'lov" / "3-to'lov" / "To'liq to'lov" */
 export function useSeqLabel() {
   const { t } = useI18n();

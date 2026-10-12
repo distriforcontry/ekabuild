@@ -121,7 +121,7 @@ export function PurchaseDetailView({ id }: { id: string }) {
       </Card>
 
       <div className="grid gap-6 lg:grid-cols-3">
-        <div className="space-y-6 lg:col-span-2">
+        <div className="min-w-0 space-y-6 lg:col-span-2">
           {/* object & unit */}
           <Card className="overflow-hidden">
             <div className="grid md:grid-cols-[240px_1fr]">
@@ -199,7 +199,7 @@ export function PurchaseDetailView({ id }: { id: string }) {
           )}
         </div>
 
-        <div className="space-y-6">
+        <div className="min-w-0 space-y-6">
           {reserved && p.reservationUntil && <ReservationCountdown until={p.reservationUntil} />}
 
           {/* contract */}

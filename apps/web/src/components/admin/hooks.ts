@@ -39,7 +39,9 @@ export function useListState<F extends string>(filterKeys: readonly F[], opts: {
       if (resetPage && !("page" in patch)) next.delete("page");
       if (next.get("page") === "1") next.delete("page");
       const qs = next.toString();
-      window.history.replaceState(window.history.state, "", `${pathname}${qs ? `?${qs}` : ""}`);
+      // `null` (not window.history.state): Next skips entries already flagged with its internal `__NA` marker,
+      // so passing the current state would leave useSearchParams stale. With null it copies its state and syncs.
+      window.history.replaceState(null, "", `${pathname}${qs ? `?${qs}` : ""}`);
     },
     [pathname],
   );

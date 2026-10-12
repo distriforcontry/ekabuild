@@ -13,7 +13,7 @@ import { useI18n } from "@/i18n/client";
 import type { Deadline, DeadlineKind, DeadlineSeverity, DeadlinesResponse } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { apiBase, type Area } from "./area";
-import { ControlHeader, DaysBadge, Segmented, useMonthShort } from "./ui";
+import { ControlHeader, DaysBadge, Segmented, useMonthShort, useTrSafe } from "./ui";
 
 const KINDS: DeadlineKind[] = ["payment", "reservation", "contract", "certificate", "project", "document", "complaint"];
 const SEVERITIES: DeadlineSeverity[] = ["overdue", "critical", "soon"];
@@ -226,7 +226,8 @@ function KindChip({ icon: Icon, label, count, active, onClick }: { icon?: IconTy
 }
 
 function DeadlineRow({ d, index }: { d: Deadline; index: number }) {
-  const { t, tr } = useI18n();
+  const { t } = useI18n();
+  const tr = useTrSafe();
   const f = useFormat();
   const monthShort = useMonthShort();
   const reduce = useReducedMotion();
