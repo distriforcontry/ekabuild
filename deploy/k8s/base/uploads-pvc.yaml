@@ -1,0 +1,11 @@
+# Uploaded documents / 3D models shared by every API pod → needs ReadWriteMany storage
+# (Longhorn, NFS, CephFS, EFS…). On clusters without RWX use STORAGE_DRIVER=s3 and drop this claim.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: uploads
+spec:
+  accessModes: [ReadWriteMany]
+  resources:
+    requests:
+      storage: 100Gi

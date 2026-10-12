@@ -898,7 +898,7 @@ async function seedDemo() {
 
   // support chat demo
   const thread = await prisma.supportThread.create({
-    data: { guestName: "Dilnoza", guestPhone: "+998901112233", subject: "Sertifikatni tekshirish", unreadForAgent: 1, lastMessageAt: new Date() },
+    data: { guestName: "Dilnoza", guestPhone: "+998901112233", subject: "Sertifikatni tekshirish", unreadForAgent: 1, lastMessageAt: new Date(now - 60_000), createdAt: new Date(now - 7 * 60_000) },
   });
   await prisma.supportMessage.createMany({
     data: [

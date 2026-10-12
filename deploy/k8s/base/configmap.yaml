@@ -1,0 +1,24 @@
+# Non-secret settings. Secrets (passwords, JWT, provider keys) live in the `ekabuild-secrets` Secret — see README.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: ekabuild-config
+data:
+  NODE_ENV: production
+  PORT: "4000"
+  PUBLIC_URL: https://ekabuild.uz
+  COOKIE_DOMAIN: .ekabuild.uz
+  REDIS_URL: redis://redis:6379
+  ACCESS_TTL_MIN: "60"
+  REFRESH_TTL_DAYS: "30"
+  STORAGE_DRIVER: local          # set to s3 for multi-node clusters without RWX storage
+  STORAGE_DIR: /data/uploads
+  S3_REGION: us-east-1
+  S3_BUCKET: ekabuild
+  SMS_PROVIDER: mock             # eskiz in production
+  EIMZO_MODE: mock               # eimzo in production
+  EIMZO_SERVER_URL: http://eimzo-server:8080
+  CADASTRE_PROVIDER: mock
+  TRUST_PROXY: "true"
+  API_INTERNAL_URL: http://api:4000
+  NEXT_PUBLIC_SITE_URL: https://ekabuild.uz

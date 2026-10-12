@@ -1,0 +1,46 @@
+# helm upgrade --install alloy grafana/alloy -n monitoring -f deploy/k8s/helm-values/alloy.yaml
+# Ships every pod's logs to Loki; JSON logs from api/worker get level/service labels.
+alloy:
+  mounts: { varlog: true }
+  configMap:
+    content: |
+      discovery.kubernetes "pods" { role = "pod" }
+
+      discovery.relabel "pods" {
+        targets = discovery.kubernetes.pods.targets
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+      }
+
+      loki.source.kubernetes "pods" {
+        targets    = discovery.relabel.pods.output
+        forward_to = [loki.process.json.receiver]
+      }
+
+      loki.process "json" {
+        stage.json {
+          expressions = { level = "level", service = "service", reqId = "reqId" }
+        }
+        stage.labels {
+          values = { level = "", service = "" }
+        }
+        forward_to = [loki.write.default.receiver]
+      }
+
+      loki.write "default" {
+        endpoint { url = "http://loki-gateway.monitoring.svc/loki/api/v1/push" }
+      }

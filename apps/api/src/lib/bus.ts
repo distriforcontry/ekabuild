@@ -1,5 +1,6 @@
 import amqp, { type ChannelModel, type ConfirmChannel } from "amqplib";
 import { env } from "../env";
+import { busPublished } from "./metrics";
 
 /**
  * RabbitMQ event bus.
@@ -103,7 +104,9 @@ export async function publish<T>(routingKey: string, data: T): Promise<void> {
       type: routingKey,
     });
     await ch.waitForConfirms();
+    busPublished.inc({ routing_key: routingKey.split(".").slice(0, 2).join("."), result: "ok" });
   } catch (e) {
+    busPublished.inc({ routing_key: routingKey.split(".").slice(0, 2).join("."), result: "error" });
     console.warn("[bus] publish failed:", (e as Error).message);
     if (pending.length < 5000) pending.push({ key: routingKey, payload: data });
   }

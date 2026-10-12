@@ -4,6 +4,8 @@ const API_INTERNAL_URL = process.env.API_INTERNAL_URL ?? "http://localhost:4000"
 
 const nextConfig: NextConfig = {
   output: "standalone",
+  // separate build dir for a parallel `next dev` (NEXT_DIST_DIR=.next-dev) next to a running production build
+  distDir: process.env.NEXT_DIST_DIR ?? ".next",
   reactStrictMode: true,
   poweredByHeader: false,
   transpilePackages: ["@eka/shared"],

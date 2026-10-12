@@ -1,0 +1,44 @@
+# helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+# helm upgrade --install kube-prometheus-stack prometheus-community/kube-prometheus-stack \
+#   -n monitoring --create-namespace -f deploy/k8s/helm-values/kube-prometheus-stack.yaml
+prometheus:
+  prometheusSpec:
+    retention: 30d
+    serviceMonitorSelectorNilUsesHelmValues: false
+    ruleSelectorNilUsesHelmValues: false
+    storageSpec:
+      volumeClaimTemplate:
+        spec:
+          accessModes: [ReadWriteOnce]
+          resources: { requests: { storage: 50Gi } }
+grafana:
+  adminPassword: change-me
+  sidecar:
+    dashboards: { enabled: true, label: grafana_dashboard, searchNamespace: ALL }
+  additionalDataSources:
+    - name: Loki
+      uid: loki
+      type: loki
+      url: http://loki-gateway.monitoring.svc
+  ingress:
+    enabled: true
+    ingressClassName: nginx
+    annotations: { cert-manager.io/cluster-issuer: letsencrypt }
+    hosts: [grafana.ekabuild.uz]
+    tls: [{ hosts: [grafana.ekabuild.uz], secretName: grafana-tls }]
+alertmanager:
+  config:
+    route:
+      receiver: telegram
+      group_by: [alertname, namespace]
+      routes:
+        - receiver: "null"
+          matchers: [alertname = "Watchdog"]
+    receivers:
+      - name: "null"
+      - name: telegram
+        telegram_configs:
+          - bot_token: REPLACE_WITH_BOT_TOKEN
+            chat_id: -1000000000000
+            parse_mode: HTML
+            send_resolved: true

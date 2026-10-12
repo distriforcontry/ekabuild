@@ -1,6 +1,7 @@
 import type { WebSocket } from "ws";
 import { env } from "../env";
 import { createSubscriber, redis } from "../lib/redis";
+import { wsConnections } from "../lib/metrics";
 
 /**
  * Real-time support hub.
@@ -64,11 +65,12 @@ export function broadcast(to: Envelope["to"], event: unknown) {
 
 export function addConn(c: Conn) {
   conns.add(c);
+  wsConnections.inc({ kind: c.kind });
   if (c.kind === "agent") void reportPresence(true);
 }
 
 export function removeConn(c: Conn) {
-  conns.delete(c);
+  if (conns.delete(c)) wsConnections.dec({ kind: c.kind });
   if (c.kind === "agent") void reportPresence(true);
 }
 

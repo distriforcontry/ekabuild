@@ -1,0 +1,13 @@
+# Optional: scale workers on RabbitMQ queue depth with KEDA (https://keda.sh) instead of CPU.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - worker-scaledobject.yaml
+patches:
+  # KEDA owns the worker HPA once the ScaledObject exists
+  - target: { kind: HorizontalPodAutoscaler, name: worker }
+    patch: |
+      $patch: delete
+      apiVersion: autoscaling/v2
+      kind: HorizontalPodAutoscaler
+      metadata: { name: worker }

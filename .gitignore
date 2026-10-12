@@ -14,3 +14,4 @@ deploy/certbot/www
 *.tsbuildinfo
 .data
 .preview
+.next-dev

@@ -1,0 +1,57 @@
+# ingress-nginx + cert-manager (ClusterIssuer "letsencrypt" in overlays/production).
+# Web hosts send /api/* straight to the API service (same-origin cookies); api.<domain> is API-only.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: ekabuild
+  annotations:
+    cert-manager.io/cluster-issuer: letsencrypt
+    nginx.ingress.kubernetes.io/proxy-body-size: 210m
+    nginx.ingress.kubernetes.io/proxy-read-timeout: "3600"   # WebSocket support chat
+    nginx.ingress.kubernetes.io/proxy-send-timeout: "3600"
+    nginx.ingress.kubernetes.io/ssl-redirect: "true"
+    nginx.ingress.kubernetes.io/limit-rps: "30"
+    nginx.ingress.kubernetes.io/limit-burst-multiplier: "3"
+    nginx.ingress.kubernetes.io/configuration-snippet: |
+      more_set_headers "Strict-Transport-Security: max-age=63072000; includeSubDomains";
+      more_set_headers "X-Content-Type-Options: nosniff";
+      more_set_headers "Referrer-Policy: strict-origin-when-cross-origin";
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [ekabuild.uz, www.ekabuild.uz, app.ekabuild.uz, admin.ekabuild.uz, api.ekabuild.uz]
+      secretName: ekabuild-tls
+  rules:
+    - host: ekabuild.uz
+      http:
+        paths:
+          # /metrics must never reach the API publicly — route it to web (404)
+          - { path: /metrics, pathType: Exact, backend: { service: { name: web, port: { number: 3000 } } } }
+          - { path: /api, pathType: Prefix, backend: { service: { name: api, port: { number: 4000 } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 3000 } } } }
+    - host: www.ekabuild.uz
+      http:
+        paths:
+          # /metrics must never reach the API publicly — route it to web (404)
+          - { path: /metrics, pathType: Exact, backend: { service: { name: web, port: { number: 3000 } } } }
+          - { path: /api, pathType: Prefix, backend: { service: { name: api, port: { number: 4000 } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 3000 } } } }
+    - host: app.ekabuild.uz
+      http:
+        paths:
+          # /metrics must never reach the API publicly — route it to web (404)
+          - { path: /metrics, pathType: Exact, backend: { service: { name: web, port: { number: 3000 } } } }
+          - { path: /api, pathType: Prefix, backend: { service: { name: api, port: { number: 4000 } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 3000 } } } }
+    - host: admin.ekabuild.uz
+      http:
+        paths:
+          # /metrics must never reach the API publicly — route it to web (404)
+          - { path: /metrics, pathType: Exact, backend: { service: { name: web, port: { number: 3000 } } } }
+          - { path: /api, pathType: Prefix, backend: { service: { name: api, port: { number: 4000 } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: web, port: { number: 3000 } } } }
+    - host: api.ekabuild.uz
+      http:
+        paths:
+          - { path: /metrics, pathType: Exact, backend: { service: { name: web, port: { number: 3000 } } } }
+          - { path: /, pathType: Prefix, backend: { service: { name: api, port: { number: 4000 } } } }

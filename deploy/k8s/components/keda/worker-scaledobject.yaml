@@ -1,0 +1,29 @@
+apiVersion: keda.sh/v1alpha1
+kind: TriggerAuthentication
+metadata:
+  name: rabbitmq-auth
+spec:
+  secretTargetRef:
+    - parameter: host
+      name: ekabuild-secrets
+      key: RABBITMQ_URL
+---
+apiVersion: keda.sh/v1alpha1
+kind: ScaledObject
+metadata:
+  name: worker
+spec:
+  scaleTargetRef: { name: worker }
+  minReplicaCount: 2
+  maxReplicaCount: 12
+  cooldownPeriod: 120
+  triggers:
+    - type: rabbitmq
+      authenticationRef: { name: rabbitmq-auth }
+      metadata: { protocol: amqp, mode: QueueLength, value: "50", queueName: eka.notifications }
+    - type: rabbitmq
+      authenticationRef: { name: rabbitmq-auth }
+      metadata: { protocol: amqp, mode: QueueLength, value: "50", queueName: eka.sms }
+    - type: rabbitmq
+      authenticationRef: { name: rabbitmq-auth }
+      metadata: { protocol: amqp, mode: QueueLength, value: "100", queueName: eka.trust }

@@ -3,13 +3,18 @@ import * as React from "react";
 import dynamic from "next/dynamic";
 import { useTheme } from "next-themes";
 import { motion, useReducedMotion } from "motion/react";
-import { Buildings2, Map1, Verify } from "iconsax-reactjs";
+import { Buildings2, I3DRotate, Gallery, Map1, Verify } from "iconsax-reactjs";
 import { TrustRing } from "@/components/ui/trust-ring";
 import { useI18n } from "@/i18n/client";
 import { SPLASH_ATTR, SPLASH_DONE_EVENT } from "@/components/brand/Splash";
 import { cn } from "@/lib/utils";
 
 const HeroBuilding = dynamic(() => import("./HeroBuilding"), { ssr: false, loading: () => null });
+const BuildingViewer = dynamic(() => import("@/components/three").then((m) => m.BuildingViewer), { ssr: false, loading: () => null });
+
+// Photoreal Cycles render + the same building as an interactive GLB (tools/blender/build_models.py)
+const HERO_RENDER = "/renders/hero-tower.jpg";
+const HERO_MODEL = { id: "hero-tower", url: "/models/hero-tower.glb", originalName: "hero-tower.glb", mime: "model/gltf-binary", size: 0, sha256: "" };
 
 function hasWebGL() {
   try {
@@ -101,6 +106,8 @@ export function HeroVisual() {
   const [ready, setReady] = React.useState(false);
   const [mounted, setMounted] = React.useState(false);
   const [started, setStarted] = React.useState(false);
+  const [mode, setMode] = React.useState<"render" | "3d">("render");
+  const [renderFailed, setRenderFailed] = React.useState(false);
 
   React.useEffect(() => {
     setMounted(true);
@@ -142,9 +149,50 @@ export function HeroVisual() {
         <div className="absolute left-1/2 top-[52%] aspect-square w-[70%] -translate-x-1/2 -translate-y-1/2 rounded-full border border-dashed border-gold-500/15" />
       </div>
 
-      <div role="img" aria-label={t("landing.hero.visualLabel")} className="absolute inset-0">
-        <TowerFallback className={cn("transition-opacity duration-1000", ready && webgl ? "opacity-0" : "opacity-100")} />
-        {webgl && <HeroBuilding active={active} started={started} theme={theme} reduced={reduce} onReady={() => setReady(true)} />}
+      <div role="img" aria-label={t("landing.hero.visualLabel")} className="absolute inset-[6%] lg:inset-x-[8%] lg:inset-y-[7%]">
+        <motion.div
+          className="relative size-full overflow-hidden rounded-[2rem] border border-gold-500/25 bg-ink-900 shadow-[0_40px_120px_-40px_rgb(201_164_100/0.45)]"
+          initial={reduce ? false : { opacity: 0, scale: 0.94, y: 24 }}
+          animate={started || reduce ? { opacity: 1, scale: 1, y: 0 } : undefined}
+          transition={{ duration: 1.2, ease: [0.16, 1, 0.3, 1] }}
+        >
+          {mode === "render" ? (
+            <>
+              {/* slow cinematic push-in on the Cycles render */}
+              <motion.img
+                src={HERO_RENDER}
+                alt=""
+                className="absolute inset-0 size-full object-cover"
+                initial={{ scale: 1.12 }}
+                animate={{ scale: reduce ? 1.04 : [1.12, 1.02] }}
+                transition={{ duration: 14, ease: "easeOut" }}
+                onError={() => setRenderFailed(true)}
+                style={{ objectPosition: "50% 35%" }}
+              />
+              {renderFailed && webgl && <HeroBuilding active={active} started={started} theme={theme} reduced={reduce} onReady={() => setReady(true)} />}
+              {renderFailed && !webgl && <TowerFallback />}
+              <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-[#0b0c0e]/85 via-transparent to-[#0b0c0e]/10" />
+              <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_top,transparent_55%,rgb(0_0_0/0.35))]" />
+            </>
+          ) : (
+            <BuildingViewer model3d={HERO_MODEL} floors={22} progress={100} variant="compact" autoRotate className="h-full rounded-none border-0 shadow-none" />
+          )}
+          {/* caption + mode switch */}
+          <div className="absolute inset-x-0 bottom-0 flex items-end justify-between gap-3 p-4 sm:p-5">
+            <div className="min-w-0 leading-tight">
+              <div className="truncate font-display text-xl text-[#f4f1ea] sm:text-2xl">{t("landing.hero.renderCaption")}</div>
+              {mode === "3d" && <div className="mt-1 text-[11px] text-[#c4c7ce]">{t("landing.hero.view3dHint")}</div>}
+            </div>
+            <button
+              type="button"
+              onClick={() => setMode((m) => (m === "render" ? "3d" : "render"))}
+              className="glass inline-flex h-10 shrink-0 cursor-pointer items-center gap-2 rounded-xl px-3.5 text-xs font-semibold text-[#f4f1ea] transition hover:border-gold-400/60 hover:text-gold-200"
+            >
+              {mode === "render" ? <I3DRotate size={18} variant="Bulk" /> : <Gallery size={18} variant="Bulk" />}
+              {mode === "render" ? t("landing.hero.view3d") : t("landing.hero.viewRender")}
+            </button>
+          </div>
+        </motion.div>
       </div>
 
       {/* floating proof cards */}

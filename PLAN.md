@@ -76,6 +76,7 @@
 
 ## 5. Interfeys (UI/UX)
 
+* **Auth:** telefon + SMS OTP (Eskiz.uz), parol bilan kirish, rol bo'yicha yo'naltirish; 3 til (uz / ўз / ru), 2 tema.
 * **Brend:** logotip (oltin plita + "EKA" vertikal + "1" ko'rinishidagi bino kesimi + "BUILD") SVG qilib qayta chizildi.
   Ranglar: grafit `#0E0F11`, ko'mir `#17181B`, oltin `#C9A464 → #E6CB8F`, tosh `#F4F1EA`.
   Shriftlar: *Manrope* (UI), *Cormorant Garamond* (premium sarlavhalar), *JetBrains Mono* (raqamlar/kodlar).
@@ -97,6 +98,9 @@
 | 5 | Web: admin panel | ✅ |
 | 6 | RabbitMQ event bus + worker, Redis kesh/limit | ✅ |
 | 7 | Docker compose, nginx LB, TLS, deploy skriptlari | ✅ |
+| 7.1 | Kubernetes (Kustomize: HPA, KEDA, PDB, Ingress+cert-manager, NetworkPolicy) | ✅ |
+| 7.2 | Monitoring: Prometheus, Grafana dashboard, Loki + Alloy loglar, Alertmanager → Telegram | ✅ |
+| 7.3 | Blender (bpy) 3D modellar + Cycles renderlar, CI/CD (GitHub Actions → GHCR) | ✅ |
 | 8 | Serverga deploy (`ekabuild.uz` + subdomenlar) | ⏳ server ma'lumoti kutilmoqda |
 | 9 | Rasmiy integratsiyalar: kadastr API, E-IMZO server kalitlari, to'lov (Click/Payme), SMS (Eskiz) | 🔜 |
 

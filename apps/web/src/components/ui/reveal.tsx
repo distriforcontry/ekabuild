@@ -1,6 +1,6 @@
 "use client";
 import * as React from "react";
-import { motion, useInView, useMotionValue, useSpring, useReducedMotion } from "motion/react";
+import { animate, motion, useInView, useReducedMotion } from "motion/react";
 
 /** Fade/slide-in on scroll. */
 export function Reveal({
@@ -31,26 +31,30 @@ export function Reveal({
   );
 }
 
-/** Number that counts up when scrolled into view. */
+/** Number that counts up when scrolled into view (re-animates from the previous value when `value` changes). */
 export function CountUp({ value, duration = 1.6, format }: { value: number; duration?: number; format?: (n: number) => string }) {
   const ref = React.useRef<HTMLSpanElement>(null);
   const inView = useInView(ref, { once: true });
-  const mv = useMotionValue(0);
-  const spring = useSpring(mv, { duration: duration * 1000, bounce: 0 });
-  const [display, setDisplay] = React.useState("0");
+  const reduce = useReducedMotion();
+  const fmt = React.useCallback((n: number) => (format ? format(n) : new Intl.NumberFormat("uz-UZ").format(n).replace(/,/g, " ")), [format]);
+  const from = React.useRef(0);
+  const [display, setDisplay] = React.useState(() => fmt(0));
 
   React.useEffect(() => {
-    if (inView) mv.set(value);
-  }, [inView, value, mv]);
-
-  React.useEffect(
-    () =>
-      spring.on("change", (v) => {
-        const n = Math.round(v);
-        setDisplay(format ? format(n) : new Intl.NumberFormat("uz-UZ").format(n).replace(/,/g, " "));
-      }),
-    [spring, format],
-  );
+    if (!inView) return;
+    if (reduce) {
+      setDisplay(fmt(value));
+      from.current = value;
+      return;
+    }
+    const controls = animate(from.current, value, {
+      duration,
+      ease: [0.16, 1, 0.3, 1],
+      onUpdate: (v) => setDisplay(fmt(Math.round(v))),
+    });
+    from.current = value;
+    return () => controls.stop();
+  }, [inView, value, duration, reduce, fmt]);
 
   return <span ref={ref}>{display}</span>;
 }

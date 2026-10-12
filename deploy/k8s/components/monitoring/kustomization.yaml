@@ -1,0 +1,12 @@
+# Requires kube-prometheus-stack (Prometheus Operator + Grafana sidecar) — see ../../helm-values.
+apiVersion: kustomize.config.k8s.io/v1alpha1
+kind: Component
+resources:
+  - servicemonitors.yaml
+  - prometheusrule.yaml
+configMapGenerator:
+  - name: ekabuild-grafana-dashboard
+    files: [ekabuild-overview.json]
+    options:
+      disableNameSuffixHash: true
+      labels: { grafana_dashboard: "1" }

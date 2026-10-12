@@ -14,6 +14,7 @@ import { badRequest, conflict, forbidden, notFound } from "../lib/errors";
 import { notify, notifyOrgMembers } from "../lib/notify";
 import { documentDto, fileRef, purchaseDto, purchaseInclude } from "../lib/serializers";
 import { isAdminRole, requireUser, type AuthUser } from "../plugins/auth";
+import { businessEvents } from "../lib/metrics";
 
 const DEFAULT_TEMPLATES = {
   UNIT: "unit-sale",
@@ -162,6 +163,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
       meta: { number: purchase.number, kind: body.kind, unitId: unit?.id ?? null, amount: amount.toString(), contractHash: sha256(rendered) },
     });
     void publish("purchase.created", { purchaseId: purchase.id, projectId: project.id });
+    businessEvents.inc({ event: `purchase_${body.kind.toLowerCase()}` });
     void notifyOrgMembers(project.developerId, {
       type: "INFO",
       title: "Yangi buyurtma",
@@ -216,6 +218,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
     ]);
     void audit({ actorId: u.id, action: "PURCHASE_PAY", entity: "Purchase", entityId: p.id, ip: req.ip, meta: { amount: p.amount.toString() } });
     void publish("purchase.paid", { purchaseId: p.id, projectId: p.projectId });
+    businessEvents.inc({ event: "purchase_paid" });
     void notify(u.id, { type: "SUCCESS", title: "To'lov qabul qilindi", body: `Buyurtma ${p.number}. Hujjatlar endi siz uchun ochiq.`, link: `/app/purchases/${p.id}`, sms: true });
     const updated = await prisma.purchase.findUniqueOrThrow({ where: { id: p.id }, include: purchaseInclude });
     return purchaseDto(updated);
@@ -290,6 +293,7 @@ export default async function buyerRoutes(app: FastifyInstance) {
       ip: req.ip,
       meta: { role: viewerRole, method, certSerial: v.certSerial ?? null, bodyHash: c.bodyHash, complete },
     });
+    businessEvents.inc({ event: `contract_signed_${method.toLowerCase()}` });
     void publish(complete ? "contract.signed" : "contract.partially_signed", { contractId: c.id, purchaseId: c.purchaseId });
     if (viewerRole === "SELLER") {
       void notify(c.purchase.buyerId, {

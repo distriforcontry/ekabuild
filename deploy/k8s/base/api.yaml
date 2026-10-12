@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api
+  labels: { app.kubernetes.io/name: api, app.kubernetes.io/component: backend }
+spec:
+  replicas: 2
+  revisionHistoryLimit: 5
+  strategy:
+    type: RollingUpdate
+    rollingUpdate: { maxSurge: 1, maxUnavailable: 0 }   # zero-downtime rollouts
+  selector:
+    matchLabels: { app.kubernetes.io/name: api }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: api, app.kubernetes.io/component: backend }
+      annotations:
+        prometheus.io/scrape: "true"
+        prometheus.io/port: "4000"
+        prometheus.io/path: /metrics
+    spec:
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1000
+        runAsGroup: 1000
+        fsGroup: 1000
+        seccompProfile: { type: RuntimeDefault }
+      topologySpreadConstraints:
+        - maxSkew: 1
+          topologyKey: kubernetes.io/hostname
+          whenUnsatisfiable: ScheduleAnyway
+          labelSelector: { matchLabels: { app.kubernetes.io/name: api } }
+      containers:
+        - name: api
+          image: ekabuild-api
+          imagePullPolicy: IfNotPresent
+          ports: [{ name: http, containerPort: 4000 }]
+          envFrom:
+            - configMapRef: { name: ekabuild-config }
+            - secretRef: { name: ekabuild-secrets }
+          env:
+            - name: INSTANCE_ID
+              valueFrom: { fieldRef: { fieldPath: metadata.name } }
+            - name: SERVICE_NAME
+              value: api
+          resources:
+            requests: { cpu: 250m, memory: 384Mi }
+            limits: { cpu: "1", memory: 768Mi }
+          readinessProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 5
+            failureThreshold: 3
+          livenessProbe:
+            tcpSocket: { port: http }
+            initialDelaySeconds: 20
+            periodSeconds: 15
+          startupProbe:
+            httpGet: { path: /health, port: http }
+            periodSeconds: 3
+            failureThreshold: 40
+          lifecycle:
+            # give the ingress time to drop the pod before it stops accepting connections
+            preStop: { exec: { command: ["sleep", "5"] } }
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities: { drop: [ALL] }
+          volumeMounts:
+            - { name: uploads, mountPath: /data/uploads }
+            - { name: tmp, mountPath: /tmp }
+      volumes:
+        - name: uploads
+          persistentVolumeClaim: { claimName: uploads }
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: api
+  labels: { app.kubernetes.io/name: api }
+spec:
+  selector: { app.kubernetes.io/name: api }
+  ports: [{ name: http, port: 4000, targetPort: http }]
+---
+apiVersion: autoscaling/v2
+kind: HorizontalPodAutoscaler
+metadata:
+  name: api
+spec:
+  scaleTargetRef: { apiVersion: apps/v1, kind: Deployment, name: api }
+  minReplicas: 2
+  maxReplicas: 10
+  metrics:
+    - type: Resource
+      resource: { name: cpu, target: { type: Utilization, averageUtilization: 65 } }
+    - type: Resource
+      resource: { name: memory, target: { type: Utilization, averageUtilization: 80 } }
+  behavior:
+    scaleUp: { stabilizationWindowSeconds: 30, policies: [{ type: Percent, value: 100, periodSeconds: 30 }] }
+    scaleDown: { stabilizationWindowSeconds: 300, policies: [{ type: Pods, value: 1, periodSeconds: 60 }] }
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: api
+spec:
+  minAvailable: 1
+  selector: { matchLabels: { app.kubernetes.io/name: api } }

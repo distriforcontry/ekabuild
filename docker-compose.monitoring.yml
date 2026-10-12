@@ -1,0 +1,134 @@
+# EKA BUILD — observability add-on (metrics, dashboards, logs, alerts)
+#
+#   docker compose -f docker-compose.yml -f docker-compose.monitoring.yml up -d
+#
+# Grafana:      http://127.0.0.1:3001   (ssh -L 3001:127.0.0.1:3001 root@SERVER)  login admin / $GRAFANA_PASSWORD
+# Prometheus:   http://127.0.0.1:9090   Alertmanager: http://127.0.0.1:9093
+# Logs: every container's stdout (JSON from api/worker) → Grafana Alloy → Loki → Grafana "Explore" / dashboard panel.
+
+x-logging: &logging
+  driver: json-file
+  options: { max-size: "20m", max-file: "3" }
+
+services:
+  prometheus:
+    image: prom/prometheus:v3.5.0
+    restart: unless-stopped
+    command:
+      - --config.file=/etc/prometheus/prometheus.yml
+      - --storage.tsdb.path=/prometheus
+      - --storage.tsdb.retention.time=30d
+      - --web.enable-lifecycle
+    volumes:
+      - ./deploy/monitoring/prometheus:/etc/prometheus:ro
+      - prometheus:/prometheus
+    ports: ["127.0.0.1:9090:9090"]
+    networks: [backend]
+    logging: *logging
+
+  alertmanager:
+    image: prom/alertmanager:v0.28.1
+    restart: unless-stopped
+    command: ["--config.file=/etc/alertmanager/alertmanager.yml", "--storage.path=/alertmanager"]
+    volumes:
+      - ./deploy/monitoring/alertmanager:/etc/alertmanager:ro
+      - alertmanager:/alertmanager
+    ports: ["127.0.0.1:9093:9093"]
+    networks: [backend]
+    logging: *logging
+
+  grafana:
+    image: grafana/grafana:12.1.0
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:?set GRAFANA_PASSWORD}
+      GF_USERS_ALLOW_SIGN_UP: "false"
+      GF_ANALYTICS_REPORTING_ENABLED: "false"
+      GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH: /var/lib/grafana/dashboards/ekabuild-overview.json
+    volumes:
+      - ./deploy/monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./deploy/monitoring/grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - grafana:/var/lib/grafana
+    ports: ["127.0.0.1:3001:3000"]
+    depends_on: [prometheus, loki]
+    networks: [backend]
+    logging: *logging
+
+  loki:
+    image: grafana/loki:3.5.3
+    restart: unless-stopped
+    command: ["-config.file=/etc/loki/loki.yml"]
+    volumes:
+      - ./deploy/monitoring/loki/loki.yml:/etc/loki/loki.yml:ro
+      - loki:/loki
+    networks: [backend]
+    logging: *logging
+
+  alloy:
+    image: grafana/alloy:v1.10.0
+    restart: unless-stopped
+    command: ["run", "--server.http.listen-addr=0.0.0.0:12345", "--storage.path=/var/lib/alloy/data", "/etc/alloy/config.alloy"]
+    volumes:
+      - ./deploy/monitoring/alloy/config.alloy:/etc/alloy/config.alloy:ro
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - alloy:/var/lib/alloy/data
+    depends_on: [loki]
+    networks: [backend]
+    logging: *logging
+
+  # ── exporters
+  node-exporter:
+    image: prom/node-exporter:v1.9.1
+    restart: unless-stopped
+    command: ["--path.rootfs=/host"]
+    pid: host
+    volumes: ["/:/host:ro,rslave"]
+    networks: [backend]
+    logging: *logging
+
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.52.1
+    restart: unless-stopped
+    privileged: true
+    devices: ["/dev/kmsg"]
+    volumes:
+      - /:/rootfs:ro
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    networks: [backend]
+    logging: *logging
+
+  mysqld-exporter:
+    image: prom/mysqld-exporter:v0.17.2
+    restart: unless-stopped
+    command: ["--mysqld.address=mysql:3306", "--mysqld.username=root"]
+    environment:
+      MYSQLD_EXPORTER_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+    depends_on: [mysql]
+    networks: [backend]
+    logging: *logging
+
+  redis-exporter:
+    image: oliver006/redis_exporter:v1.74.0
+    restart: unless-stopped
+    environment: { REDIS_ADDR: "redis://redis:6379" }
+    depends_on: [redis]
+    networks: [backend]
+    logging: *logging
+
+  nginx-exporter:
+    image: nginx/nginx-prometheus-exporter:1.4.2
+    restart: unless-stopped
+    command: ["--nginx.scrape-uri=http://nginx:8081/nginx_status"]
+    depends_on: [nginx]
+    networks: [backend]
+    logging: *logging
+
+volumes:
+  prometheus:
+  alertmanager:
+  grafana:
+  loki:
+  alloy:

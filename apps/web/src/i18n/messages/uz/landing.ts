@@ -46,7 +46,11 @@ const landing = {
     cardLive: "Qurilish jarayoni",
     cardLiveValue: "18-qavat · 72%",
     scroll: "Pastga aylantiring",
-    visualLabel: "Aylanuvchi 3D bino modeli",
+    visualLabel: "Oltin Vodiy Residence — fotorealistik vizualizatsiya va interaktiv 3D model",
+    view3d: "3D'da aylantirish",
+    viewRender: "Vizualizatsiya",
+    view3dHint: "Aylantiring, yaqinlashtiring, qavatlarni ajrating",
+    renderCaption: "Oltin Vodiy Residence · Yunusobod",
   },
   marquee: {
     label: "Platformada tekshiriladi",

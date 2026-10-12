@@ -1,0 +1,71 @@
+groups:
+  - name: ekabuild-availability
+    rules:
+      - alert: InstanceDown
+        expr: up{job=~"api|worker|mysql|redis|rabbitmq|nginx"} == 0
+        for: 1m
+        labels: { severity: critical }
+        annotations:
+          summary: "{{ $labels.job }} ({{ $labels.instance }}) ishlamayapti"
+          description: "Prometheus 1 daqiqadan beri metrikalarni ololmayapti."
+      - alert: AllApiReplicasDown
+        expr: sum(up{job="api"}) == 0
+        for: 30s
+        labels: { severity: critical }
+        annotations: { summary: "Barcha API replikalari to'xtagan — sayt ishlamayapti" }
+
+  - name: ekabuild-api
+    rules:
+      - alert: HighErrorRate
+        expr: |
+          sum(rate(eka_http_request_duration_seconds_count{status=~"5.."}[5m]))
+            / clamp_min(sum(rate(eka_http_request_duration_seconds_count[5m])), 1) > 0.02
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "API 5xx xatolar ulushi 2% dan yuqori" }
+      - alert: HighLatencyP95
+        expr: histogram_quantile(0.95, sum by (le) (rate(eka_http_request_duration_seconds_bucket[5m]))) > 1
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "API p95 kechikish 1 soniyadan oshdi" }
+      - alert: AuthBruteForce
+        expr: sum(rate(eka_http_request_duration_seconds_count{route=~".*/auth/(login|otp/verify)",status=~"4.."}[5m])) > 2
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "Kirish/OTP bo'yicha ko'p muvaffaqiyatsiz urinishlar (brute-force shubhasi)" }
+
+  - name: ekabuild-queues
+    rules:
+      - alert: QueueBacklog
+        expr: sum by (queue) (rabbitmq_detailed_queue_messages_ready{queue=~"eka\\..*"}) > 500
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "RabbitMQ navbati {{ $labels.queue }} to'planib qoldi" }
+      - alert: DeadLetters
+        expr: sum by (queue) (rabbitmq_detailed_queue_messages{queue=~".*\\.dlq"}) > 0
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "{{ $labels.queue }} da muvaffaqiyatsiz xabarlar bor (DLQ)" }
+      - alert: WorkerFailures
+        expr: sum(rate(eka_worker_jobs_total{outcome="dead_lettered"}[15m])) > 0
+        for: 1m
+        labels: { severity: warning }
+        annotations: { summary: "Worker vazifalari DLQ ga tushmoqda" }
+
+  - name: ekabuild-infra
+    rules:
+      - alert: DiskAlmostFull
+        expr: (node_filesystem_avail_bytes{mountpoint="/",fstype!="tmpfs"} / node_filesystem_size_bytes{mountpoint="/",fstype!="tmpfs"}) < 0.1
+        for: 10m
+        labels: { severity: critical }
+        annotations: { summary: "Diskda 10% dan kam joy qoldi" }
+      - alert: HighMemory
+        expr: (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes) > 0.9
+        for: 10m
+        labels: { severity: warning }
+        annotations: { summary: "Server xotirasi 90% dan ko'p band" }
+      - alert: MySQLTooManyConnections
+        expr: mysql_global_status_threads_connected / mysql_global_variables_max_connections > 0.8
+        for: 5m
+        labels: { severity: warning }
+        annotations: { summary: "MySQL ulanishlari limitga yaqin" }

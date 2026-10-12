@@ -1,0 +1,30 @@
+# Production overlay:  kubectl apply -k deploy/k8s/overlays/production
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../../base
+  - cluster-issuer.yaml
+components:
+  - ../../components/monitoring
+  # - ../../components/keda      # enable after installing KEDA
+images:
+  - name: ekabuild-api
+    newName: ghcr.io/distriforcontry/ekabuild-api
+    newTag: latest               # deploy.sh pins this to the git SHA
+  - name: ekabuild-web
+    newName: ghcr.io/distriforcontry/ekabuild-web
+    newTag: latest
+patches:
+  - target: { kind: ConfigMap, name: ekabuild-config }
+    patch: |
+      - op: replace
+        path: /data/SMS_PROVIDER
+        value: eskiz
+      - op: replace
+        path: /data/EIMZO_MODE
+        value: eimzo
+  - target: { kind: Deployment, name: api }
+    patch: |
+      - op: replace
+        path: /spec/replicas
+        value: 3

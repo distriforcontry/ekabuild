@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22, cache: pnpm }
+      - run: pnpm install --frozen-lockfile
+      - name: Prisma generate & validate
+        working-directory: apps/api
+        env: { DATABASE_URL: "mysql://u:p@localhost:3306/db" }
+        run: pnpm exec prisma generate && pnpm exec prisma validate
+      - name: Typecheck API
+        run: pnpm --filter @eka/api typecheck
+      - name: Typecheck web
+        run: pnpm --filter @eka/web typecheck
+      - name: Build API bundle
+        working-directory: apps/api
+        run: pnpm exec tsup
+      - name: Build web
+        working-directory: apps/web
+        env: { API_INTERNAL_URL: "http://api:4000", NEXT_TELEMETRY_DISABLED: "1" }
+        run: pnpm exec next build
+
+  manifests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Validate docker compose
+        run: |
+          cp .env.example .env
+          docker compose -f docker-compose.yml -f docker-compose.monitoring.yml config -q
+      - name: Kustomize build + schema validation
+        run: |
+          curl -fsSL https://raw.githubusercontent.com/kubernetes-sigs/kustomize/master/hack/install_kustomize.sh | bash
+          ./kustomize build deploy/k8s/overlays/production > /tmp/prod.yaml
+          curl -fsSL https://github.com/yannh/kubeconform/releases/latest/download/kubeconform-linux-amd64.tar.gz | tar xz
+          ./kubeconform -strict -summary -ignore-missing-schemas /tmp/prod.yaml

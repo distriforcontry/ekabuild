@@ -1,0 +1,46 @@
+# Zero-trust networking: deny everything, then allow only the paths the app needs.
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: default-deny-ingress }
+spec:
+  podSelector: {}
+  policyTypes: [Ingress]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-ingress-controller }
+spec:
+  podSelector:
+    matchExpressions: [{ key: app.kubernetes.io/name, operator: In, values: [web, api] }]
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: ingress-nginx } }
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-web-to-api }
+spec:
+  podSelector: { matchLabels: { app.kubernetes.io/name: api } }
+  ingress:
+    - from: [{ podSelector: { matchLabels: { app.kubernetes.io/name: web } } }]
+      ports: [{ port: 4000 }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-app-to-data }
+spec:
+  podSelector:
+    matchExpressions: [{ key: app.kubernetes.io/name, operator: In, values: [mysql, redis, rabbitmq] }]
+  ingress:
+    - from:
+        - podSelector:
+            matchExpressions: [{ key: app.kubernetes.io/name, operator: In, values: [api, worker, migrate] }]
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata: { name: allow-monitoring-scrape }
+spec:
+  podSelector: {}
+  ingress:
+    - from:
+        - namespaceSelector: { matchLabels: { kubernetes.io/metadata.name: monitoring } }

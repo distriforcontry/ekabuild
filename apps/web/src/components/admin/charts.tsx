@@ -228,7 +228,7 @@ export function StatusDonut({
   const shown = active != null ? rows[active] : null;
 
   return (
-    <div className="flex flex-col items-center gap-6 sm:flex-row sm:items-center">
+    <div className="flex flex-col items-center gap-6 2xl:flex-row 2xl:items-center">
       <div className="relative shrink-0" style={{ width: size, height: size }}>
         <ResponsiveContainer width="100%" height="100%">
           <PieChart>

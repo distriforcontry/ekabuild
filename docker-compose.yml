@@ -56,7 +56,11 @@ x-api: &api
 x-worker: &worker
   <<: *api
   command: ["node", "dist/worker.js"]
-  healthcheck: { disable: true }
+  healthcheck:
+    test: ["CMD", "wget", "-qO-", "http://127.0.0.1:9100/health"]
+    interval: 15s
+    timeout: 5s
+    retries: 3
 
 x-web: &web
   image: ekabuild/web:${TAG:-latest}
@@ -151,10 +155,10 @@ services:
   # ───────────── workers (RabbitMQ consumers) ─────────────
   worker-1:
     <<: *worker
-    environment: { <<: *api-env, INSTANCE_ID: worker-1 }
+    environment: { <<: *api-env, INSTANCE_ID: worker-1, SERVICE_NAME: worker }
   worker-2:
     <<: *worker
-    environment: { <<: *api-env, INSTANCE_ID: worker-2 }
+    environment: { <<: *api-env, INSTANCE_ID: worker-2, SERVICE_NAME: worker }
 
   # ───────────── web pool ─────────────
   web-1:

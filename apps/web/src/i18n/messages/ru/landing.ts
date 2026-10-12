@@ -48,7 +48,11 @@ const landing: Shape<typeof uz> = {
     cardLive: "Ход строительства",
     cardLiveValue: "18-й этаж · 72%",
     scroll: "Прокрутите вниз",
-    visualLabel: "Вращающаяся 3D-модель здания",
+    visualLabel: "Oltin Vodiy Residence — фотореалистичная визуализация и интерактивная 3D-модель",
+    view3d: "Покрутить в 3D",
+    viewRender: "Визуализация",
+    view3dHint: "Вращайте, приближайте, разбирайте по этажам",
+    renderCaption: "Oltin Vodiy Residence · Юнусабад",
   },
   marquee: {
     label: "На платформе проверяется",

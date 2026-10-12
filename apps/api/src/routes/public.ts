@@ -21,6 +21,7 @@ import {
   unitDto,
 } from "../lib/serializers";
 import { isAdminRole, isStaffRole, requireUser } from "../plugins/auth";
+import { businessEvents } from "../lib/metrics";
 
 const listQuery = z.object({
   q: z.string().trim().max(100).optional(),
@@ -262,6 +263,7 @@ export default async function publicRoutes(app: FastifyInstance) {
     const [hit] = await certPublic({ code: req.params.code.trim().toUpperCase() });
     if (!hit) throw notFound("Sertifikat topilmadi", "CERT_NOT_FOUND");
     void publish("certificate.checked", { code: req.params.code });
+    businessEvents.inc({ event: "certificate_verified_lookup" });
     return hit;
   });
 
@@ -315,6 +317,7 @@ export default async function publicRoutes(app: FastifyInstance) {
     const c = await prisma.complaint.create({ data: { ...body, reporterId: req.user?.id } });
     void audit({ actorId: req.user?.id, action: "COMPLAINT_CREATE", entity: "Complaint", entityId: c.id, ip: req.ip, meta: { category: body.category, projectId: body.projectId } });
     void publish("complaint.created", { complaintId: c.id, projectId: body.projectId ?? null });
+    businessEvents.inc({ event: `complaint_${body.category.toLowerCase()}` });
     return { id: c.id };
   });
 

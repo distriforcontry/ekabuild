@@ -1,0 +1,54 @@
+# Single-node MySQL for small clusters. For HA use a managed database or the MySQL Operator (InnoDB Cluster)
+# and point DATABASE_URL at it — the app needs no other change.
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql
+  labels: { app.kubernetes.io/name: mysql }
+spec:
+  clusterIP: None
+  selector: { app.kubernetes.io/name: mysql }
+  ports: [{ name: mysql, port: 3306 }]
+---
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: mysql
+spec:
+  serviceName: mysql
+  replicas: 1
+  selector:
+    matchLabels: { app.kubernetes.io/name: mysql }
+  template:
+    metadata:
+      labels: { app.kubernetes.io/name: mysql, app.kubernetes.io/component: database }
+    spec:
+      securityContext: { fsGroup: 999 }
+      containers:
+        - name: mysql
+          image: mysql:8.4
+          args: ["--character-set-server=utf8mb4", "--collation-server=utf8mb4_unicode_ci", "--innodb-buffer-pool-size=1G", "--max-connections=400", "--skip-name-resolve"]
+          ports: [{ name: mysql, containerPort: 3306 }]
+          env:
+            - { name: MYSQL_DATABASE, value: ekabuild }
+            - { name: MYSQL_USER, value: eka }
+            - name: MYSQL_PASSWORD
+              valueFrom: { secretKeyRef: { name: ekabuild-secrets, key: MYSQL_PASSWORD } }
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom: { secretKeyRef: { name: ekabuild-secrets, key: MYSQL_ROOT_PASSWORD } }
+          resources:
+            requests: { cpu: 500m, memory: 1536Mi }
+            limits: { memory: 2Gi }
+          readinessProbe:
+            exec: { command: ["sh", "-c", "mysqladmin ping -h 127.0.0.1 -uroot -p\"$MYSQL_ROOT_PASSWORD\" --silent"] }
+            periodSeconds: 10
+          livenessProbe:
+            tcpSocket: { port: mysql }
+            initialDelaySeconds: 60
+            periodSeconds: 20
+          volumeMounts: [{ name: data, mountPath: /var/lib/mysql }]
+  volumeClaimTemplates:
+    - metadata: { name: data }
+      spec:
+        accessModes: [ReadWriteOnce]
+        resources: { requests: { storage: 50Gi } }

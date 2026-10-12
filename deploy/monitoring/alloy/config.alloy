@@ -1,0 +1,49 @@
+// Grafana Alloy: tail every container of the stack via the Docker socket and ship to Loki.
+// api/worker emit pino JSON → `level`, `service`, `instance` become labels; request ids stay searchable.
+
+discovery.docker "containers" {
+  host = "unix:///var/run/docker.sock"
+}
+
+discovery.relabel "containers" {
+  targets = discovery.docker.containers.targets
+
+  rule {
+    source_labels = ["__meta_docker_container_name"]
+    regex         = "/(.*)"
+    target_label  = "container"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_service"]
+    target_label  = "compose_service"
+  }
+  rule {
+    source_labels = ["__meta_docker_container_label_com_docker_compose_project"]
+    target_label  = "project"
+  }
+}
+
+loki.source.docker "stack" {
+  host       = "unix:///var/run/docker.sock"
+  targets    = discovery.relabel.containers.output
+  forward_to = [loki.process.json.receiver]
+}
+
+loki.process "json" {
+  stage.json {
+    expressions = { level = "level", service = "service", instance = "instance", reqId = "reqId" }
+  }
+  stage.labels {
+    values = { level = "", service = "" }
+  }
+  stage.structured_metadata {
+    values = { instance = "", reqId = "" }
+  }
+  forward_to = [loki.write.local.receiver]
+}
+
+loki.write "local" {
+  endpoint {
+    url = "http://loki:3100/loki/api/v1/push"
+  }
+}

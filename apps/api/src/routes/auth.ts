@@ -21,6 +21,7 @@ import { publish } from "../lib/bus";
 import { AppError, badRequest, conflict, forbidden, notFound, tooMany, unauthorized } from "../lib/errors";
 import { userDto, userSelect } from "../lib/serializers";
 import { requireUser } from "../plugins/auth";
+import { businessEvents } from "../lib/metrics";
 
 const OTP_TTL_SEC = 120;
 const OTP_RESEND_SEC = 60;
@@ -83,6 +84,7 @@ export default async function authRoutes(app: FastifyInstance) {
     });
     const message = `EKA BUILD: tasdiqlash kodi ${code}. Kodni hech kimga bermang. Muddati 2 daqiqa.`;
     await publish("sms.send", { phone, message, kind: "otp" });
+    businessEvents.inc({ event: `otp_sent_${purpose.toLowerCase()}` });
 
     return {
       sent: true,
@@ -170,6 +172,7 @@ export default async function authRoutes(app: FastifyInstance) {
       });
     });
 
+    businessEvents.inc({ event: "register" });
     void audit({ actorId: user.id, action: "REGISTER", entity: "User", entityId: user.id, ip: req.ip, meta: { accountType: body.accountType } });
     void publish("notification.welcome", { userId: user.id });
     if (user.organizationId) void publish("project.org.pending", { organizationId: user.organizationId });
@@ -186,6 +189,7 @@ export default async function authRoutes(app: FastifyInstance) {
     if (!user || !ok) throw unauthorized("Telefon raqam yoki parol noto'g'ri", "INVALID_CREDENTIALS");
     if (user.status === "BLOCKED") throw forbidden("Hisob bloklangan", "BLOCKED");
     const dto = await startSession(req, reply, user.id);
+    businessEvents.inc({ event: "login" });
     void audit({ actorId: user.id, action: "LOGIN", entity: "User", entityId: user.id, ip: req.ip });
     return { user: dto };
   });

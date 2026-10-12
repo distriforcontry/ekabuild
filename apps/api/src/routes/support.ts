@@ -154,7 +154,7 @@ export default async function supportRoutes(app: FastifyInstance) {
       prisma.supportThread.count({ where: { status: "CLOSED", closedAt: { gte: startOfDay } } }),
       prisma.supportThread.findMany({ where: { firstResponseAt: { not: null } }, select: { createdAt: true, firstResponseAt: true }, orderBy: { createdAt: "desc" }, take: 200 }),
     ]);
-    const avg = responded.length ? responded.reduce((s, t) => s + (t.firstResponseAt!.getTime() - t.createdAt.getTime()), 0) / responded.length / 60000 : 0;
+    const avg = responded.length ? responded.reduce((s, t) => s + Math.max(0, t.firstResponseAt!.getTime() - t.createdAt.getTime()), 0) / responded.length / 60000 : 0;
     return { open, pending, closedToday, agentsOnline: await agentsOnline(), avgFirstResponseMin: Math.round(avg * 10) / 10 };
   });
 

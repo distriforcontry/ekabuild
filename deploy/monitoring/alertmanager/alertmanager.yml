@@ -1,0 +1,15 @@
+# Alerts → Telegram. Create a bot with @BotFather, add it to your ops group and put the values below.
+route:
+  receiver: telegram
+  group_by: [alertname, job]
+  group_wait: 30s
+  group_interval: 5m
+  repeat_interval: 4h
+
+receivers:
+  - name: telegram
+    telegram_configs:
+      - bot_token: "REPLACE_WITH_BOT_TOKEN"
+        chat_id: -1000000000000
+        parse_mode: HTML
+        send_resolved: true

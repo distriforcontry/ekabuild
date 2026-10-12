@@ -1,0 +1,25 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: ekabuild
+labels:
+  - pairs: { app.kubernetes.io/part-of: ekabuild }
+    includeSelectors: false
+resources:
+  - namespace.yaml
+  - configmap.yaml
+  - uploads-pvc.yaml
+  - data/mysql.yaml
+  - data/redis.yaml
+  - data/rabbitmq.yaml
+  - api.yaml
+  - worker.yaml
+  - web.yaml
+  - ingress.yaml
+  - networkpolicy.yaml
+images:
+  - name: ekabuild-api
+    newName: ghcr.io/distriforcontry/ekabuild-api
+    newTag: latest
+  - name: ekabuild-web
+    newName: ghcr.io/distriforcontry/ekabuild-web
+    newTag: latest

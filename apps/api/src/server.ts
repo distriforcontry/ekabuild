@@ -12,6 +12,7 @@ import { prisma } from "./db";
 import { AppError } from "./lib/errors";
 import { redis } from "./lib/redis";
 import { busStatus } from "./lib/bus";
+import { httpDuration, registry, routeLabel } from "./lib/metrics";
 import authPlugin from "./plugins/auth";
 import authRoutes from "./routes/auth";
 import publicRoutes from "./routes/public";
@@ -28,7 +29,13 @@ export async function buildServer() {
     trustProxy: env.TRUST_PROXY,
     bodyLimit: 2 * 1024 * 1024,
     logger: isProd
-      ? { level: "info", redact: ["req.headers.cookie", "req.headers.authorization"] }
+      ? {
+          level: "info",
+          redact: ["req.headers.cookie", "req.headers.authorization"],
+          // string levels + service label → clean Loki labels
+          formatters: { level: (label: string) => ({ level: label }) },
+          base: { service: "api", instance: env.INSTANCE_ID },
+        }
       : { level: "info", transport: { target: "pino-pretty", options: { translateTime: "HH:MM:ss", ignore: "pid,hostname" } } },
     genReqId: (req) => (req.headers["x-request-id"] as string) ?? crypto.randomUUID(),
   });
@@ -102,15 +109,28 @@ export async function buildServer() {
       rabbitmq: busStatus(),
     };
   };
-  app.get("/health", health);
+  // probes & scrapes are frequent — keep them out of the request log
+  app.get("/health", { logLevel: "silent" }, health);
   // echo the serving replica so load balancing is observable
   app.addHook("onSend", async (_req, reply) => {
     reply.header("x-served-by", env.INSTANCE_ID);
   });
+  app.addHook("onResponse", async (req, reply) => {
+    if (req.url === "/metrics" || req.url.endsWith("/health")) return;
+    httpDuration.observe(
+      { method: req.method, route: routeLabel(req.url, req.routeOptions?.url), status: String(reply.statusCode) },
+      reply.elapsedTime / 1000,
+    );
+  });
+  // Prometheus scrape endpoint — the public nginx/ingress never routes /metrics
+  app.get("/metrics", { logLevel: "silent" }, async (_req, reply) => {
+    reply.header("content-type", registry.contentType);
+    return registry.metrics();
+  });
 
   await app.register(
     async (api) => {
-      api.get("/health", health);
+      api.get("/health", { logLevel: "silent" }, health);
       await api.register(authRoutes);
       await api.register(publicRoutes);
       await api.register(developerRoutes);

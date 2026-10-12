@@ -1,4 +1,6 @@
 import fs from "node:fs/promises";
+import http from "node:http";
+import pino from "pino";
 import path from "node:path";
 import amqp, { type Channel, type ConsumeMessage } from "amqplib";
 import { env } from "../env";
@@ -9,6 +11,7 @@ import { notify } from "../lib/notify";
 import { redis } from "../lib/redis";
 import { smsProvider } from "../lib/sms";
 import { recalculateTrust } from "../lib/trust";
+import { jobDuration, jobsProcessed, registry } from "../lib/metrics";
 
 /**
  * EKA BUILD worker — consumes the RabbitMQ queues declared in lib/bus.ts.
@@ -16,7 +19,14 @@ import { recalculateTrust } from "../lib/trust";
  * failed messages are retried with exponential backoff and parked in *.dlq after MAX_ATTEMPTS.
  */
 
-const log = (...a: unknown[]) => console.log(new Date().toISOString(), `[worker:${env.INSTANCE_ID}]`, ...a);
+// structured JSON logs (collected by Loki/Promtail); pretty in development
+const logger = pino({
+  level: process.env.LOG_LEVEL ?? "info",
+  base: { service: "worker", instance: env.INSTANCE_ID },
+  formatters: { level: (label: string) => ({ level: label }) },
+  ...(env.NODE_ENV === "production" ? {} : { transport: { target: "pino-pretty", options: { translateTime: "HH:MM:ss", ignore: "pid,hostname" } } }),
+});
+const log = (msg: string, ...rest: unknown[]) => logger.info(rest.length ? { detail: rest } : {}, msg);
 
 type Handler = (e: BusEvent<any>) => Promise<void>;
 
@@ -122,16 +132,22 @@ async function consume(ch: Channel, queue: string, handler: Handler) {
       ch.nack(msg, false, false); // poison message → DLQ
       return;
     }
+    const stop = jobDuration.startTimer({ queue });
     try {
       await handler(event);
       ch.ack(msg);
+      jobsProcessed.inc({ queue, outcome: "ok" });
+      stop();
     } catch (err) {
+      stop();
       if (attempts + 1 >= MAX_ATTEMPTS) {
-        log(`✗ ${queue} ${event.type} failed permanently:`, (err as Error).message);
+        logger.error({ queue, type: event.type, err: (err as Error).message, attempts: attempts + 1 }, "job failed permanently → DLQ");
+        jobsProcessed.inc({ queue, outcome: "dead_lettered" });
         ch.nack(msg, false, false); // dead-letter → <queue>.dlq
       } else {
         const delay = Math.min(60_000, 1000 * 2 ** attempts);
-        log(`↻ ${queue} ${event.type} retry #${attempts + 1} in ${delay}ms:`, (err as Error).message);
+        logger.warn({ queue, type: event.type, err: (err as Error).message, retry: attempts + 1, delayMs: delay }, "job failed, scheduling retry");
+        jobsProcessed.inc({ queue, outcome: "retried" });
         ch.publish(RETRY_EXCHANGE, queue, msg.content, {
           persistent: true,
           contentType: "application/json",
@@ -188,7 +204,22 @@ async function expireCertificates() {
 
 // ───────────────────────────── main ─────────────────────────────
 
+function startMetricsServer() {
+  const port = Number(process.env.WORKER_METRICS_PORT ?? 9100);
+  http
+    .createServer(async (req, res) => {
+      if (req.url === "/metrics") {
+        res.setHeader("content-type", registry.contentType);
+        res.end(await registry.metrics());
+      } else if (req.url === "/health") res.end("ok");
+      else res.writeHead(404).end();
+    })
+    .listen(port, () => log(`metrics on :${port}/metrics`));
+}
+
 async function main() {
+  process.env.SERVICE_NAME ??= "worker";
+  startMetricsServer();
   if (!env.RABBITMQ_URL) {
     log("RABBITMQ_URL is not set — nothing to do");
     return;

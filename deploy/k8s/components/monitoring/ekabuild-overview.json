@@ -1,0 +1,1253 @@
+{
+ "title": "EKA BUILD — Overview",
+ "uid": "ekabuild-overview",
+ "tags": [
+  "ekabuild"
+ ],
+ "timezone": "browser",
+ "schemaVersion": 41,
+ "version": 1,
+ "refresh": "30s",
+ "time": {
+  "from": "now-3h",
+  "to": "now"
+ },
+ "editable": true,
+ "graphTooltip": 1,
+ "panels": [
+  {
+   "type": "row",
+   "title": "Umumiy holat",
+   "id": 1,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 0
+   }
+  },
+  {
+   "type": "stat",
+   "title": "So'rovlar / s",
+   "id": 2,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 0,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "(sum(rate(eka_http_request_duration_seconds_count[2m]))) or vector(0)",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#C9A464",
+        "value": null
+       }
+      ]
+     },
+     "decimals": 1
+    },
+    "overrides": []
+   }
+  },
+  {
+   "type": "stat",
+   "title": "p95 kechikish",
+   "id": 3,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 4,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "(histogram_quantile(0.95, sum by (le) (rate(eka_http_request_duration_seconds_bucket[5m])))) or vector(0)",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#3FB68B",
+        "value": null
+       },
+       {
+        "color": "#E8B04B",
+        "value": 0.5
+       },
+       {
+        "color": "#E5484D",
+        "value": 1
+       }
+      ]
+     },
+     "decimals": 3
+    },
+    "overrides": []
+   }
+  },
+  {
+   "type": "stat",
+   "title": "5xx ulushi",
+   "id": 4,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 8,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "(100 * sum(rate(eka_http_request_duration_seconds_count{status=~\"5..\"}[5m])) / clamp_min(sum(rate(eka_http_request_duration_seconds_count[5m])), 0.001)) or vector(0)",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#3FB68B",
+        "value": null
+       },
+       {
+        "color": "#E8B04B",
+        "value": 1
+       },
+       {
+        "color": "#E5484D",
+        "value": 2
+       }
+      ]
+     },
+     "decimals": 2
+    },
+    "overrides": []
+   }
+  },
+  {
+   "type": "stat",
+   "title": "API replikalar",
+   "id": 5,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 12,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "(sum(up{job=\"api\"})) or vector(0)",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#E5484D",
+        "value": null
+       },
+       {
+        "color": "#E8B04B",
+        "value": 1
+       },
+       {
+        "color": "#3FB68B",
+        "value": 2
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Chat ulanishlari",
+   "id": 6,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 16,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "(sum(eka_support_ws_connections)) or vector(0)",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#C9A464",
+        "value": null
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "type": "stat",
+   "title": "Navbatda xabarlar",
+   "id": 7,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 4,
+    "w": 4,
+    "x": 20,
+    "y": 1
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum(rabbitmq_detailed_queue_messages_ready{queue=~\"eka\\\\..*\"}) or vector(0)",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "options": {
+    "reduceOptions": {
+     "calcs": [
+      "lastNotNull"
+     ]
+    },
+    "colorMode": "background",
+    "graphMode": "area",
+    "textMode": "value"
+   },
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "color": {
+      "mode": "thresholds"
+     },
+     "thresholds": {
+      "mode": "absolute",
+      "steps": [
+       {
+        "color": "#3FB68B",
+        "value": null
+       },
+       {
+        "color": "#E8B04B",
+        "value": 100
+       },
+       {
+        "color": "#E5484D",
+        "value": 500
+       }
+      ]
+     }
+    },
+    "overrides": []
+   }
+  },
+  {
+   "type": "row",
+   "title": "API va load balancing",
+   "id": 8,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 5
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "So'rovlar replika bo'yicha (load balancing)",
+   "id": 9,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (instance_id) (rate(eka_http_request_duration_seconds_count[2m]))",
+     "legendFormat": "{{instance_id}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Kechikish p50 / p95 / p99",
+   "id": 10,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 6
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "histogram_quantile(0.5, sum by (le) (rate(eka_http_request_duration_seconds_bucket[5m])))",
+     "legendFormat": "p50",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "B",
+     "expr": "histogram_quantile(0.95, sum by (le) (rate(eka_http_request_duration_seconds_bucket[5m])))",
+     "legendFormat": "p95",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "C",
+     "expr": "histogram_quantile(0.99, sum by (le) (rate(eka_http_request_duration_seconds_bucket[5m])))",
+     "legendFormat": "p99",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "HTTP status kodlari",
+   "id": 11,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 14
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (status) (rate(eka_http_request_duration_seconds_count[2m]))",
+     "legendFormat": "{{status}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "reqps",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Eng sekin route'lar (p95)",
+   "id": 12,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 14
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "topk(8, histogram_quantile(0.95, sum by (le, route) (rate(eka_http_request_duration_seconds_bucket[10m]))))",
+     "legendFormat": "{{route}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "s",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "Biznes hodisalari va RabbitMQ",
+   "id": 13,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 22
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Biznes hodisalari (login, OTP, xarid, imzo, shikoyat…)",
+   "id": 14,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (event) (increase(eka_business_events_total[15m]))",
+     "legendFormat": "{{event}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "normal"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Worker vazifalari",
+   "id": 15,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 23
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (queue, outcome) (rate(eka_worker_jobs_total[5m]))",
+     "legendFormat": "{{queue}} · {{outcome}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "RabbitMQ navbat chuqurligi",
+   "id": 16,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 31
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (queue) (rabbitmq_detailed_queue_messages{queue=~\"eka\\\\..*\"})",
+     "legendFormat": "{{queue}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Nashr qilingan hodisalar",
+   "id": 17,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 31
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (routing_key, result) (rate(eka_bus_published_total[5m]))",
+     "legendFormat": "{{routing_key}} {{result}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "ops",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "Infratuzilma",
+   "id": 18,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 39
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Server CPU / RAM",
+   "id": 19,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 0,
+    "y": 40
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "100 * (1 - avg(rate(node_cpu_seconds_total{mode=\"idle\"}[2m])))",
+     "legendFormat": "CPU %",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "B",
+     "expr": "100 * (1 - node_memory_MemAvailable_bytes / node_memory_MemTotal_bytes)",
+     "legendFormat": "RAM %",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percent",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "MySQL",
+   "id": 20,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 8,
+    "y": 40
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "mysql_global_status_threads_connected",
+     "legendFormat": "ulanishlar",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    },
+    {
+     "refId": "B",
+     "expr": "rate(mysql_global_status_queries[2m])",
+     "legendFormat": "so'rov/s",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "short",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Redis",
+   "id": 21,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 8,
+    "x": 16,
+    "y": 40
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "redis_memory_used_bytes",
+     "legendFormat": "xotira",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Konteyner CPU",
+   "id": 22,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 0,
+    "y": 48
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (name) (rate(container_cpu_usage_seconds_total{name=~\".+\"}[2m]))",
+     "legendFormat": "{{name}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "percentunit",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "timeseries",
+   "title": "Konteyner xotirasi",
+   "id": 23,
+   "datasource": {
+    "type": "prometheus",
+    "uid": "prometheus"
+   },
+   "gridPos": {
+    "h": 8,
+    "w": 12,
+    "x": 12,
+    "y": 48
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "sum by (name) (container_memory_working_set_bytes{name=~\".+\"})",
+     "legendFormat": "{{name}}",
+     "datasource": {
+      "type": "prometheus",
+      "uid": "prometheus"
+     }
+    }
+   ],
+   "fieldConfig": {
+    "defaults": {
+     "unit": "bytes",
+     "custom": {
+      "lineWidth": 2,
+      "fillOpacity": 12,
+      "gradientMode": "opacity",
+      "showPoints": "never",
+      "stacking": {
+       "mode": "none"
+      }
+     }
+    },
+    "overrides": []
+   },
+   "options": {
+    "legend": {
+     "displayMode": "table",
+     "placement": "bottom",
+     "calcs": [
+      "mean",
+      "max",
+      "lastNotNull"
+     ]
+    },
+    "tooltip": {
+     "mode": "multi"
+    }
+   }
+  },
+  {
+   "type": "row",
+   "title": "Loglar (Loki)",
+   "id": 24,
+   "collapsed": false,
+   "gridPos": {
+    "h": 1,
+    "w": 24,
+    "x": 0,
+    "y": 56
+   }
+  },
+  {
+   "type": "logs",
+   "title": "Xatolar va ogohlantirishlar",
+   "id": 25,
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "gridPos": {
+    "h": 9,
+    "w": 24,
+    "x": 0,
+    "y": 57
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "{level=~\"error|warn|fatal\"}",
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     }
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending",
+    "enableLogDetails": true,
+    "prettifyLogMessage": false
+   }
+  },
+  {
+   "type": "logs",
+   "title": "API va worker loglari",
+   "id": 26,
+   "datasource": {
+    "type": "loki",
+    "uid": "loki"
+   },
+   "gridPos": {
+    "h": 12,
+    "w": 24,
+    "x": 0,
+    "y": 66
+   },
+   "targets": [
+    {
+     "refId": "A",
+     "expr": "{service=~\"api|worker\"} | json",
+     "datasource": {
+      "type": "loki",
+      "uid": "loki"
+     }
+    }
+   ],
+   "options": {
+    "showTime": true,
+    "wrapLogMessage": true,
+    "sortOrder": "Descending",
+    "enableLogDetails": true,
+    "prettifyLogMessage": false
+   }
+  }
+ ],
+ "templating": {
+  "list": []
+ },
+ "annotations": {
+  "list": []
+ }
+}
