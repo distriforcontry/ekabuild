@@ -70,7 +70,7 @@ export function DevProjectsView() {
           </span>
           <div className="min-w-0">
             <div className="truncate font-semibold text-stone-100">{tr(p.name)}</div>
-            <div className="max-w-64 truncate text-xs text-ink-400">{tr([p.region, p.address].filter(Boolean).join(", "))}</div>
+            <div className="max-w-52 truncate text-xs text-ink-400">{tr([p.region, p.address].filter(Boolean).join(", "))}</div>
             <ControlBadges row={p} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
           </div>
         </div>
@@ -143,7 +143,8 @@ export function DevProjectsView() {
       cell: (p) => <span className="text-xs text-ink-300">{fmt.date(p.createdAt)}</span>,
       sortValue: (p) => (p.createdAt ? new Date(p.createdAt) : null),
       exportValue: (p) => p.createdAt?.slice(0, 10) ?? "",
-      hideOnMobile: true,
+      className: "hidden 2xl:table-cell",
+      headerClassName: "hidden 2xl:table-cell",
     },
     {
       key: "actions",
@@ -151,6 +152,8 @@ export function DevProjectsView() {
       align: "right",
       alwaysVisible: true,
       width: "56px",
+      className: "sticky right-0 z-[1] bg-ink-900/95 backdrop-blur-sm",
+      headerClassName: "sticky right-0 z-[1] bg-ink-900/95",
       cell: (p) => (
         <RowActions
           actions={[

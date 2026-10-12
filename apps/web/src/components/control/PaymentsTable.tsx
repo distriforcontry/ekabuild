@@ -125,6 +125,8 @@ export function PaymentsTable({ area, onChanged }: { area: Area; onChanged?: () 
       align: "right",
       alwaysVisible: true,
       width: "56px",
+      className: "sticky right-0 z-[1] bg-ink-900/95 backdrop-blur-sm",
+      headerClassName: "sticky right-0 z-[1] bg-ink-900/95",
       cell: (p) => (
         <RowActions
           actions={[

@@ -101,8 +101,8 @@ export function SalesView() {
         p.contract ? (
           <div className="flex items-center gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
             <StatusBadge kind="contractStatus" value={p.contract.status} />
-            <Button size="sm" variant="ghost" onClick={() => setOpenId(p.id)} aria-label={t("app.finance.seller.schedule")} title={t("app.finance.seller.schedule")}>
-              <Calendar size={14} variant="Bulk" /> <span className="hidden xl:inline">{t("app.finance.seller.open")}</span>
+            <Button size="icon-sm" variant="ghost" onClick={() => setOpenId(p.id)} aria-label={t("app.finance.seller.schedule")} title={t("app.finance.seller.schedule")}>
+              <Calendar variant="Bulk" className="text-gold-300" />
             </Button>
             <Button asChild size="sm" variant={canSign(p) ? "gold" : "ghost"}>
               <Link href={`/app/contracts/${p.contract.id}`}>
