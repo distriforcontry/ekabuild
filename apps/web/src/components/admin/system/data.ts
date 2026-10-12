@@ -10,6 +10,7 @@ import {
   FingerScan,
   Global,
   Layer,
+  Map1,
   Mobile,
   Monitor,
   People,
@@ -42,9 +43,10 @@ export type InfoKey =
   | "hpa"
   | "keda"
   | "pdb"
-  | "monitoring";
+  | "monitoring"
+  | "cadastre";
 
-export type HealthKey = "edge" | "web" | "api" | "db" | "redis" | "rabbitmq";
+export type HealthKey = "edge" | "web" | "api" | "db" | "redis" | "rabbitmq" | "workers" | "storage" | "sms" | "eimzo" | "cadastre";
 export type EdgeKind = "http" | "data" | "event" | "external" | "metrics";
 export type ViewKey = "compose" | "k8s";
 
@@ -82,9 +84,10 @@ const shared = {
   redis: N({ id: "redis", info: "redis", x: 736, y: 250, w: 192, h: 62, icon: Flash, health: "redis", subtitle: "cache · pub/sub" }),
   mysql: N({ id: "mysql", info: "mysql", x: 736, y: 330, w: 192, h: 62, icon: Data, health: "db", subtitle: "Prisma · InnoDB" }),
   rabbitmq: N({ id: "rabbitmq", info: "rabbitmq", x: 736, y: 410, w: 192, h: 62, icon: Layer, health: "rabbitmq", subtitle: "eka.events · DLQ" }),
-  storage: N({ id: "storage", info: "storage", x: 736, y: 490, w: 192, h: 62, icon: Box, subtitle: "volume · S3" }),
-  eimzo: N({ id: "eimzo", info: "eimzo", x: 736, y: 570, w: 192, h: 62, icon: FingerScan, external: true, title: "E-IMZO", subtitle: "PKCS#7 verify" }),
-  sms: N({ id: "sms", info: "sms", x: 994, y: 250, w: 176, h: 62, icon: Sms, external: true, title: "Eskiz.uz", subtitle: "OTP · SMS" }),
+  storage: N({ id: "storage", info: "storage", x: 736, y: 490, w: 192, h: 62, icon: Box, health: "storage", subtitle: "volume · S3" }),
+  eimzo: N({ id: "eimzo", info: "eimzo", x: 736, y: 570, w: 192, h: 62, icon: FingerScan, external: true, health: "eimzo", title: "E-IMZO", subtitle: "PKCS#7 verify" }),
+  sms: N({ id: "sms", info: "sms", x: 994, y: 250, w: 176, h: 62, icon: Sms, external: true, health: "sms", title: "Eskiz.uz", subtitle: "OTP · SMS" }),
+  cadastre: N({ id: "cadastre", info: "cadastre", x: 994, y: 576, w: 176, h: 62, icon: Map1, external: true, health: "cadastre", subtitle: "CADASTRE_PROVIDER" }),
 };
 
 export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
@@ -104,9 +107,10 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       shared.storage,
       shared.eimzo,
       shared.sms,
+      shared.cadastre,
       N({ id: "workerPool", info: "worker", kind: "pool", poolLabel: "worker", x: 976, y: 352, w: 210, h: 196 }),
-      N({ id: "worker1", info: "worker", x: 994, y: 394, w: 176, h: 62, icon: Cpu, title: "worker-1", subtitle: "eka.* consumer" }),
-      N({ id: "worker2", info: "worker", x: 994, y: 468, w: 176, h: 62, icon: Cpu, title: "worker-2", subtitle: "eka.* consumer" }),
+      N({ id: "worker1", info: "worker", x: 994, y: 394, w: 176, h: 62, icon: Cpu, title: "worker-1", subtitle: "eka.* consumer", health: "workers" }),
+      N({ id: "worker2", info: "worker", x: 994, y: 468, w: 176, h: 62, icon: Cpu, title: "worker-2", subtitle: "eka.* consumer", health: "workers" }),
     ],
     edges: [
       { from: "internet", to: "nginx", kind: "http" },
@@ -121,6 +125,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       { from: "rabbitmq", to: "workerPool", kind: "event", label: "consume" },
       { from: "workerPool", to: "mysql", kind: "data" },
       { from: "workerPool", to: "sms", kind: "external", label: "sms" },
+      { from: "workerPool", to: "cadastre", kind: "external" },
     ],
   },
   k8s: {
@@ -142,10 +147,11 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       N({ ...shared.storage, subtitle: "PVC RWX · S3" }),
       shared.eimzo,
       shared.sms,
+      shared.cadastre,
       N({ id: "monitoring", info: "monitoring", x: 736, y: 70, w: 192, h: 120, icon: Chart2, subtitle: "ns: monitoring" }),
       N({ id: "workerPool", info: "worker", kind: "pool", poolLabel: "workerK8s", x: 976, y: 352, w: 210, h: 196 }),
-      N({ id: "worker1", info: "worker", x: 994, y: 394, w: 176, h: 62, icon: Cpu, title: "worker-t2p", subtitle: "Pod · Ready" }),
-      N({ id: "worker2", info: "worker", x: 994, y: 468, w: 176, h: 62, icon: Cpu, title: "worker-v8n", subtitle: "Pod · Ready" }),
+      N({ id: "worker1", info: "worker", x: 994, y: 394, w: 176, h: 62, icon: Cpu, title: "worker-t2p", subtitle: "Pod · Ready", health: "workers" }),
+      N({ id: "worker2", info: "worker", x: 994, y: 468, w: 176, h: 62, icon: Cpu, title: "worker-v8n", subtitle: "Pod · Ready", health: "workers" }),
       N({ id: "keda", info: "keda", kind: "chip", x: 1080, y: 340, w: 112, h: 26, title: "KEDA 2→12", icon: Repeat }),
     ],
     edges: [
@@ -161,6 +167,7 @@ export const VIEWS: Record<ViewKey, { nodes: MapNode[]; edges: MapEdge[] }> = {
       { from: "rabbitmq", to: "workerPool", kind: "event", label: "consume" },
       { from: "workerPool", to: "mysql", kind: "data" },
       { from: "workerPool", to: "sms", kind: "external", label: "sms" },
+      { from: "workerPool", to: "cadastre", kind: "external" },
       { from: "monitoring", to: "apiPool", kind: "metrics", label: "scrape" },
       { from: "monitoring", to: "workerPool", kind: "metrics" },
     ],
@@ -185,6 +192,7 @@ export const FACTS: Record<InfoKey, string[]> = {
   keda: ["ScaledObject", "rabbitmq queueLength", "2 → 12"],
   pdb: ["minAvailable: 1", "maxUnavailable: 0", "topologySpread"],
   monitoring: ["Prometheus", "Alertmanager → Telegram", "Grafana", "Loki", "Alloy"],
+  cadastre: ["CADASTRE_PROVIDER", "eka.cadastre", "CadastreProvider adapter"],
 };
 
 /* ───────────────────────────── Sequence flows ───────────────────────────── */

@@ -129,7 +129,7 @@ export function OrganizationsView() {
             { label: t("common.actions.approve"), icon: TickCircle, tone: "success", onSelect: () => approve(o), hidden: o.status === "VERIFIED", separatorBefore: true },
             { label: t("common.actions.reject"), icon: CloseCircle, tone: "danger", onSelect: () => reject(o), hidden: o.status === "REJECTED" },
             ...control.rowActions({
-              block: { kind: "org", row: o, name: tr(o.name), onDone: (p) => patchRow(o.id, p) },
+              block: { kind: "org", row: o, name: tr(o.name), onDone: ({ blockedAt, blockReason }) => patchRow(o.id, { blockedAt, blockReason }) },
               archive: { entity: "organizations", row: o, name: tr(o.name), onDone: (p) => patchRow(o.id, p) },
             }),
           ]}

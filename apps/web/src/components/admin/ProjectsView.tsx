@@ -13,13 +13,15 @@ import { StatusBadge } from "@/components/ui/status-badge";
 import { TrustRing } from "@/components/ui/trust-ring";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage } from "@/lib/api";
+import { ExcelButton } from "@/components/control/ExportButton";
 import { useAdmin } from "./context";
+import { ArchiveTabs, archiveViewOf, archiveViewPatch, ControlBadges, useControlActions } from "./control";
 import { useFormat } from "./format";
 import { settle, useApiList, useListState } from "./hooks";
 import { Dim, ErrorNotice, FilterSelect, OptimisticSwitch, ResetFilters, RowActions, SearchBox, useConfirm } from "./primitives";
 import type { ProjectRow, TrustResult } from "./types";
 
-const FILTERS = ["verification", "status"] as const;
+const FILTERS = ["verification", "status", "archived"] as const;
 
 export function ProjectsView() {
   const { t, label, tr } = useI18n();
@@ -28,6 +30,8 @@ export function ProjectsView() {
   const list = useListState(FILTERS);
   const data = useApiList<ProjectRow>("/admin/projects", list.apiQuery);
   const [confirm, confirmNode] = useConfirm();
+  const control = useControlActions(confirm);
+  const view = archiveViewOf(list.filters);
   const [trust, setTrust] = React.useState<{ project: ProjectRow; previous: number; result: TrustResult | null; loading: boolean } | null>(null);
 
   const patch = async (p: ProjectRow, body: Partial<Pick<ProjectRow, "published" | "featured" | "verificationStatus">>) => {
@@ -86,6 +90,7 @@ export function ProjectsView() {
             <div className="truncate text-xs text-ink-400">
               {tr(p.developer?.name)} · {t("admin.projects.units", { available: p.unitsAvailable ?? 0, total: p.unitsTotal ?? 0 })}
             </div>
+            <ControlBadges row={p} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
           </div>
         </div>
       ),
@@ -170,6 +175,17 @@ export function ProjectsView() {
             { label: t("admin.projects.reject"), icon: CloseCircle, tone: "danger", onSelect: () => setVerification(p, "REJECTED"), hidden: p.verificationStatus === "REJECTED" },
             { label: t("admin.projects.recalc"), icon: Refresh2, tone: "gold", onSelect: () => recalc(p), separatorBefore: true },
             { label: t("admin.common.openPublic"), icon: ExportSquare, onSelect: () => window.open(`/projects/${p.slug}`, "_blank", "noopener") },
+            ...control.rowActions({
+              archive: {
+                entity: "projects",
+                row: p,
+                name: tr(p.name),
+                onDone: (patch) => {
+                  data.mutate((items) => items.map((x) => (x.id === p.id ? { ...x, ...patch } : x)));
+                  data.reload();
+                },
+              },
+            }),
           ]}
         />
       ),
@@ -180,6 +196,9 @@ export function ProjectsView() {
     <div>
       <PageHeader eyebrow={t("admin.nav.moderation")} title={t("admin.projects.title")} description={t("admin.projects.description")} />
       <ErrorNotice error={data.error} onRetry={data.reload} />
+      <div className="mb-3 flex flex-wrap items-center gap-3">
+        <ArchiveTabs value={view} onChange={(v) => list.update(archiveViewPatch(v))} />
+      </div>
       <Dim active={data.refreshing}>
         <DataTable
           columns={columns}
@@ -206,7 +225,8 @@ export function ProjectsView() {
                 placeholder={t("admin.projects.filters.status")}
                 options={PROJECT_STATUSES.map((v) => ({ value: v, label: label("projectStatus", v) }))}
               />
-              <ResetFilters count={list.activeFilters} onReset={list.resetFilters} />
+              <ResetFilters count={list.activeFilters - (list.filters.archived ? 1 : 0)} onReset={() => list.update({ q: null, verification: null, status: null })} />
+              <ExcelButton area="admin" entity="projects" filters={{ q: list.q, status: list.filters.status, archived: list.filters.archived }} className="sm:ml-auto" />
             </>
           }
           bulkActions={(rows, clear) => {

@@ -1,11 +1,14 @@
 "use client";
 import * as React from "react";
-import { API_BASE } from "@/lib/api";
+import { api, API_BASE } from "@/lib/api";
+import type { SystemHealth } from "@/lib/types";
 import type { HealthKey } from "./data";
 
 export type Health = { status: string; instance: string | null; uptime: number | null; db: string | null; redis: string | null; rabbitmq: string | null };
 export type HealthSample = { at: number; ok: boolean; ms: number; instance: string | null };
-export type NodeStatus = "up" | "down" | "unknown";
+export type NodeStatus = "up" | "down" | "unknown" | "mock";
+/** integrations that report a demo/mock mode */
+const INTEGRATIONS = new Set<HealthKey>(["sms", "eimzo", "cadastre"]);
 
 const HISTORY = 24;
 
@@ -19,6 +22,9 @@ export function useHealth(intervalMs = 10_000) {
   const [checking, setChecking] = React.useState(false);
   const [history, setHistory] = React.useState<HealthSample[]>([]);
   const [lastAt, setLastAt] = React.useState<number | null>(null);
+  /** deep checks (GET /admin/system/health); null + deepFailed → fall back to the basic probe */
+  const [deep, setDeep] = React.useState<SystemHealth | null>(null);
+  const [deepFailed, setDeepFailed] = React.useState(false);
   const busy = React.useRef(false);
 
   const check = React.useCallback(async () => {
@@ -27,6 +33,16 @@ export function useHealth(intervalMs = 10_000) {
     setChecking(true);
     const t0 = performance.now();
     let sample: HealthSample;
+    const deepReq = api
+      .get<SystemHealth>("/admin/system/health")
+      .then((d) => {
+        setDeep(d && typeof d === "object" && d.checks ? d : null);
+        setDeepFailed(!(d && d.checks));
+      })
+      .catch(() => {
+        setDeep(null);
+        setDeepFailed(true);
+      });
     try {
       const res = await fetch(`${API_BASE}/health`, { cache: "no-store", credentials: "include" });
       const ms = Math.round(performance.now() - t0);
@@ -48,6 +64,7 @@ export function useHealth(intervalMs = 10_000) {
       setHealth(null);
       sample = { at: Date.now(), ok: false, ms: Math.round(performance.now() - t0), instance: null };
     } finally {
+      await deepReq;
       busy.current = false;
       setChecking(false);
     }
@@ -73,15 +90,55 @@ export function useHealth(intervalMs = 10_000) {
       if (reachable === null) return "unknown";
       if (key === "edge") return reachable ? "up" : "unknown";
       if (key === "api") return reachable && health ? "up" : "down";
+      if (deep) {
+        const c = deep.checks;
+        switch (key) {
+          case "db":
+            return c.mysql?.ok ? "up" : "down";
+          case "redis":
+            return c.redis?.ok ? "up" : "down";
+          case "rabbitmq":
+            return c.rabbitmq?.ok ? "up" : "down";
+          case "workers":
+            return (c.workers?.count ?? 0) > 0 ? "up" : "down";
+          case "storage":
+            return c.storage?.ok ? "up" : "down";
+          case "sms":
+          case "eimzo":
+          case "cadastre": {
+            const i = c[key];
+            if (!i) return "unknown";
+            return !i.ok ? "down" : i.mock ? "mock" : "up";
+          }
+        }
+      }
       if (!health) return "unknown";
-      const v = key === "db" ? health.db : key === "redis" ? health.redis : health.rabbitmq;
+      const v = key === "db" ? health.db : key === "redis" ? health.redis : key === "rabbitmq" ? health.rabbitmq : null;
       if (!v || v === "disabled") return "unknown";
       return v === "up" || v === "ready" ? "up" : "down";
     },
-    [health, reachable],
+    [health, reachable, deep],
+  );
+
+  /** probe latency for a node, ms (deep checks; the api node uses the /health round trip) */
+  const latencyOf = React.useCallback(
+    (key: HealthKey | undefined): number | null => {
+      if (key === "api") return history[history.length - 1]?.ok ? history[history.length - 1]!.ms : null;
+      if (!deep) return null;
+      const ms = key === "db" ? deep.checks.mysql?.ms : key === "redis" ? deep.checks.redis?.ms : key === "rabbitmq" ? deep.checks.rabbitmq?.ms : undefined;
+      return typeof ms === "number" ? ms : null;
+    },
+    [deep, history],
+  );
+
+  /** translation key suffix for a node's status ("up" integrations read as "connected") */
+  const labelOf = React.useCallback(
+    (key: HealthKey | undefined, status: NodeStatus): "up" | "down" | "unknown" | "mock" | "connected" =>
+      status === "up" && key && INTEGRATIONS.has(key) ? "connected" : status,
+    [],
   );
 
   const overall: "ok" | "degraded" | "down" | null = reachable === null ? null : !reachable || !health ? "down" : health.status === "ok" ? "ok" : "degraded";
 
-  return { health, reachable, checking, history, lastAt, check, statusOf, overall };
+  return { health, reachable, checking, history, lastAt, check, statusOf, latencyOf, labelOf, overall, deep, deepFailed };
 }
