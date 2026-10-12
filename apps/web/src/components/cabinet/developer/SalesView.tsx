@@ -1,8 +1,9 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
-import { DollarCircle, FingerScan, ReceiptText } from "iconsax-reactjs";
+import { ArrowRight, Calendar, DollarCircle, FingerScan, ReceiptText } from "iconsax-reactjs";
+import { Sheet } from "@/components/admin/primitives";
+import { ExcelButton } from "@/components/control/ExportButton";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { StatusBadge } from "@/components/ui/status-badge";
@@ -13,12 +14,22 @@ import { asList, useApi } from "../hooks";
 import { useFmt } from "../format";
 import { ErrorState } from "../states";
 import { AnimatedNumber, Kpi, PageHead, PanelEmpty as EmptyState } from "../kit";
+import { DealDocuments, PaymentSchedule } from "../DealFinance";
 
 export function SalesView() {
   const { t, label, tr } = useI18n();
   const fmt = useFmt();
-  const router = useRouter();
   const { data, loading, error, reload } = useApi<PurchaseItem[]>("/dev/purchases", undefined, { select: asList });
+  const [openId, setOpenId] = React.useState<string | null>(null);
+  const [lastOpen, setLastOpen] = React.useState<PurchaseItem | null>(null);
+  const open = (data ?? []).find((p) => p.id === openId) ?? null;
+  React.useEffect(() => {
+    if (open) setLastOpen(open);
+  }, [open]);
+  const sheet = open ?? lastOpen;
+  // deep links from Finance / Deadlines: /app/developer/sales?q=P-2026-…
+  const [initialQ, setInitialQ] = React.useState<string | null>(null);
+  React.useEffect(() => setInitialQ(new URLSearchParams(window.location.search).get("q") ?? ""), []);
 
   // the list DTO says whether *I* (the seller) can sign right now
   const canSign = (p: PurchaseItem) => Boolean(p.contract?.canSign);
@@ -62,7 +73,17 @@ export function SalesView() {
       key: "amount",
       header: t("app.developer.sales.columns.amount"),
       align: "right",
-      cell: (p) => <span className="whitespace-nowrap font-mono text-sm">{fmt.money(p.amount, p.currency)}</span>,
+      cell: (p) => (
+        <div className="whitespace-nowrap">
+          <div className="font-mono text-sm">{fmt.money(p.amount, p.currency)}</div>
+          {p.kind === "UNIT" && p.planType && (
+            <div className="text-[11px] text-ink-400">
+              {label("paymentPlan", p.planType)}
+              {p.planType === "INSTALLMENT" ? ` · ${p.downPercent}% + ${p.months}` : ""}
+            </div>
+          )}
+        </div>
+      ),
       sortValue: (p) => Number(p.amount),
       exportValue: (p) => p.amount,
     },
@@ -80,6 +101,9 @@ export function SalesView() {
         p.contract ? (
           <div className="flex items-center gap-2 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
             <StatusBadge kind="contractStatus" value={p.contract.status} />
+            <Button size="sm" variant="ghost" onClick={() => setOpenId(p.id)} aria-label={t("app.finance.seller.schedule")} title={t("app.finance.seller.schedule")}>
+              <Calendar size={14} variant="Bulk" /> <span className="hidden xl:inline">{t("app.finance.seller.open")}</span>
+            </Button>
             <Button asChild size="sm" variant={canSign(p) ? "gold" : "ghost"}>
               <Link href={`/app/contracts/${p.contract.id}`}>
                 {canSign(p) ? (
@@ -109,7 +133,22 @@ export function SalesView() {
 
   return (
     <div>
-      <PageHead icon={ReceiptText} eyebrow={t("app.shell.sections.developer")} title={t("app.developer.sales.title")} description={t("app.developer.sales.subtitle")} />
+      <PageHead
+        icon={ReceiptText}
+        eyebrow={t("app.shell.sections.developer")}
+        title={t("app.developer.sales.title")}
+        description={t("app.developer.sales.subtitle")}
+        actions={
+          <>
+            <ExcelButton area="dev" entity="purchases" size="md" />
+            <Button asChild variant="secondary">
+              <Link href="/app/developer/finance">
+                <DollarCircle size={16} variant="Bulk" className="text-gold-300" /> {t("app.finance.nav.finance")}
+              </Link>
+            </Button>
+          </>
+        }
+      />
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : !loading && !(data ?? []).length ? (
@@ -128,19 +167,59 @@ export function SalesView() {
               />
             </div>
           )}
+        {initialQ !== null && (
         <DataTable
+          key={initialQ}
+          initialQuery={initialQ}
           columns={columns}
           data={data ?? []}
           loading={loading}
           rowKey={(p) => p.id}
-          onRowClick={(p) => p.contract && router.push(`/app/contracts/${p.contract.id}`)}
+          onRowClick={(p) => setOpenId(p.id)}
           searchText={(p) => `${p.number} ${p.project.name} ${p.buyer.fullName} ${p.buyerOrg?.name ?? ""}`}
           searchPlaceholder={t("app.developer.sales.search")}
           exportName="sales"
           initialSort={{ key: "date", dir: "desc" }}
         />
+        )}
         </div>
       )}
+      <Sheet
+        open={Boolean(open)}
+        onOpenChange={(o) => !o && setOpenId(null)}
+        title={sheet ? t("app.finance.seller.title", { number: sheet.number }) : ""}
+        description={sheet ? `${tr(sheet.project.name)}${sheet.unit ? ` · ${t("app.common.unitShort", { section: sheet.unit.section, floor: sheet.unit.floor, number: sheet.unit.number })}` : ""}` : undefined}
+        width="max-w-2xl"
+        footer={
+          sheet?.contract && (
+            <Button asChild variant="gold">
+              <Link href={`/app/contracts/${sheet.contract.id}`}>
+                {t("app.finance.seller.contract")} <ArrowRight size={16} />
+              </Link>
+            </Button>
+          )
+        }
+      >
+        {sheet && (
+          <div className="space-y-5">
+            <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-line bg-ink-850 p-4">
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-wider text-ink-400">{t("app.finance.seller.buyer")}</div>
+                <div className="truncate font-semibold text-stone-100">{sheet.buyerOrg ? tr(sheet.buyerOrg.name) : sheet.buyer.fullName}</div>
+                <a href={`tel:${sheet.buyer.phone}`} className="font-mono text-xs text-ink-300 hover:text-gold-300">
+                  {formatPhone(sheet.buyer.phone)}
+                </a>
+              </div>
+              <div className="text-right">
+                <div className="font-mono text-lg font-semibold text-stone-100">{fmt.money(sheet.amount, sheet.currency)}</div>
+                <StatusBadge kind="purchaseStatus" value={sheet.status} />
+              </div>
+            </div>
+            {sheet.status !== "CANCELLED" && <PaymentSchedule key={sheet.id} purchase={sheet} mode="seller" />}
+            <DealDocuments key={`d-${sheet.id}`} purchase={sheet} />
+          </div>
+        )}
+      </Sheet>
     </div>
   );
 }

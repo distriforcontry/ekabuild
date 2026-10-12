@@ -12,6 +12,7 @@ import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, Dia
 import { Button } from "@/components/ui/button";
 import { InfoRow } from "@/components/ui/misc";
 import { useFormat } from "@/components/catalog/use-format";
+import { DEFAULT_PLAN, PlanPicker, type PlanChoice } from "./InstallmentCalculator";
 
 export type PurchaseTarget = { kind: "UNIT"; unit: UnitItem } | { kind: "DOCUMENT_PACKAGE" };
 
@@ -34,12 +35,16 @@ export function PurchaseDialog({
   const router = useRouter();
   const [agree, setAgree] = React.useState(false);
   const [busy, setBusy] = React.useState(false);
+  const [plan, setPlan] = React.useState<PlanChoice>(DEFAULT_PLAN);
   const lastTarget = React.useRef(target);
   if (target) lastTarget.current = target;
   const tg = target ?? lastTarget.current;
 
   React.useEffect(() => {
-    if (target) setAgree(false);
+    if (target) {
+      setAgree(false);
+      setPlan(DEFAULT_PLAN);
+    }
   }, [target]);
 
   if (!tg) return null;
@@ -53,7 +58,12 @@ export function PurchaseDialog({
       const res = await api.post<{ purchase: PurchaseItem } | PurchaseItem>("/purchases", {
         projectId: project.id,
         kind: tg.kind,
-        ...(isUnit ? { unitId: tg.unit.id } : {}),
+        ...(isUnit
+          ? {
+              unitId: tg.unit.id,
+              plan: plan.planType === "INSTALLMENT" ? { planType: "INSTALLMENT", downPercent: plan.downPercent, months: plan.months } : { planType: "FULL" },
+            }
+          : {}),
       });
       const purchase = "purchase" in res ? res.purchase : res;
       toast.success(t("catalog.purchase.success"));
@@ -79,7 +89,7 @@ export function PurchaseDialog({
 
   return (
     <Dialog open={Boolean(target)} onOpenChange={(o) => !o && !busy && onClose()}>
-      <DialogContent size="md">
+      <DialogContent size={isUnit && plan.planType === "INSTALLMENT" ? "xl" : isUnit ? "lg" : "md"} className="flex max-h-[94vh] flex-col transition-[max-width] duration-300">
         <DialogHeader>
           <div className="mb-3 grid size-11 place-items-center rounded-xl bg-gold-gradient text-onyx shadow-glow">
             {isUnit ? <Home2 size={20} variant="Bold" /> : <DocumentText size={20} variant="Bold" />}
@@ -89,7 +99,7 @@ export function PurchaseDialog({
           </DialogTitle>
           <DialogDescription>{isUnit ? t("catalog.purchase.unitDesc") : t("catalog.purchase.packageDesc")}</DialogDescription>
         </DialogHeader>
-        <DialogBody className="space-y-5">
+        <DialogBody className="min-h-0 flex-1 space-y-5 overflow-y-auto">
           <div className="rounded-2xl border border-line bg-ink-850 px-4 py-1">
             <InfoRow label={t("catalog.purchase.project")} value={tr(project.name)} />
             {isUnit ? (
@@ -109,6 +119,8 @@ export function PurchaseDialog({
               <span className="font-mono text-xl font-semibold text-gold-gradient">{fmt.money(amount, project.currency)}</span>
             </div>
           </div>
+
+          {isUnit && amount && <PlanPicker amount={Number(amount)} currency={project.currency} value={plan} onChange={setPlan} />}
 
           <div>
             <div className="mb-2 text-xs font-semibold uppercase tracking-wider text-ink-400">{t("catalog.purchase.steps.title")}</div>

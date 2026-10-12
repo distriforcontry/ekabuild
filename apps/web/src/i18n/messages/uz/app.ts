@@ -689,6 +689,8 @@ const app = {
         noneHint: "Model yuklanmaguncha, obyekt sahifasida massing parametrlari asosidagi hajm ko'rsatiladi.",
         success: "3D model yangilandi",
         replace: "Modelni almashtirish",
+        openStudio: "3D Studiyada ochish",
+        openStudioHint: "Modelni tekshirish, qavatlarni ajratish, o'lchash, tahrirlash va qayta yuklash",
       },
       progress: {
         title: "Jarayon yangilanishi",

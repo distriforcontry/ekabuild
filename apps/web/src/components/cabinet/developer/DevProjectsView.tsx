@@ -2,7 +2,14 @@
 import * as React from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { Add, Buildings2 } from "iconsax-reactjs";
+import { Add, Archive, ArchiveBook, Buildings2, Edit2, ExportSquare } from "iconsax-reactjs";
+import { toast } from "sonner";
+import { ControlBadges } from "@/components/admin/control";
+import { RowActions, useConfirm } from "@/components/admin/primitives";
+import { ExcelButton } from "@/components/control/ExportButton";
+import { Segmented } from "@/components/control/ui";
+import { api, ApiError } from "@/lib/api";
+import type { ControlFlags } from "@/lib/types";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
@@ -21,9 +28,37 @@ export function DevProjectsView() {
   const { t, label, tr } = useI18n();
   const fmt = useFmt();
   const router = useRouter();
-  const { data, loading, error, reload } = useApi<DevProject[]>("/dev/projects", undefined, { select: asList });
+  const { data, loading, error, reload, setData } = useApi<(DevProject & ControlFlags)[]>("/dev/projects", undefined, { select: asList });
+  const [confirm, confirmNode] = useConfirm();
+  const [view, setView] = React.useState<"active" | "archived" | "all">("active");
+  const all = data ?? [];
+  const rows = view === "all" ? all : all.filter((p) => (view === "archived" ? Boolean(p.archivedAt) : !p.archivedAt));
 
-  const columns: Column<DevProject>[] = [
+  const toggleArchive = (p: DevProject & ControlFlags) => {
+    const archiving = !p.archivedAt;
+    confirm({
+      title: archiving ? t("admin.control.archive.archiveTitle") : t("admin.control.archive.unarchiveTitle"),
+      description: archiving ? t("admin.control.archive.archiveDesc", { name: tr(p.name) }) : t("admin.control.archive.unarchiveDesc", { name: tr(p.name) }),
+      tone: archiving ? "gold" : "success",
+      icon: archiving ? Archive : ArchiveBook,
+      confirmLabel: archiving ? t("admin.control.archive.archive") : t("admin.control.archive.unarchive"),
+      onConfirm: async () => {
+        try {
+          const res = await api.post<{ id: string; archivedAt: string | null }>(`/dev/projects/${p.id}/archive`, { archived: archiving });
+          setData((items) => (items ?? []).map((x) => (x.id === p.id ? { ...x, archivedAt: res?.archivedAt ?? (archiving ? new Date().toISOString() : null) } : x)));
+          toast.success(archiving ? t("admin.control.archive.archived") : t("admin.control.archive.unarchived"), { description: tr(p.name) });
+        } catch (e) {
+          if (e instanceof ApiError && e.code === "OPEN_DEALS") {
+            toast.error(t("admin.control.archive.openDeals"), { description: e.message });
+            return;
+          }
+          throw e;
+        }
+      },
+    });
+  };
+
+  const columns: Column<DevProject & ControlFlags>[] = [
     {
       key: "name",
       header: t("app.developer.projects.columns.name"),
@@ -36,6 +71,7 @@ export function DevProjectsView() {
           <div className="min-w-0">
             <div className="truncate font-semibold text-stone-100">{tr(p.name)}</div>
             <div className="max-w-64 truncate text-xs text-ink-400">{tr([p.region, p.address].filter(Boolean).join(", "))}</div>
+            <ControlBadges row={p} className="mt-1 flex flex-wrap items-center gap-1 empty:hidden" />
           </div>
         </div>
       ),
@@ -109,6 +145,28 @@ export function DevProjectsView() {
       exportValue: (p) => p.createdAt?.slice(0, 10) ?? "",
       hideOnMobile: true,
     },
+    {
+      key: "actions",
+      header: "",
+      align: "right",
+      alwaysVisible: true,
+      width: "56px",
+      cell: (p) => (
+        <RowActions
+          actions={[
+            { label: t("common.actions.edit"), icon: Edit2, onSelect: () => router.push(`/app/developer/projects/${p.id}`) },
+            { label: t("admin.common.openPublic"), icon: ExportSquare, onSelect: () => window.open(`/projects/${p.slug}`, "_blank", "noopener"), hidden: !p.published },
+            {
+              label: p.archivedAt ? t("admin.control.archive.unarchive") : t("admin.control.archive.archive"),
+              icon: p.archivedAt ? ArchiveBook : Archive,
+              tone: "gold",
+              separatorBefore: true,
+              onSelect: () => toggleArchive(p),
+            },
+          ]}
+        />
+      ),
+    },
   ];
 
   const newButton = (
@@ -121,15 +179,41 @@ export function DevProjectsView() {
 
   return (
     <div>
-      <PageHead icon={Buildings2} eyebrow={t("app.shell.sections.developer")} title={t("app.developer.projects.title")} description={t("app.developer.projects.subtitle")} actions={newButton} />
+      <PageHead
+        icon={Buildings2}
+        eyebrow={t("app.shell.sections.developer")}
+        title={t("app.developer.projects.title")}
+        description={t("app.developer.projects.subtitle")}
+        actions={
+          <>
+            <ExcelButton area="dev" entity="projects" size="md" filters={{ archived: view === "active" ? null : view === "archived" ? "1" : "all" }} />
+            <ExcelButton area="dev" entity="units" size="md" label={`${t("admin.control.excel")} · ${t("admin.control.exportCenter.entities.units.title")}`} />
+            {newButton}
+          </>
+        }
+      />
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : !loading && !(data ?? []).length ? (
         <EmptyState icon={Buildings2} title={t("app.developer.projects.empty")} description={t("app.developer.projects.emptyHint")} action={newButton} />
       ) : (
+        <div>
+        <div className="mb-3">
+          <Segmented
+            size="md"
+            value={view}
+            onChange={setView}
+            label={t("admin.control.archive.tabsLabel")}
+            options={[
+              { value: "active", label: t("admin.control.archive.tabs.active"), count: data ? all.filter((p) => !p.archivedAt).length : null },
+              { value: "archived", label: t("admin.control.archive.tabs.archived"), count: data ? all.filter((p) => p.archivedAt).length : null },
+              { value: "all", label: t("admin.control.archive.tabs.all"), count: data ? all.length : null },
+            ]}
+          />
+        </div>
         <DataTable
           columns={columns}
-          data={data ?? []}
+          data={rows}
           loading={loading}
           rowKey={(p) => p.id}
           onRowClick={(p) => router.push(`/app/developer/projects/${p.id}`)}
@@ -137,7 +221,9 @@ export function DevProjectsView() {
           searchPlaceholder={t("app.developer.projects.search")}
           exportName="projects"
         />
+        </div>
       )}
+      {confirmNode}
     </div>
   );
 }

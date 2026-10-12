@@ -1,5 +1,6 @@
 "use client";
-import { DocumentDownload, I3DCubeScan, InfoCircle } from "iconsax-reactjs";
+import Link from "next/link";
+import { DocumentDownload, I3DCubeScan, I3DRotate, InfoCircle } from "iconsax-reactjs";
 import { useI18n } from "@/i18n/client";
 import { Button } from "@/components/ui/button";
 import { BuildingViewer } from "@/components/three/BuildingViewer";
@@ -42,6 +43,12 @@ export function ModelTab() {
               {t("catalog.viewer.fileInfo")}: <span className="text-ink-200">{m.originalName}</span> · <span className="font-mono">{fmt.bytes(m.size)}</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
+              <Button size="sm" asChild>
+                <Link href={`/app/studio/${p.slug}`} title={t("catalog.viewer.openStudioHint")}>
+                  <I3DRotate size={15} variant="Bulk" />
+                  {t("catalog.viewer.openStudio")}
+                </Link>
+              </Button>
               <ShaChip sha={m.sha256} />
               <Button variant="secondary" size="sm" asChild>
                 <a href={downloadUrl(m)}>

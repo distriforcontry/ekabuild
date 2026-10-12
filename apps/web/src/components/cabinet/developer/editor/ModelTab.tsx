@@ -61,6 +61,13 @@ export function ModelTab({ projectId, detail, onChanged }: { projectId: string; 
               <div className="mt-1 font-mono text-xs text-ink-400">{fmt.bytes(model.size)}</div>
               <HashChip value={model.sha256} className="mt-3" />
               <div className="mt-5 flex flex-wrap justify-center gap-2">
+                {detail?.slug && (
+                  <Button asChild size="sm">
+                    <Link href={`/app/studio/${detail.slug}`} title={t("app.developer.editor.model.openStudioHint")}>
+                      <I3Dcube size={16} variant="Bulk" /> {t("app.developer.editor.model.openStudio")}
+                    </Link>
+                  </Button>
+                )}
                 <Button asChild variant="secondary" size="sm">
                   <a href={downloadUrl(model.url)} download>
                     <DocumentDownload size={16} /> {t("app.common.download")}

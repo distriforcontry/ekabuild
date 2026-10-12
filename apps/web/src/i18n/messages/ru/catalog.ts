@@ -281,6 +281,8 @@ const catalog: Shape<typeof uz> = {
     },
   },
   viewer: {
+    openStudio: "Открыть в 3D-студии",
+    openStudioHint: "Этажи, измерения, разрез и все данные модели — в профессиональном просмотрщике",
     loading: "Загрузка 3D-модели…",
     loadingPct: "Загрузка 3D-модели — {pct}%",
     procedural: "Схематичная модель",

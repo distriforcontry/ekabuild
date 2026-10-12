@@ -279,6 +279,8 @@ const catalog = {
     },
   },
   viewer: {
+    openStudio: "3D Studiyada ochish",
+    openStudioHint: "Qavatlar, o'lchovlar, kesim va barcha model ma'lumotlari — professional ko'ruvchida",
     loading: "3D model yuklanmoqda…",
     loadingPct: "3D model yuklanmoqda — {pct}%",
     procedural: "Sxematik model",

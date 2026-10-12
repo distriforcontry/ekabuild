@@ -1,7 +1,6 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import {
   ArrowRight,
@@ -12,13 +11,11 @@ import {
   InfoCircle,
   Location,
   PenTool,
-  Wallet2,
   Warning2,
 } from "iconsax-reactjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
@@ -29,7 +26,7 @@ import { FilePreviewDialog } from "../FilePreviewDialog";
 import { asList, unwrap, useApi } from "../hooks";
 import { useFmt } from "../format";
 import { ErrorState, ListSkeleton } from "../states";
-import { SuccessBurst } from "../SuccessBurst";
+import { DealDocuments, PaymentSchedule, ReservationCountdown } from "../DealFinance";
 import { BackLink, ConfirmDialog, KV, ProjectCover } from "../ui";
 import type { MyFilesGroup } from "./DashboardView";
 import { DocumentRow } from "./DocumentRow";
@@ -39,31 +36,15 @@ import { PageHead } from "../kit";
 export function PurchaseDetailView({ id }: { id: string }) {
   const { t, label, tr } = useI18n();
   const fmt = useFmt();
-  const { data: purchase, loading, error, reload, setData } = useApi<PurchaseItem>(`/purchases/${id}`, undefined, {
+  const { data: purchase, loading, error, reload } = useApi<PurchaseItem>(`/purchases/${id}`, undefined, {
     select: (r) => unwrap<PurchaseItem>(r, "purchase"),
   });
   const unlocked = purchase && (purchase.status === "PAID" || purchase.status === "COMPLETED");
   const files = useApi<MyFilesGroup[]>(unlocked ? "/me/files" : null, undefined, { select: asList });
   const docs = (files.data ?? []).find((g) => g.project.slug === purchase?.project.slug)?.documents ?? [];
 
-  const [payOpen, setPayOpen] = React.useState(false);
   const [cancelOpen, setCancelOpen] = React.useState(false);
-  const [paidOpen, setPaidOpen] = React.useState(false);
   const [preview, setPreview] = React.useState<{ file: FileRef; title: string } | null>(null);
-
-  const pay = async () => {
-    try {
-      const res = await api.post<unknown>(`/purchases/${id}/pay`);
-      const next = unwrap<PurchaseItem | undefined>(res, "purchase");
-      if (next && typeof next === "object" && "status" in next) setData(next);
-      else await reload();
-      setPayOpen(false);
-      setPaidOpen(true);
-      void reload();
-    } catch (e) {
-      toast.error(errorMessage(e, t("common.errors.generic")));
-    }
-  };
 
   const cancel = async () => {
     try {
@@ -89,6 +70,7 @@ export function PurchaseDetailView({ id }: { id: string }) {
   const p = purchase;
   const canCancel = p.status === "DRAFT" || p.status === "PENDING_SIGNATURES";
   const cancelled = p.status === "CANCELLED";
+  const reserved = Boolean(p.reservationUntil) && !p.paidAt && (p.status === "PENDING_SIGNATURES" || p.status === "SIGNED");
 
   return (
     <div>
@@ -185,6 +167,9 @@ export function PurchaseDetailView({ id }: { id: string }) {
             </div>
           </Card>
 
+          {/* payment schedule (buyer pays the next due instalment here) */}
+          {!cancelled && <PaymentSchedule purchase={p} onPaid={() => void reload()} />}
+
           {/* unlocked documents */}
           {unlocked && (
             <Card>
@@ -215,6 +200,8 @@ export function PurchaseDetailView({ id }: { id: string }) {
         </div>
 
         <div className="space-y-6">
+          {reserved && p.reservationUntil && <ReservationCountdown until={p.reservationUntil} />}
+
           {/* contract */}
           <Card>
             <CardHeader>
@@ -246,26 +233,7 @@ export function PurchaseDetailView({ id }: { id: string }) {
             </CardContent>
           </Card>
 
-          {/* payment */}
-          {p.status === "SIGNED" && (
-            <motion.div initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }}>
-              <Card className="relative overflow-hidden border-gold-500/30 shadow-glow">
-                <div className="bg-blueprint pointer-events-none absolute inset-0 opacity-50" />
-                <CardContent className="relative">
-                  <span className="grid size-11 place-items-center rounded-xl bg-gold-gradient text-onyx">
-                    <Wallet2 size={20} variant="Bold" />
-                  </span>
-                  <h3 className="mt-4 text-lg font-semibold text-stone-100">{t("app.purchases.detail.payment.title")}</h3>
-                  <p className="mt-1 text-sm text-ink-300">{t("app.purchases.detail.payment.text")}</p>
-                  <div className="mt-4 font-mono text-2xl font-semibold text-stone-100">{fmt.money(p.amount, p.currency)}</div>
-                  <Button variant="gold" size="lg" className="mt-4 w-full" onClick={() => setPayOpen(true)}>
-                    {t("app.purchases.detail.payment.button")}
-                  </Button>
-                  <p className="mt-3 text-[11px] leading-relaxed text-ink-400">{t("app.purchases.detail.payment.demo")}</p>
-                </CardContent>
-              </Card>
-            </motion.div>
-          )}
+          {!cancelled && <DealDocuments purchase={p} />}
 
           {p.paidAt && (
             <Card>
@@ -278,18 +246,6 @@ export function PurchaseDetailView({ id }: { id: string }) {
       </div>
 
       <ConfirmDialog
-        open={payOpen}
-        onOpenChange={setPayOpen}
-        icon={Wallet2}
-        title={t("app.purchases.detail.payment.confirmTitle")}
-        description={t("app.purchases.detail.payment.confirmText", { amount: fmt.money(p.amount, p.currency) })}
-        confirmLabel={t("app.purchases.detail.payment.confirm")}
-        onConfirm={pay}
-      >
-        <p className="text-xs text-ink-400">{t("app.purchases.detail.payment.demo")}</p>
-      </ConfirmDialog>
-
-      <ConfirmDialog
         open={cancelOpen}
         onOpenChange={setCancelOpen}
         tone="danger"
@@ -299,23 +255,6 @@ export function PurchaseDetailView({ id }: { id: string }) {
         confirmLabel={t("app.purchases.detail.cancel.confirm")}
         onConfirm={cancel}
       />
-
-      <Dialog open={paidOpen} onOpenChange={setPaidOpen}>
-        <DialogContent size="sm" className="overflow-hidden">
-          <AnimatePresence>
-            {paidOpen && (
-              <div className="flex flex-col items-center px-6 pb-8 pt-4 text-center">
-                <SuccessBurst size={96} />
-                <DialogTitle className="-mt-4 font-display text-3xl font-medium">{t("app.purchases.detail.payment.success")}</DialogTitle>
-                <p className="mt-2 max-w-xs text-sm text-ink-300">{t("app.purchases.detail.payment.successText")}</p>
-                <Button variant="gold" className="mt-6" onClick={() => setPaidOpen(false)}>
-                  {t("common.actions.close")}
-                </Button>
-              </div>
-            )}
-          </AnimatePresence>
-        </DialogContent>
-      </Dialog>
 
       <FilePreviewDialog file={preview?.file ?? null} title={preview?.title} open={Boolean(preview)} onOpenChange={(o) => !o && setPreview(null)} />
     </div>

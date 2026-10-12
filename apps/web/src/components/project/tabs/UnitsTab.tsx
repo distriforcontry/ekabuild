@@ -19,6 +19,7 @@ import { useFormat } from "@/components/catalog/use-format";
 import { useProject } from "../ProjectProvider";
 import { Sheet } from "../Sheet";
 import { Lightbox } from "../Lightbox";
+import { InstallmentCalculatorCard } from "../InstallmentCalculator";
 
 const CELL: Record<UnitStatus, string> = {
   AVAILABLE: "border-success/35 bg-success/12 text-success hover:border-success/70 hover:bg-success/22",
@@ -37,7 +38,7 @@ type Filters = { rooms: string | null; status: string | null; pMin: string; pMax
 const EMPTY: Filters = { rooms: null, status: null, pMin: "", pMax: "", aMin: "", aMax: "" };
 
 export function UnitsTab() {
-  const { units, loadUnits, purchaseForUnit } = useProject();
+  const { project, units, loadUnits, purchaseForUnit } = useProject();
   const { t, label } = useI18n();
   const [view, setView] = React.useState<"chess" | "list">("chess");
   const [section, setSection] = React.useState<number | null>(null);
@@ -268,6 +269,8 @@ export function UnitsTab() {
 
       <UnitSheet unit={selected} onClose={() => setSelected(null)} />
       {units.status === "loading" && <span className="sr-only">{t("common.actions.loading")}</span>}
+
+      <CalculatorFor units={items} selected={selected} currency={project.currency} fallback={project.priceFrom} />
     </div>
   );
 }
@@ -549,4 +552,20 @@ function PlanSchematic({ rooms, area, note }: { rooms: number; area: number; not
       <p className="mt-2 text-center text-xs text-ink-400">{note}</p>
     </div>
   );
+}
+
+/** Instalment calculator priced from the selected unit, else the cheapest unit on sale (or the project's "from" price). */
+function CalculatorFor({ units, selected, currency, fallback }: { units: UnitItem[]; selected: UnitItem | null; currency: string; fallback: string | null }) {
+  const [picked, setPicked] = React.useState<UnitItem | null>(null);
+  React.useEffect(() => {
+    if (selected) setPicked(selected);
+  }, [selected]);
+  const cheapest = React.useMemo(
+    () => units.filter((u) => u.status === "AVAILABLE").reduce<UnitItem | null>((m, u) => (!m || Number(u.price) < Number(m.price) ? u : m), null),
+    [units],
+  );
+  const unit = picked ?? cheapest;
+  const amount = unit ? Number(unit.price) : fallback ? Number(fallback) : null;
+  if (!amount) return null;
+  return <InstallmentCalculatorCard defaultAmount={amount} currency={currency} unitLabel={unit?.number ?? null} className="mt-2" />;
 }
