@@ -19,6 +19,7 @@ import type { ProjectDetail } from "@/lib/types";
 import { asList } from "../hooks";
 import { ErrorState } from "../states";
 import { BackLink, ConfirmDialog } from "../ui";
+import { useBreadcrumb } from "@/components/layout/Breadcrumbs";
 import type { DevProject } from "./DevDashboardView";
 import { BasicTab } from "./editor/BasicTab";
 import { CertificatesTab } from "./editor/CertificatesTab";
@@ -94,6 +95,9 @@ export function ProjectEditor({ id }: { id: string | null }) {
     }
   };
 
+  const crumbName = detail?.name ?? card?.name;
+  useBreadcrumb(id ? (crumbName ? tr(crumbName) : null) : t("app.developer.editor.newTitle"));
+
   if (id && loading) return <EditorSkeleton />;
   if (id && (error || !card)) {
     return (
@@ -126,7 +130,9 @@ export function ProjectEditor({ id }: { id: string | null }) {
               {verification && <StatusBadge kind="verification" value={verification} />}
               {id && (published ? <Badge tone="success" dot>{t("app.developer.projects.published")}</Badge> : <Badge dot>{t("app.developer.projects.draft")}</Badge>)}
             </div>
-            <h1 className="text-2xl font-bold tracking-tight text-stone-100 md:text-3xl">{id && name ? tr(name) : t("app.developer.editor.newTitle")}</h1>
+            <h1 className="text-balance bg-gradient-to-br from-stone-100 from-40% to-gold-200 bg-clip-text pb-1 font-display text-[34px] font-medium leading-[1.05] text-transparent md:text-[44px]">
+              {id && name ? tr(name) : t("app.developer.editor.newTitle")}
+            </h1>
             {!id && <p className="mt-2 max-w-2xl text-sm text-ink-300">{t("app.developer.editor.newSubtitle")}</p>}
           </div>
         </div>

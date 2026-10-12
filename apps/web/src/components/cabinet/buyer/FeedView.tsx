@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "motion/react";
 import { Activity, Gallery, Play, User } from "iconsax-reactjs";
 import type { ProgressPhase } from "@eka/shared";
 import { Badge } from "@/components/ui/badge";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Progress } from "@/components/ui/progress";
 import { useI18n } from "@/i18n/client";
 import type { FileRef } from "@/lib/types";
@@ -16,6 +15,7 @@ import { asList, useApi } from "../hooks";
 import { dayKey, useFmt } from "../format";
 import { ErrorState, ListSkeleton } from "../states";
 import type { FeedItem } from "./DashboardView";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 type Filter = "all" | ProgressPhase;
 const FILTERS: Filter[] = ["all", "CONSTRUCTION", "POST_HANDOVER"];
@@ -42,7 +42,7 @@ export function FeedView() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.area")} title={t("app.feed.title")} description={t("app.feed.subtitle")} />
+      <PageHead icon={Activity} eyebrow={t("app.shell.area")} title={t("app.feed.title")} description={t("app.feed.subtitle")} />
 
       <div role="tablist" className="no-scrollbar -mx-4 mb-8 flex gap-2 overflow-x-auto px-4">
         {FILTERS.map((f) => {

@@ -1,384 +1,187 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { toast } from "sonner";
+import { motion } from "motion/react";
 import type { Icon as IconType } from "iconsax-reactjs";
-import { ArrowRight, ClipboardTick, CloseCircle, DocumentText, Eye, Map1, ShieldCross, TickCircle, Verify } from "iconsax-reactjs";
-import { Button } from "@/components/ui/button";
-import { DataTable, type Column } from "@/components/ui/data-table";
-import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Label, Textarea } from "@/components/ui/input";
-import { PageHeader, StatCard } from "@/components/ui/misc";
-import { CountUp, Reveal } from "@/components/ui/reveal";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Tooltip } from "@/components/ui/tooltip";
+import { ArrowRight, ClipboardTick, DocumentText, Map1, SearchStatus, ShieldTick, TaskSquare, Timer1, Verify, Warning2 } from "iconsax-reactjs";
+import type { InspectionResult, InspectionType } from "@eka/shared";
+import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
-import { api, errorMessage } from "@/lib/api";
-import type { CertificateItem, FileRef } from "@/lib/types";
-import type { DocumentType, VerificationStatus } from "@eka/shared";
+import { api } from "@/lib/api";
+import type { InspectionItem, ProjectCard, ProjectDetail } from "@/lib/types";
 import { cn } from "@/lib/utils";
-import { FilePreviewDialog } from "../FilePreviewDialog";
-import { FileTypeIcon } from "../FileTypeIcon";
-import { useApi } from "../hooks";
+import { useCabinetUser } from "../CabinetContext";
+import { asList } from "../hooks";
 import { useFmt } from "../format";
-import { ErrorState, StatCardsSkeleton } from "../states";
+import { AnimatedNumber, Kpi, PageHead, Panel, PanelEmpty, SeeAll } from "../kit";
+import { ErrorState, ListSkeleton, StatCardsSkeleton } from "../states";
+import { InspectorQueue, isExpired, useInspectorQueue } from "./InspectorQueue";
 
-type QueueCert = CertificateItem & { project: { slug: string; name: string } };
-type QueueDoc = {
-  id: string;
-  type: DocumentType;
-  title: string;
-  number: string | null;
-  issuer: string | null;
-  status: VerificationStatus;
-  createdAt: string;
-  project: { slug: string; name: string };
-  file: FileRef | null;
-};
-type Queue = { certificates: QueueCert[]; documents: QueueDoc[] };
-type Decision = "VERIFIED" | "REJECTED" | "REVOKED";
-type Target = { kind: "certificate"; item: QueueCert } | { kind: "document"; item: QueueDoc };
+type RecentInspection = InspectionItem & { project: { slug: string; name: string } };
+
+/**
+ * There is no "my inspections" endpoint yet, so recent inspections are collected from the newest projects' public detail
+ * (each carries its inspection acts) — mine are highlighted.
+ */
+function useRecentInspections() {
+  const [state, setState] = React.useState<{ items: RecentInspection[]; loading: boolean; error: unknown }>({ items: [], loading: true, error: null });
+  const load = React.useCallback(async () => {
+    setState((s) => ({ ...s, loading: true, error: null }));
+    try {
+      const list = asList<ProjectCard>(await api.get<unknown>("/projects", { query: { sort: "new", pageSize: 12 } }));
+      const details = await Promise.allSettled(list.map((p) => api.get<ProjectDetail>(`/projects/${p.slug}`)));
+      const items: RecentInspection[] = [];
+      for (const r of details) {
+        if (r.status !== "fulfilled") continue;
+        for (const i of r.value.inspections ?? []) items.push({ ...i, project: { slug: r.value.slug, name: r.value.name } });
+      }
+      items.sort((a, b) => +new Date(b.date) - +new Date(a.date));
+      setState({ items: items.slice(0, 6), loading: false, error: null });
+    } catch (e) {
+      setState({ items: [], loading: false, error: e });
+    }
+  }, []);
+  React.useEffect(() => {
+    void load();
+  }, [load]);
+  return { ...state, reload: load };
+}
 
 export function InspectorDashboardView() {
-  const { t, label, tr } = useI18n();
-  const fmt = useFmt();
-  const { data, loading, error, reload, setData } = useApi<Queue>("/inspector/queue", undefined, {
-    select: (r) => {
-      const q = (r ?? {}) as Partial<Queue>;
-      return { certificates: Array.isArray(q.certificates) ? q.certificates : [], documents: Array.isArray(q.documents) ? q.documents : [] };
-    },
-  });
-  const [tab, setTab] = React.useState<"certificates" | "documents">("certificates");
-  const [decision, setDecision] = React.useState<{ target: Target; status: Decision } | null>(null);
-  const [preview, setPreview] = React.useState<{ file: FileRef; title: string } | null>(null);
-
-  const certs = data?.certificates ?? [];
-  const docs = data?.documents ?? [];
-
-  const onDone = (target: Target) => {
-    setData((q) =>
-      q
-        ? target.kind === "certificate"
-          ? { ...q, certificates: q.certificates.filter((c) => c.id !== target.item.id) }
-          : { ...q, documents: q.documents.filter((d) => d.id !== target.item.id) }
-        : q,
-    );
-  };
-
-  const actions = (target: Target, revoke = false) => (
-    <div className="flex items-center justify-end gap-1.5" onClick={(e) => e.stopPropagation()}>
-      <Button size="sm" variant="success" onClick={() => setDecision({ target, status: "VERIFIED" })}>
-        <TickCircle size={14} variant="Bold" /> <span className="hidden lg:inline">{t("app.inspector.dashboard.verify")}</span>
-      </Button>
-      <Tooltip content={t("app.inspector.dashboard.reject")}>
-        <Button size="icon-sm" variant="ghost" className="text-danger hover:bg-danger/10 hover:text-danger" onClick={() => setDecision({ target, status: "REJECTED" })} aria-label={t("app.inspector.dashboard.reject")}>
-          <CloseCircle size={16} />
-        </Button>
-      </Tooltip>
-      {revoke && (
-        <Tooltip content={t("app.inspector.dashboard.revoke")}>
-          <Button size="icon-sm" variant="ghost" className="hover:text-danger" onClick={() => setDecision({ target, status: "REVOKED" })} aria-label={t("app.inspector.dashboard.revoke")}>
-            <ShieldCross size={16} />
-          </Button>
-        </Tooltip>
-      )}
-    </div>
-  );
-
-  const certColumns: Column<QueueCert>[] = [
-    {
-      key: "item",
-      header: t("app.inspector.dashboard.columns.item"),
-      alwaysVisible: true,
-      cell: (c) => (
-        <div className="flex items-center gap-3">
-          <span className="grid size-10 shrink-0 place-items-center rounded-xl border border-gold-500/25 bg-gold-500/10 text-gold-300">
-            <Verify size={18} variant="Bulk" />
-          </span>
-          <div className="min-w-0">
-            <div className="truncate text-sm font-semibold text-stone-100">{label("certificateType", c.type)}</div>
-            <div className="font-mono text-xs text-ink-400">№ {c.number}</div>
-          </div>
-        </div>
-      ),
-      sortValue: (c) => c.number,
-      exportValue: (c) => c.number,
-    },
-    {
-      key: "project",
-      header: t("app.inspector.dashboard.columns.project"),
-      cell: (c) => (
-        <Link href={`/projects/${c.project.slug}`} target="_blank" onClick={(e) => e.stopPropagation()} className="text-sm text-ink-100 hover:text-gold-300">
-          {tr(c.project.name)}
-        </Link>
-      ),
-      sortValue: (c) => c.project.name,
-      exportValue: (c) => c.project.name,
-    },
-    { key: "issuer", header: t("app.inspector.dashboard.columns.issuer"), cell: (c) => <span className="text-sm text-ink-200">{tr(c.issuer)}</span>, exportValue: (c) => c.issuer, hideOnMobile: true },
-    { key: "issued", header: t("app.inspector.dashboard.columns.issued"), cell: (c) => <span className="text-xs text-ink-300">{fmt.date(c.issuedAt)}</span>, sortValue: (c) => new Date(c.issuedAt), exportValue: (c) => c.issuedAt.slice(0, 10), hideOnMobile: true },
-    {
-      key: "validUntil",
-      header: t("app.inspector.dashboard.columns.validUntil"),
-      cell: (c) => {
-        const expired = c.validUntil && new Date(c.validUntil).getTime() < Date.now();
-        return <span className={cn("text-xs", expired ? "font-semibold text-danger" : "text-ink-300")}>{c.validUntil ? fmt.date(c.validUntil) : "—"}</span>;
-      },
-      sortValue: (c) => (c.validUntil ? new Date(c.validUntil) : null),
-      exportValue: (c) => c.validUntil?.slice(0, 10) ?? "",
-      hideOnMobile: true,
-    },
-    { key: "actions", header: t("app.inspector.dashboard.columns.actions"), align: "right", alwaysVisible: true, cell: (c) => actions({ kind: "certificate", item: c }, true) },
-  ];
-
-  const docColumns: Column<QueueDoc>[] = [
-    {
-      key: "item",
-      header: t("app.inspector.dashboard.columns.item"),
-      alwaysVisible: true,
-      cell: (d) => (
-        <div className="flex items-center gap-3">
-          <FileTypeIcon mime={d.file?.mime} name={d.file?.originalName} />
-          <div className="min-w-0">
-            <div className="max-w-64 truncate text-sm font-semibold text-stone-100">{tr(d.title)}</div>
-            <div className="text-xs text-ink-400">
-              {label("documentType", d.type)}
-              {d.number && <span className="font-mono"> · № {d.number}</span>}
-            </div>
-          </div>
-        </div>
-      ),
-      sortValue: (d) => d.title,
-      exportValue: (d) => d.title,
-    },
-    {
-      key: "project",
-      header: t("app.inspector.dashboard.columns.project"),
-      cell: (d) => (
-        <Link href={`/projects/${d.project.slug}`} target="_blank" onClick={(e) => e.stopPropagation()} className="text-sm text-ink-100 hover:text-gold-300">
-          {tr(d.project.name)}
-        </Link>
-      ),
-      sortValue: (d) => d.project.name,
-      exportValue: (d) => d.project.name,
-    },
-    { key: "issuer", header: t("app.inspector.dashboard.columns.issuer"), cell: (d) => <span className="text-sm text-ink-200">{d.issuer ? tr(d.issuer) : "—"}</span>, exportValue: (d) => d.issuer ?? "", hideOnMobile: true },
-    { key: "created", header: t("app.inspector.dashboard.columns.created"), cell: (d) => <span className="text-xs text-ink-300">{fmt.date(d.createdAt)}</span>, sortValue: (d) => new Date(d.createdAt), exportValue: (d) => d.createdAt.slice(0, 10), hideOnMobile: true },
-    {
-      key: "actions",
-      header: t("app.inspector.dashboard.columns.actions"),
-      align: "right",
-      alwaysVisible: true,
-      cell: (d) => (
-        <div className="flex items-center justify-end gap-1.5">
-          {d.file && (
-            <Tooltip content={t("app.inspector.dashboard.file")}>
-              <Button
-                size="icon-sm"
-                variant="secondary"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  setPreview({ file: d.file!, title: tr(d.title) });
-                }}
-                aria-label={t("app.inspector.dashboard.file")}
-              >
-                <Eye size={16} />
-              </Button>
-            </Tooltip>
-          )}
-          {actions({ kind: "document", item: d })}
-        </div>
-      ),
-    },
-  ];
+  const { t } = useI18n();
+  const queue = useInspectorQueue();
+  const recent = useRecentInspections();
+  const certs = queue.data?.certificates ?? [];
+  const docs = queue.data?.documents ?? [];
+  const expired = certs.filter(isExpired).length;
 
   return (
-    <div>
-      <PageHeader eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.dashboard.title")} description={t("app.inspector.dashboard.subtitle")} />
+    <div className="space-y-6 md:space-y-8">
+      <PageHead
+        eyebrow={t("app.shell.sections.inspector")}
+        icon={ShieldTick}
+        title={t("app.inspector.dashboard.title")}
+        description={t("app.inspector.dashboard.subtitle")}
+      />
 
-      <div className="mb-8 grid gap-4 md:grid-cols-2">
-        <QuickCard href="/app/inspector/inspections/new" icon={ClipboardTick} title={t("app.inspector.dashboard.quick.inspection")} text={t("app.inspector.dashboard.quick.inspectionHint")} />
-        <QuickCard href="/app/inspector/cadastre" icon={Map1} title={t("app.inspector.dashboard.quick.cadastre")} text={t("app.inspector.dashboard.quick.cadastreHint")} />
+      <div className="grid gap-3 md:grid-cols-3 md:gap-4">
+        <QuickCard index={0} href="/app/inspector/inspections/new" icon={ClipboardTick} title={t("app.inspector.dashboard.quick.inspection")} text={t("app.inspector.dashboard.quick.inspectionHint")} primary />
+        <QuickCard index={1} href="/app/inspector/queue" icon={TaskSquare} title={t("app.inspector.dashboard.quick.queue")} text={t("app.inspector.dashboard.quick.queueHint")} />
+        <QuickCard index={2} href="/app/inspector/cadastre" icon={Map1} title={t("app.inspector.dashboard.quick.cadastre")} text={t("app.inspector.dashboard.quick.cadastreHint")} />
       </div>
 
-      {loading ? (
-        <StatCardsSkeleton count={3} />
-      ) : error ? null : (
-        <div className="mb-8 grid grid-cols-2 gap-3 md:grid-cols-3 md:gap-4">
-          {[
-            { label: t("app.inspector.dashboard.stats.certificates"), value: certs.length, icon: Verify },
-            { label: t("app.inspector.dashboard.stats.documents"), value: docs.length, icon: DocumentText },
-            { label: t("app.inspector.dashboard.stats.total"), value: certs.length + docs.length, icon: ClipboardTick },
-          ].map((s, i) => (
-            <Reveal key={s.label} delay={i * 0.05} y={12} className={i === 2 ? "col-span-2 md:col-span-1" : undefined}>
-              <StatCard label={s.label} value={<CountUp value={s.value} duration={0.8} />} icon={s.icon} className="h-full" />
-            </Reveal>
-          ))}
+      {queue.loading ? (
+        <StatCardsSkeleton count={4} />
+      ) : queue.error ? null : (
+        <div className="grid grid-cols-2 gap-3 md:gap-4 xl:grid-cols-4">
+          <Kpi index={0} href="/app/inspector/queue" label={t("app.inspector.dashboard.stats.certificates")} value={<AnimatedNumber value={certs.length} />} icon={Verify} accent={certs.length > 0} />
+          <Kpi index={1} href="/app/inspector/queue?tab=documents" label={t("app.inspector.dashboard.stats.documents")} value={<AnimatedNumber value={docs.length} />} icon={DocumentText} accent={docs.length > 0} />
+          <Kpi index={2} label={t("app.inspector.dashboard.stats.expired")} value={<AnimatedNumber value={expired} />} hint={t("app.inspector.dashboard.stats.expiredHint")} icon={Timer1} />
+          <Kpi index={3} label={t("app.inspector.dashboard.stats.total")} value={<AnimatedNumber value={certs.length + docs.length} />} hint={t("app.inspector.dashboard.stats.totalHint")} icon={TaskSquare} />
         </div>
       )}
 
-      {error ? (
-        <ErrorState error={error} onRetry={reload} />
-      ) : (
-        <Tabs value={tab} onValueChange={(v) => setTab(v as typeof tab)}>
-          <TabsList>
-            <TabsTrigger value="certificates">
-              <Verify variant={tab === "certificates" ? "Bulk" : "Linear"} /> {t("app.inspector.dashboard.tabs.certificates")}
-              <span className="rounded-full bg-fg/8 px-1.5 font-mono text-[10px]">{certs.length}</span>
-            </TabsTrigger>
-            <TabsTrigger value="documents">
-              <DocumentText variant={tab === "documents" ? "Bulk" : "Linear"} /> {t("app.inspector.dashboard.tabs.documents")}
-              <span className="rounded-full bg-fg/8 px-1.5 font-mono text-[10px]">{docs.length}</span>
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value="certificates">
-            <DataTable
-              columns={certColumns}
-              data={certs}
-              loading={loading}
-              rowKey={(c) => c.id}
-              searchText={(c) => `${c.number} ${c.project.name} ${c.issuer}`}
-              searchPlaceholder={t("app.inspector.dashboard.search")}
-              emptyTitle={t("app.inspector.dashboard.emptyCertificates")}
-              emptyHint={t("app.inspector.dashboard.emptyHint")}
-              exportName="certificates-queue"
-            />
-          </TabsContent>
-          <TabsContent value="documents">
-            <DataTable
-              columns={docColumns}
-              data={docs}
-              loading={loading}
-              rowKey={(d) => d.id}
-              searchText={(d) => `${d.title} ${d.number ?? ""} ${d.project.name}`}
-              searchPlaceholder={t("app.inspector.dashboard.search")}
-              emptyTitle={t("app.inspector.dashboard.emptyDocuments")}
-              emptyHint={t("app.inspector.dashboard.emptyHint")}
-              exportName="documents-queue"
-            />
-          </TabsContent>
-        </Tabs>
-      )}
-
-      <DecisionDialog
-        state={decision}
-        onClose={() => setDecision(null)}
-        onDone={(target) => {
-          onDone(target);
-          setDecision(null);
-        }}
-      />
-      <FilePreviewDialog file={preview?.file ?? null} title={preview?.title} open={Boolean(preview)} onOpenChange={(o) => !o && setPreview(null)} />
+      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,400px)]">
+        <Panel
+          icon={TaskSquare}
+          title={t("app.inspector.dashboard.queueTitle")}
+          subtitle={t("app.inspector.dashboard.queueSubtitle")}
+          action={<SeeAll href="/app/inspector/queue">{t("common.actions.seeAll")}</SeeAll>}
+          className="min-w-0"
+        >
+          {queue.error ? <ErrorState error={queue.error} onRetry={queue.reload} /> : <InspectorQueue state={queue} compact />}
+        </Panel>
+        <RecentInspections {...recent} />
+      </div>
     </div>
   );
 }
 
-function QuickCard({ href, icon: Icon, title, text }: { href: string; icon: IconType; title: string; text: string }) {
+const RESULT_ICON: Record<InspectionResult, IconType> = { PASSED: ShieldTick, ISSUES: Warning2, FAILED: Warning2 };
+
+function RecentInspections({ items, loading, error, reload }: { items: RecentInspection[]; loading: boolean; error: unknown; reload: () => void }) {
+  const { t, label, tr } = useI18n();
+  const fmt = useFmt();
+  const { user } = useCabinetUser();
   return (
-    <Link
-      href={href}
-      className="group relative flex items-center gap-4 overflow-hidden rounded-2xl border border-line bg-ink-900 p-5 shadow-card transition-all duration-300 hover:-translate-y-0.5 hover:border-gold-500/40"
-    >
-      <div className="bg-blueprint pointer-events-none absolute inset-0 opacity-0 transition-opacity duration-500 group-hover:opacity-60" />
-      <span className="relative grid size-12 shrink-0 place-items-center rounded-xl bg-gold-gradient text-onyx shadow-glow">
-        <Icon size={22} variant="Bold" />
-      </span>
-      <span className="relative min-w-0 flex-1">
-        <span className="block font-semibold text-stone-100">{title}</span>
-        <span className="mt-0.5 block text-sm text-ink-400">{text}</span>
-      </span>
-      <ArrowRight size={18} className="relative shrink-0 text-ink-400 transition group-hover:translate-x-1 group-hover:text-gold-300" />
-    </Link>
+    <Panel icon={SearchStatus} title={t("app.inspector.dashboard.recent.title")} subtitle={t("app.inspector.dashboard.recent.subtitle")}>
+      {loading ? (
+        <ListSkeleton rows={4} />
+      ) : error ? (
+        <ErrorState error={error} onRetry={reload} compact />
+      ) : !items.length ? (
+        <PanelEmpty icon={SearchStatus} title={t("app.inspector.dashboard.recent.empty")} className="py-8" />
+      ) : (
+        <ol className="relative space-y-3 before:absolute before:bottom-3 before:left-[19px] before:top-3 before:w-px before:bg-line">
+          {items.map((i, idx) => {
+            const Icon = RESULT_ICON[i.result] ?? ShieldTick;
+            const mine = i.inspector?.id === user.id;
+            const open = i.violations?.filter((v) => !v.resolved).length ?? 0;
+            return (
+              <motion.li
+                key={i.id}
+                initial={{ opacity: 0, x: 8 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ duration: 0.4, delay: idx * 0.05 }}
+                className="relative flex gap-3"
+              >
+                <span
+                  className={cn(
+                    "relative z-10 grid size-10 shrink-0 place-items-center rounded-xl border bg-ink-900",
+                    i.result === "PASSED" ? "border-success/30 text-success" : i.result === "ISSUES" ? "border-warning/30 text-warning" : "border-danger/30 text-danger",
+                  )}
+                >
+                  <Icon size={18} variant="Bulk" />
+                </span>
+                <Link href={`/projects/${i.project.slug}`} className="group min-w-0 flex-1 rounded-xl border border-line bg-ink-850/40 px-3 py-2.5 transition hover:border-gold-500/25">
+                  <div className="flex items-center gap-2">
+                    <span className="min-w-0 flex-1 truncate text-[13px] font-semibold text-stone-100 group-hover:text-gold-300">{tr(i.project.name)}</span>
+                    <StatusBadge kind="inspectionResult" value={i.result} />
+                  </div>
+                  <div className="mt-1 flex flex-wrap items-center gap-x-2 gap-y-0.5 text-[11px] text-ink-400">
+                    <span>{label("inspectionType", i.type as InspectionType)}</span>
+                    <span>·</span>
+                    <span>{fmt.date(i.date)}</span>
+                    {open > 0 && <span className="text-warning">· {t("app.inspector.dashboard.recent.violations", { n: open })}</span>}
+                  </div>
+                  <div className="mt-1 truncate text-[11px] text-ink-400">
+                    {mine ? <span className="font-semibold text-gold-300">{t("app.inspector.dashboard.recent.mine")}</span> : i.inspector?.fullName}
+                  </div>
+                </Link>
+              </motion.li>
+            );
+          })}
+        </ol>
+      )}
+    </Panel>
   );
 }
 
-function DecisionDialog({ state, onClose, onDone }: { state: { target: Target; status: Decision } | null; onClose: () => void; onDone: (t: Target) => void }) {
-  const { t, label, tr } = useI18n();
-  const [note, setNote] = React.useState("");
-  const [busy, setBusy] = React.useState(false);
-  const [touched, setTouched] = React.useState(false);
-  React.useEffect(() => {
-    setNote("");
-    setTouched(false);
-  }, [state]);
-
-  const needNote = state?.status !== "VERIFIED";
-  const noteError = needNote && touched && note.trim().length < 3 ? t("app.inspector.dashboard.noteRequired") : null;
-
-  const submit = async () => {
-    if (!state) return;
-    setTouched(true);
-    if (needNote && note.trim().length < 3) return;
-    setBusy(true);
-    try {
-      if (state.target.kind === "certificate") {
-        await api.patch(`/certificates/${state.target.item.id}/verify`, { status: state.status, note: note.trim() || undefined });
-      } else {
-        await api.patch(`/documents/${state.target.item.id}/verify`, { status: state.status, rejectReason: note.trim() || undefined });
-      }
-      toast.success(t(`app.inspector.dashboard.done.${state.status}`));
-      onDone(state.target);
-    } catch (e) {
-      toast.error(errorMessage(e, t("common.errors.generic")));
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  const item = state?.target.item;
-  const subtitle = state
-    ? state.target.kind === "certificate"
-      ? `${label("certificateType", state.target.item.type)} · № ${state.target.item.number}`
-      : tr(state.target.item.title)
-    : "";
-
+function QuickCard({ href, icon: Icon, title, text, primary, index }: { href: string; icon: IconType; title: string; text: string; primary?: boolean; index: number }) {
   return (
-    <Dialog open={Boolean(state)} onOpenChange={(o) => !o && !busy && onClose()}>
-      <DialogContent size="sm">
-        <DialogHeader>
-          <div className="flex items-start gap-3">
-            <span
-              className={cn(
-                "grid size-11 shrink-0 place-items-center rounded-xl border",
-                state?.status === "VERIFIED" ? "border-success/30 bg-success/10 text-success" : "border-danger/30 bg-danger/10 text-danger",
-              )}
-            >
-              {state?.status === "VERIFIED" ? <TickCircle size={20} variant="Bold" /> : <ShieldCross size={20} variant="Bold" />}
-            </span>
-            <div className="min-w-0">
-              <DialogTitle>{state ? t(`app.inspector.dashboard.noteTitle.${state.status}`) : ""}</DialogTitle>
-              <DialogDescription className="truncate">
-                {subtitle}
-                {item ? ` — ${tr(item.project.name)}` : ""}
-              </DialogDescription>
-            </div>
-          </div>
-        </DialogHeader>
-        <DialogBody>
-          <Label htmlFor="decision-note">
-            {t("app.inspector.dashboard.noteLabel")} {!needNote && <span className="font-normal text-ink-400">({t("app.common.optional")})</span>}
-          </Label>
-          <Textarea
-            id="decision-note"
-            rows={4}
-            value={note}
-            onChange={(e) => setNote(e.target.value)}
-            onBlur={() => setTouched(true)}
-            placeholder={t("app.inspector.dashboard.notePlaceholder")}
-            aria-invalid={Boolean(noteError) || undefined}
-            autoFocus
-          />
-          {noteError && <p className="mt-1.5 text-xs text-danger">{noteError}</p>}
-        </DialogBody>
-        <DialogFooter>
-          <Button variant="ghost" onClick={onClose} disabled={busy}>
-            {t("common.actions.cancel")}
-          </Button>
-          <Button variant={state?.status === "VERIFIED" ? "success" : "danger"} onClick={submit} loading={busy}>
-            {state ? t(`app.inspector.dashboard.noteTitle.${state.status}`) : ""}
-          </Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+    <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.45, delay: index * 0.06, ease: [0.16, 1, 0.3, 1] }}>
+      <Link
+        href={href}
+        className={cn(
+          "group relative flex h-full items-center gap-4 overflow-hidden rounded-2xl border bg-ink-900/80 p-4 shadow-card transition-all duration-300 hover:-translate-y-0.5 md:p-5",
+          primary ? "border-gold-500/30 hover:border-gold-500/50" : "border-line hover:border-gold-500/30",
+        )}
+      >
+        <div aria-hidden className={cn("bg-blueprint pointer-events-none absolute inset-0 transition-opacity duration-500 group-hover:opacity-60", primary ? "opacity-40" : "opacity-0")} />
+        <span
+          className={cn(
+            "relative grid size-12 shrink-0 place-items-center rounded-xl transition-transform duration-500 group-hover:-rotate-6",
+            primary ? "bg-gold-gradient text-onyx shadow-glow" : "border border-gold-500/25 bg-gold-500/10 text-gold-300",
+          )}
+        >
+          <Icon size={22} variant={primary ? "Bold" : "Bulk"} />
+        </span>
+        <span className="relative min-w-0 flex-1">
+          <span className="block font-semibold text-stone-100">{title}</span>
+          <span className="mt-0.5 line-clamp-2 block text-sm text-ink-400">{text}</span>
+        </span>
+        <ArrowRight size={18} className="relative shrink-0 text-ink-400 transition group-hover:translate-x-1 group-hover:text-gold-300" />
+      </Link>
+    </motion.div>
   );
 }

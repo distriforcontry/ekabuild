@@ -14,7 +14,7 @@ import {
 } from "iconsax-reactjs";
 import type { Icon as IconType } from "iconsax-reactjs";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { TrustRing } from "@/components/ui/trust-ring";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { getI18n } from "@/i18n/server";
@@ -47,9 +47,7 @@ export async function FeaturesBento() {
   return (
     <section id="features" className="relative scroll-mt-24 py-24 md:py-32">
       <Container>
-        <Reveal>
-          <SectionHeading eyebrow={t("landing.features.eyebrow")} title={t("landing.features.title")} description={t("landing.features.description")} />
-        </Reveal>
+        <RevealHeading eyebrow={t("landing.features.eyebrow")} title={t("landing.features.title")} description={t("landing.features.description")} />
 
         <div className="mt-14 grid gap-4 md:grid-cols-2 lg:grid-cols-4 lg:auto-rows-[minmax(250px,auto)]">
           {/* 3D model & drawings */}

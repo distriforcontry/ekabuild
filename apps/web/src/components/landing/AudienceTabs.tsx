@@ -6,7 +6,7 @@ import { motion } from "motion/react";
 import { ArrowRight, Briefcase, Buildings2, Home2, TickCircle } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -30,9 +30,7 @@ export function AudienceTabs() {
     <section id="audience" className="relative isolate scroll-mt-24 overflow-hidden py-24 md:py-32">
       <div aria-hidden className="pointer-events-none absolute left-[-20%] top-1/3 -z-10 size-[560px] rounded-full bg-gold-500 opacity-[0.07] blur-[140px]" />
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <SectionHeading align="center" eyebrow={t("landing.audience.eyebrow")} title={t("landing.audience.title")} description={t("landing.audience.description")} />
-        </Reveal>
+        <RevealHeading align="center" eyebrow={t("landing.audience.eyebrow")} title={t("landing.audience.title")} description={t("landing.audience.description")} />
 
         <TabsPrimitive.Root value={tab} onValueChange={(v) => setTab(v as Key)} className="mt-12">
           <Reveal delay={0.1} className="flex justify-center">

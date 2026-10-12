@@ -8,6 +8,7 @@ import uzAuth from "./uz/auth";
 import uzCatalog from "./uz/catalog";
 import uzApp from "./uz/app";
 import uzAdmin from "./uz/admin";
+import uzStudio from "./uz/studio";
 
 import ruCommon from "./ru/common";
 import ruLabels from "./ru/labels";
@@ -16,6 +17,7 @@ import ruAuth from "./ru/auth";
 import ruCatalog from "./ru/catalog";
 import ruApp from "./ru/app";
 import ruAdmin from "./ru/admin";
+import ruStudio from "./ru/studio";
 
 const uz = {
   common: uzCommon,
@@ -25,6 +27,7 @@ const uz = {
   catalog: uzCatalog,
   app: uzApp,
   admin: uzAdmin,
+  studio: uzStudio,
 };
 
 export type Messages = typeof uz;
@@ -37,6 +40,7 @@ const ru: Messages = {
   catalog: ruCatalog,
   app: ruApp,
   admin: ruAdmin,
+  studio: ruStudio,
 } as Messages;
 
 let oz: Messages | null = null;

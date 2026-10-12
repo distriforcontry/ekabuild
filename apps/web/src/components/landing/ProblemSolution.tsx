@@ -1,6 +1,6 @@
 import { ArrowDown, ArrowRight, Copy, LocationCross, LocationTick, Lock, ScanBarcode, ShieldCross, TaskSquare, Timer1 } from "iconsax-reactjs";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { getI18n } from "@/i18n/server";
 import { Container } from "@/components/marketing/primitives";
 import { SpotlightCard } from "./SpotlightCard";
@@ -21,14 +21,12 @@ export async function ProblemSolution() {
   return (
     <section id="problems" className="relative scroll-mt-24 py-24 md:py-32">
       <Container>
-        <Reveal>
-          <SectionHeading
+        <RevealHeading
             align="center"
             eyebrow={t("landing.problems.eyebrow")}
             title={t("landing.problems.title")}
             description={t("landing.problems.description")}
           />
-        </Reveal>
 
         <ol className="mx-auto mt-16 max-w-6xl space-y-5">
           {items.map((it, i) => {

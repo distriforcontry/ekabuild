@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { Tooltip } from "@/components/ui/tooltip";
 import { useI18n } from "@/i18n/client";
@@ -140,10 +141,10 @@ export function DocumentsTab({ projectId, detail, onChanged }: { projectId: stri
               <Input id="doc-issuer" value={issuer} onChange={(e) => setIssuer(e.target.value)} />
             </Field>
             <Field label={t("app.developer.editor.documents.fields.issuedAt")} htmlFor="doc-issued">
-              <Input id="doc-issued" type="date" value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} />
+              <DatePicker value={issuedAt || null} onChange={(v) => setIssuedAt(v ?? "")} aria-label={t("app.developer.editor.documents.fields.issuedAt")} />
             </Field>
             <Field label={t("app.developer.editor.documents.fields.expiresAt")} htmlFor="doc-expires">
-              <Input id="doc-expires" type="date" value={expiresAt} onChange={(e) => setExpiresAt(e.target.value)} />
+              <DatePicker value={expiresAt || null} onChange={(v) => setExpiresAt(v ?? "")} min={issuedAt || undefined} aria-label={t("app.developer.editor.documents.fields.expiresAt")} />
             </Field>
             <Field label={t("app.developer.editor.documents.fields.description")} htmlFor="doc-desc" className="sm:col-span-2">
               <Textarea id="doc-desc" rows={3} className="min-h-20" value={description} onChange={(e) => setDescription(e.target.value)} />

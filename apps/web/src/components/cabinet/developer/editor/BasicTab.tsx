@@ -7,7 +7,9 @@ import { Gallery, GalleryEdit, Gps, InfoCircle } from "iconsax-reactjs";
 import { PROJECT_STATUSES, PROJECT_TYPES, REGIONS, type ProjectStatus, type ProjectType } from "@eka/shared";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
+import { DatePicker } from "@/components/ui/date-picker";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { formatMasked, MaskedInput, MoneyInput, NumberInput } from "@/components/ui/masked-input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage, uploadFile } from "@/lib/api";
@@ -51,6 +53,11 @@ type Form = {
 };
 
 const str = (v: unknown) => (v === null || v === undefined ? "" : String(v));
+/** form keeps strings (validation reports bad input); numeric controls get numbers */
+const numVal = (v: string) => {
+  const n = parseNum(v);
+  return n === null || Number.isNaN(n) ? null : n;
+};
 
 function initial(d: ProjectDetail | null): Form {
   return {
@@ -257,7 +264,7 @@ export function BasicTab({
             <Input id="pe-lng" inputMode="decimal" className="font-mono" value={f.lng} onChange={(e) => set("lng", e.target.value)} aria-invalid={Boolean(err("lng")) || undefined} />
           </Field>
           <Field label={L("cadastre")} htmlFor="pe-cad" className="md:col-span-2">
-            <Input id="pe-cad" className="font-mono" value={f.cadastreNumber} onChange={(e) => set("cadastreNumber", e.target.value)} placeholder={t("app.developer.editor.basic.placeholders.cadastre")} />
+            <MaskedInput id="pe-cad" mask="cadastre" value={f.cadastreNumber.replace(/\D/g, "")} onChange={(raw) => set("cadastreNumber", formatMasked("cadastre", raw))} />
           </Field>
         </div>
       </FormSection>
@@ -266,16 +273,16 @@ export function BasicTab({
         <FormSection title={t("app.developer.editor.basic.sections.specs")}>
           <div className="grid grid-cols-2 gap-5">
             <Field label={L("floors")} error={err("floors")} htmlFor="pe-floors">
-              <Input id="pe-floors" inputMode="numeric" className="font-mono" value={f.floors} onChange={(e) => set("floors", e.target.value)} />
+              <NumberInput id="pe-floors" min={1} value={numVal(f.floors)} onChange={(v) => set("floors", v == null ? "" : String(v))} aria-invalid={Boolean(err("floors")) || undefined} />
             </Field>
             <Field label={L("sections")} error={err("sections")} htmlFor="pe-sections">
-              <Input id="pe-sections" inputMode="numeric" className="font-mono" value={f.sections} onChange={(e) => set("sections", e.target.value)} />
+              <NumberInput id="pe-sections" min={1} value={numVal(f.sections)} onChange={(v) => set("sections", v == null ? "" : String(v))} aria-invalid={Boolean(err("sections")) || undefined} />
             </Field>
             <Field label={L("landArea")} error={err("landArea")} htmlFor="pe-land">
-              <Input id="pe-land" inputMode="decimal" className="font-mono" value={f.landArea} onChange={(e) => set("landArea", e.target.value)} />
+              <NumberInput id="pe-land" decimals={1} suffix="m²" value={numVal(f.landArea)} onChange={(v) => set("landArea", v == null ? "" : String(v))} />
             </Field>
             <Field label={L("totalArea")} error={err("totalArea")} htmlFor="pe-total">
-              <Input id="pe-total" inputMode="decimal" className="font-mono" value={f.totalArea} onChange={(e) => set("totalArea", e.target.value)} />
+              <NumberInput id="pe-total" decimals={1} suffix="m²" value={numVal(f.totalArea)} onChange={(v) => set("totalArea", v == null ? "" : String(v))} />
             </Field>
           </div>
         </FormSection>
@@ -283,8 +290,8 @@ export function BasicTab({
         <FormSection title={t("app.developer.editor.basic.sections.prices")}>
           <div className="grid gap-5">
             {(["priceFrom", "pricePerSqm", "packagePrice"] as const).map((k) => (
-              <Field key={k} label={L(k)} error={err(k)} hint={parseNum(f[k]) ? fmt.money(parseNum(f[k])) : undefined} htmlFor={`pe-${k}`}>
-                <Input id={`pe-${k}`} inputMode="numeric" className="font-mono" value={f[k]} onChange={(e) => set(k, e.target.value.replace(/[^\d.,\s]/g, ""))} />
+              <Field key={k} label={L(k)} error={err(k)} htmlFor={`pe-${k}`}>
+                <MoneyInput id={`pe-${k}`} value={numVal(f[k])} onChange={(v) => set(k, v == null ? "" : String(Math.round(v)))} />
               </Field>
             ))}
           </div>
@@ -295,10 +302,10 @@ export function BasicTab({
         <FormSection title={t("app.developer.editor.basic.sections.dates")}>
           <div className="grid grid-cols-2 gap-5">
             <Field label={L("startDate")} htmlFor="pe-start">
-              <Input id="pe-start" type="date" value={f.startDate} onChange={(e) => set("startDate", e.target.value)} />
+              <DatePicker value={f.startDate || null} onChange={(v) => set("startDate", v ?? "")} aria-label={L("startDate")} />
             </Field>
             <Field label={L("plannedEndDate")} htmlFor="pe-end">
-              <Input id="pe-end" type="date" value={f.plannedEndDate} onChange={(e) => set("plannedEndDate", e.target.value)} />
+              <DatePicker value={f.plannedEndDate || null} onChange={(v) => set("plannedEndDate", v ?? "")} min={f.startDate || undefined} aria-label={L("plannedEndDate")} />
             </Field>
             {projectId && (
               <Field label={L("progress")} className="col-span-2">
@@ -355,10 +362,10 @@ export function BasicTab({
       <FormSection title={t("app.developer.editor.basic.sections.massing")} description={t("app.developer.editor.basic.massingHint")}>
         <div className="grid gap-5 sm:grid-cols-3">
           <Field label={L("width")} error={err("width")} htmlFor="pe-w">
-            <Input id="pe-w" inputMode="decimal" className="font-mono" value={f.width} onChange={(e) => set("width", e.target.value)} placeholder="36" />
+            <NumberInput id="pe-w" decimals={1} suffix="m" value={numVal(f.width)} onChange={(v) => set("width", v == null ? "" : String(v))} placeholder="36" />
           </Field>
           <Field label={L("depth")} error={err("depth")} htmlFor="pe-d">
-            <Input id="pe-d" inputMode="decimal" className="font-mono" value={f.depth} onChange={(e) => set("depth", e.target.value)} placeholder="18" />
+            <NumberInput id="pe-d" decimals={1} suffix="m" value={numVal(f.depth)} onChange={(v) => set("depth", v == null ? "" : String(v))} placeholder="18" />
           </Field>
           <Field label={L("accent")} htmlFor="pe-accent">
             <div className="flex h-11 items-center gap-3 rounded-xl border border-line bg-ink-850 px-2">
@@ -370,7 +377,7 @@ export function BasicTab({
       </FormSection>
 
       {/* sticky save bar */}
-      <div className="pointer-events-none sticky bottom-4 z-30 flex justify-center">
+      <div className="pointer-events-none sticky bottom-[calc(var(--shell-bottom,0px)+1rem)] z-30 flex justify-center">
         <AnimatePresence initial={false}>
           {(dirty || !projectId) && (
             <motion.div

@@ -3,7 +3,7 @@ import * as React from "react";
 import { AnimatePresence, motion } from "motion/react";
 import { Add, Call } from "iconsax-reactjs";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { OpenSupportButton } from "@/components/support/OpenSupportButton";
 import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
@@ -20,9 +20,7 @@ export function Faq() {
     <section id="faq" className="relative scroll-mt-24 border-t border-line bg-ink-900/30 py-24 md:py-32">
       <div className="mx-auto grid w-full max-w-7xl gap-12 px-4 sm:px-6 lg:grid-cols-12 lg:px-8">
         <div className="lg:sticky lg:top-28 lg:col-span-4 lg:self-start">
-          <Reveal>
-            <SectionHeading eyebrow={t("landing.faq.eyebrow")} title={t("landing.faq.title")} description={t("landing.faq.description")} />
-          </Reveal>
+          <RevealHeading eyebrow={t("landing.faq.eyebrow")} title={t("landing.faq.title")} description={t("landing.faq.description")} />
           <Reveal delay={0.1}>
             <div className="mt-8 flex flex-wrap gap-3">
               <OpenSupportButton variant="gold" size="lg">

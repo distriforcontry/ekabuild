@@ -3,7 +3,6 @@ import * as React from "react";
 import Link from "next/link";
 import { ExportSquare, Folder2, FolderOpen, SearchNormal1 } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Reveal } from "@/components/ui/reveal";
 import { useI18n } from "@/i18n/client";
 import type { DocumentItem, FileRef } from "@/lib/types";
@@ -12,6 +11,7 @@ import { asList, useApi } from "../hooks";
 import { ErrorState, ListSkeleton } from "../states";
 import type { MyFilesGroup } from "./DashboardView";
 import { DocumentRow } from "./DocumentRow";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 export function FilesView() {
   const { t, tr } = useI18n();
@@ -33,7 +33,7 @@ export function FilesView() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.area")} title={t("app.files.title")} description={t("app.files.subtitle")} />
+      <PageHead icon={Folder2} eyebrow={t("app.shell.area")} title={t("app.files.title")} description={t("app.files.subtitle")} />
       {loading ? (
         <ListSkeleton rows={5} />
       ) : error ? (

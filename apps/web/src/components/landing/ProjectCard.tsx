@@ -1,7 +1,7 @@
 "use client";
 import * as React from "react";
 import Link from "next/link";
-import { ArrowRight, Building, Location, Verify } from "iconsax-reactjs";
+import { ArrowRight, Building, Location, Star1, Verify } from "iconsax-reactjs";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TrustRing } from "@/components/ui/trust-ring";
 import { Progress } from "@/components/ui/progress";
@@ -9,51 +9,64 @@ import { useI18n } from "@/i18n/client";
 import type { ProjectCard as ProjectCardData } from "@/lib/types";
 import { cn } from "@/lib/utils";
 import { fmtMoneyCompact } from "@/components/marketing/format";
+import { apiImg, apiSrcSet } from "@/components/marketing/img";
+import { SmartImg } from "@/components/marketing/SmartImg";
+import { Tilt } from "@/components/marketing/motion";
 
-/** Elegant project card used on the landing page and developer profiles. */
-export function ProjectCard({ project, className }: { project: ProjectCardData; className?: string }) {
+/**
+ * Elegant project card used on the landing page and developer profiles: resized WebP cover that sharpens in,
+ * slow hover zoom, 3D tilt with a cursor spotlight, gold glow ring and — for the editor's pick — a rotating
+ * gold border.
+ */
+export function ProjectCard({ project, className, pick = false }: { project: ProjectCardData; className?: string; pick?: boolean }) {
   const { t, tr, locale } = useI18n();
   const [imgOk, setImgOk] = React.useState(!!project.coverUrl);
   const price = fmtMoneyCompact(project.priceFrom, locale, project.currency);
   const location = [project.district, project.region].filter(Boolean).map((x) => tr(x)).join(", ");
 
-  return (
+  const card = (
     <Link
       href={`/projects/${project.slug}`}
       aria-label={`${tr(project.name)} — ${t("landing.projects.open")}`}
       className={cn(
-        "group relative flex flex-col overflow-hidden rounded-3xl border border-line bg-ink-900/80 shadow-card transition-all duration-500 ease-[var(--ease-out-expo)] hover:-translate-y-1.5 hover:border-gold-500/35 hover:shadow-lift",
-        className,
+        "group relative flex h-full flex-col overflow-hidden rounded-3xl bg-ink-900 shadow-card transition-shadow duration-500 hover:shadow-lift",
+        !pick && "border border-line transition-[border-color,box-shadow] hover:border-gold-500/35",
+        pick && "rounded-[calc(1.5rem-1px)]",
       )}
     >
       <div className="relative aspect-[16/11] overflow-hidden">
         {imgOk && project.coverUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={project.coverUrl}
-            alt=""
-            loading="lazy"
+          <SmartImg
+            src={apiImg(project.coverUrl, 768)}
+            srcSet={apiSrcSet(project.coverUrl, [480, 768, 1024])}
+            sizes="(min-width: 1024px) 400px, (min-width: 640px) 50vw, 100vw"
             onError={() => setImgOk(false)}
-            className="absolute inset-0 size-full object-cover transition-transform duration-[1200ms] ease-[var(--ease-out-expo)] group-hover:scale-[1.06]"
+            imgClassName="duration-[1400ms] group-hover:scale-[1.07]"
           />
         ) : (
           <CoverPlaceholder floors={project.floors} />
         )}
-        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-ink-950/90 via-ink-950/10 to-transparent" />
+        <div aria-hidden className="absolute inset-0 bg-gradient-to-t from-[#0b0b0c]/85 via-[#0b0b0c]/10 to-transparent" />
         <div className="absolute left-4 top-4 flex flex-wrap gap-2">
           <StatusBadge kind="projectStatus" value={project.status} className="backdrop-blur-md" />
           {project.verificationStatus === "VERIFIED" && (
-            <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-ink-950/60 px-2.5 py-0.5 text-[11px] font-semibold text-success backdrop-blur-md">
+            <span className="inline-flex items-center gap-1 rounded-full border border-success/30 bg-[#0b0b0c]/60 px-2.5 py-0.5 text-[11px] font-semibold text-[#5fd3a6] backdrop-blur-md">
               <Verify size={12} variant="Bold" />
               {t("landing.projects.verified")}
             </span>
           )}
         </div>
-        <div className="absolute bottom-4 right-4 rounded-full bg-ink-950/70 p-1 backdrop-blur-md">
+        {pick && (
+          <span className="absolute right-4 top-4 inline-flex items-center gap-1.5 rounded-full bg-gradient-to-r from-[#e9d5a8] via-[#c9a464] to-[#8e6e3c] px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.16em] text-[#1f1a12] shadow-glow">
+            <Star1 size={11} variant="Bold" />
+            {t("landing.projects.pick")}
+          </span>
+        )}
+        <div className="absolute bottom-4 right-4 rounded-full bg-[#0b0b0c]/65 p-1 ring-1 ring-[#e9d5a8]/25 backdrop-blur-md transition-transform duration-500 group-hover:scale-105">
           <TrustRing score={project.trustScore} size={48} stroke={4} />
         </div>
         <div className="absolute bottom-4 left-4 right-20">
-          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-gold-300">{tr(project.developer.name)}</div>
+          <div className="text-[11px] font-medium uppercase tracking-[0.18em] text-[#e0c285]">{tr(project.developer.name)}</div>
         </div>
       </div>
 
@@ -96,7 +109,7 @@ export function ProjectCard({ project, className }: { project: ProjectCardData; 
           </div>
           <div className="flex items-center gap-3 text-xs text-ink-400">
             <span className="inline-flex items-center gap-1">
-              <Building size={14} variant="Bulk" />
+              <Building size={14} variant="Bulk" className="text-gold-400" />
               {t("landing.projects.floors", { n: project.floors })}
             </span>
             <span className="grid size-9 place-items-center rounded-full border border-line text-gold-300 transition-all duration-500 group-hover:border-gold-400 group-hover:bg-gold-gradient group-hover:text-onyx">
@@ -106,6 +119,19 @@ export function ProjectCard({ project, className }: { project: ProjectCardData; 
         </div>
       </div>
     </Link>
+  );
+
+  return (
+    <Tilt max={5} className={cn("eka-glow h-full rounded-3xl", className)}>
+      {pick ? (
+        <div className="eka-border h-full rounded-3xl">
+          <div aria-hidden className="eka-border-spin" />
+          {card}
+        </div>
+      ) : (
+        card
+      )}
+    </Tilt>
   );
 }
 

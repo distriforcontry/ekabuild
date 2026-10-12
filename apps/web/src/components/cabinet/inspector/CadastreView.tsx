@@ -8,7 +8,6 @@ import { ExportSquare, InfoCircle, Map1, SearchStatus } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Label } from "@/components/ui/input";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
@@ -20,6 +19,7 @@ import { useFmt } from "../format";
 import { KV } from "../ui";
 import type { MapPoint } from "../developer/editor/LocationPicker";
 import { useProjectSearch } from "./useProjectSearch";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 const LocationPicker = dynamic(() => import("../developer/editor/LocationPicker"), {
   ssr: false,
@@ -87,7 +87,7 @@ export function CadastreView() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.cadastre.title")} description={t("app.inspector.cadastre.subtitle")} />
+      <PageHead icon={Map1} eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.cadastre.title")} description={t("app.inspector.cadastre.subtitle")} />
 
       <div className="mb-6 flex flex-col gap-3 rounded-2xl border border-line bg-ink-900 p-4 shadow-card md:flex-row md:items-end md:p-5">
         <div className="flex-1">

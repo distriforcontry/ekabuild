@@ -4,13 +4,13 @@ import { useRouter } from "next/navigation";
 import { useTheme } from "next-themes";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { Building, Call, LanguageCircle, Lock1, Monitor, Moon, Profile, Sun1, TickCircle, Verify } from "iconsax-reactjs";
+import { Building, Call, LanguageCircle, Lock1, Monitor, Moon, Profile, Setting2, Sun1, TickCircle, Verify } from "iconsax-reactjs";
 import { isPinfl } from "@eka/shared";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/misc";
+import { MaskedInput } from "@/components/ui/masked-input";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { FieldError } from "@/components/auth/FormError";
 import { PasswordInput, PasswordStrength } from "@/components/auth/PasswordInput";
@@ -23,12 +23,13 @@ import { cn } from "@/lib/utils";
 import { useCabinetUser } from "../CabinetContext";
 import { useFmt } from "../format";
 import { CopyButton, KV } from "../ui";
+import { PageHead } from "../kit";
 
 export function SettingsView() {
   const { t } = useI18n();
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.area")} title={t("app.settings.title")} description={t("app.settings.subtitle")} />
+      <PageHead icon={Setting2} eyebrow={t("app.shell.area")} title={t("app.settings.title")} description={t("app.settings.subtitle")} />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_400px]">
         <div className="space-y-6">
           <ProfileCard />
@@ -130,15 +131,13 @@ function ProfileCard() {
           </div>
           <div className="md:col-span-2">
             <Label htmlFor="st-pinfl">{t("app.settings.profile.pinfl")}</Label>
-            <Input
+            <MaskedInput
               id="st-pinfl"
-              inputMode="numeric"
-              maxLength={14}
-              className="font-mono tracking-wider"
+              mask="pinfl"
               value={pinfl}
-              onChange={(e) => setPinfl(e.target.value.replace(/\D/g, "").slice(0, 14))}
+              onChange={(v) => setPinfl(v.slice(0, 14))}
+              validateComplete={false}
               aria-invalid={Boolean(submitted && errors.pinfl) || undefined}
-              placeholder="12345678901234"
             />
             {submitted && errors.pinfl ? (
               <FieldError message={errors.pinfl} />

@@ -357,3 +357,101 @@ export function TrustHistogram({ data, unit, height = 240 }: { data: { bucket: s
     </div>
   );
 }
+
+/* ───────────────────────────── CSS-variable palette ─────────────────────────────
+ * The same validated categorical slots as `useChartTheme`, exposed as CSS custom properties so SVG marks
+ * (recharts or hand-drawn) follow the theme instantly — no React re-render, works for print too.
+ * Render <ChartPaletteStyle /> once on a page, then use chartVar(0..5) / var(--chart-1..6). */
+
+const paletteCss = (colors: string[]) => colors.map((c, i) => `--chart-${i + 1}:${c};`).join("");
+export const CHART_PALETTE_CSS = `:root{${paletteCss(CATEGORICAL_DARK)}}[data-theme="light"]{${paletteCss(CATEGORICAL_LIGHT)}}`;
+
+/** Palette variables + keyframes for the hand-drawn charts; render once per page. */
+export function ChartPaletteStyle() {
+  return <style>{CHART_PALETTE_CSS + CHART_KEYFRAMES_CSS}</style>;
+}
+
+/** Categorical slot as a CSS colour (fixed order — colour follows the entity, never its rank). */
+export const chartVar = (slot: number) => `var(--chart-${(slot % 6) + 1})`;
+
+/** Sequential gold ramp: 0 → surface-ish, 1 → full gold (one hue, light→dark in both themes). */
+export const goldRamp = (t: number, surface = "var(--color-ink-850)") =>
+  `color-mix(in oklab, var(--color-gold-400) ${Math.round(8 + Math.max(0, Math.min(1, t)) * 92)}%, ${surface})`;
+
+/** Observed content-box size of an element (0×0 until mounted). */
+export function useElementSize<T extends HTMLElement = HTMLDivElement>() {
+  const ref = React.useRef<T>(null);
+  const [size, setSize] = React.useState({ width: 0, height: 0 });
+  React.useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const update = () => {
+      const r = el.getBoundingClientRect();
+      setSize((s) => (Math.abs(s.width - r.width) < 0.5 && Math.abs(s.height - r.height) < 0.5 ? s : { width: r.width, height: r.height }));
+    };
+    update();
+    const ro = new ResizeObserver(update);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, []);
+  return [ref, size] as const;
+}
+
+/* ───────────────────────────── Sparkline ───────────────────────────── */
+
+/** Tiny trend line for stat tiles: area wash + 2px line + end dot. Decorative (aria-hidden) — the tile carries the value. */
+export function Sparkline({
+  values,
+  color = "var(--color-gold-400)",
+  height = 36,
+  className,
+}: {
+  values: number[];
+  color?: string;
+  height?: number;
+  className?: string;
+}) {
+  const id = React.useId().replace(/:/g, "");
+  const W = 120;
+  const pts = values.length > 1 ? values : values.length === 1 ? [values[0]!, values[0]!] : [0, 0];
+  const max = Math.max(...pts);
+  const min = Math.min(0, ...pts);
+  const span = max - min || 1;
+  const xy = pts.map((v, i) => [(i / (pts.length - 1)) * W, 3 + (1 - (v - min) / span) * (height - 6)] as const);
+  const line = xy.map(([x, y], i) => `${i ? "L" : "M"}${x.toFixed(2)},${y.toFixed(2)}`).join("");
+  const area = `${line}L${W},${height}L0,${height}Z`;
+  const last = xy[xy.length - 1]!;
+  return (
+    <svg viewBox={`0 0 ${W} ${height}`} preserveAspectRatio="none" className={cn("block w-full overflow-visible", className)} style={{ height }} aria-hidden>
+      <defs>
+        <linearGradient id={`spk-${id}`} x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.22} />
+          <stop offset="100%" stopColor={color} stopOpacity={0} />
+        </linearGradient>
+      </defs>
+      <path d={area} fill={`url(#spk-${id})`} className="animate-[eka-fade_.9s_ease-out_both]" />
+      <path
+        d={line}
+        fill="none"
+        stroke={color}
+        strokeWidth={2}
+        strokeLinejoin="round"
+        strokeLinecap="round"
+        vectorEffect="non-scaling-stroke"
+        pathLength={1}
+        className="[stroke-dasharray:1] [stroke-dashoffset:1] animate-[eka-draw_1.2s_cubic-bezier(.16,1,.3,1)_.1s_forwards] motion-reduce:animate-none motion-reduce:[stroke-dashoffset:0]"
+      />
+      <circle cx={last[0]} cy={last[1]} r={3} fill={color} stroke="var(--color-ink-900)" strokeWidth={1.5} vectorEffect="non-scaling-stroke" className="animate-[eka-fade_.4s_ease-out_1s_both]" />
+    </svg>
+  );
+}
+
+/** Keyframes used by the hand-drawn charts / diagrams (draw-on, fade, flowing dashes). */
+export const CHART_KEYFRAMES_CSS = `
+@keyframes eka-draw{to{stroke-dashoffset:0}}
+@keyframes eka-fade{from{opacity:0}to{opacity:1}}
+@keyframes eka-flow{to{stroke-dashoffset:-24}}
+@keyframes eka-flow-rev{to{stroke-dashoffset:24}}
+@keyframes eka-ping{0%{transform:scale(1);opacity:.55}100%{transform:scale(2.2);opacity:0}}
+@media (prefers-reduced-motion: reduce){.eka-flowing{animation:none!important}}
+`;

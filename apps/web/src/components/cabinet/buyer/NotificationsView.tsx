@@ -5,7 +5,6 @@ import { AnimatePresence, motion } from "motion/react";
 import type { Icon as IconType } from "iconsax-reactjs";
 import { ArrowRight2, Danger, InfoCircle, Notification, TickCircle, Warning2 } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { useI18n } from "@/i18n/client";
 import type { NotificationItem } from "@/lib/types";
 import { cn } from "@/lib/utils";
@@ -13,6 +12,7 @@ import { useNotifications } from "../CabinetContext";
 import { dayKey, useFmt } from "../format";
 import { NOTIF_TONE } from "../NotificationsBell";
 import { ErrorState, ListSkeleton } from "../states";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 const ICONS: Record<NotificationItem["type"], IconType> = { INFO: InfoCircle, SUCCESS: TickCircle, WARNING: Warning2, DANGER: Danger };
 
@@ -29,7 +29,7 @@ export function NotificationsView() {
 
   return (
     <div>
-      <PageHeader
+      <PageHead icon={Notification}
         eyebrow={t("app.shell.area")}
         title={t("app.notifications.title")}
         description={t("app.notifications.subtitle")}

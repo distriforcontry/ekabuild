@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { DataTable, type Column } from "@/components/ui/data-table";
 import { Field, Input } from "@/components/ui/input";
+import { NumberInput } from "@/components/ui/masked-input";
 import { Spinner } from "@/components/ui/spinner";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage } from "@/lib/api";
@@ -144,7 +145,16 @@ export function UnitsTab({ projectId, detail }: { projectId: string; detail: Pro
           <div className="grid grid-cols-2 gap-4 md:grid-cols-3 xl:grid-cols-6">
             {(["sections", "floors", "perFloor", "areaMin", "areaMax", "pricePerSqm"] as const).map((k) => (
               <Field key={k} label={t(`app.developer.editor.units.generator.${k}`)} error={submitted ? genErrors[k] : null} htmlFor={`gen-${k}`}>
-                <Input id={`gen-${k}`} inputMode="decimal" className="font-mono" value={gen[k]} onChange={(e) => setGen((g) => ({ ...g, [k]: e.target.value }))} />
+                <NumberInput
+                  id={`gen-${k}`}
+                  decimals={k === "areaMin" || k === "areaMax" ? 1 : 0}
+                  suffix={k === "areaMin" || k === "areaMax" ? "m²" : k === "pricePerSqm" ? "so'm" : undefined}
+                  value={(() => {
+                    const v = parseNum(gen[k]);
+                    return v === null || Number.isNaN(v) ? null : v;
+                  })()}
+                  onChange={(v) => setGen((g) => ({ ...g, [k]: v == null ? "" : String(v) }))}
+                />
               </Field>
             ))}
           </div>

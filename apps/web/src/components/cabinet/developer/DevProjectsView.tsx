@@ -6,7 +6,6 @@ import { Add, Buildings2 } from "iconsax-reactjs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { Progress } from "@/components/ui/progress";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { TrustRing } from "@/components/ui/trust-ring";
@@ -16,6 +15,7 @@ import { useFmt } from "../format";
 import { ErrorState } from "../states";
 import { ProjectCover } from "../ui";
 import type { DevProject } from "./DevDashboardView";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 export function DevProjectsView() {
   const { t, label, tr } = useI18n();
@@ -121,7 +121,7 @@ export function DevProjectsView() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.sections.developer")} title={t("app.developer.projects.title")} description={t("app.developer.projects.subtitle")} actions={newButton} />
+      <PageHead icon={Buildings2} eyebrow={t("app.shell.sections.developer")} title={t("app.developer.projects.title")} description={t("app.developer.projects.subtitle")} actions={newButton} />
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : !loading && !(data ?? []).length ? (

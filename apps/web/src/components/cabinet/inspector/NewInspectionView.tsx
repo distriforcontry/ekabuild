@@ -4,12 +4,12 @@ import Link from "next/link";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import type { Icon as IconType } from "iconsax-reactjs";
-import { Add, CloseCircle, Danger, ExportSquare, TickCircle, Trash, Warning2 } from "iconsax-reactjs";
+import { Add, ClipboardTick, CloseCircle, Danger, ExportSquare, TickCircle, Trash, Warning2 } from "iconsax-reactjs";
 import { INSPECTION_RESULTS, INSPECTION_TYPES, type InspectionResult, type InspectionType } from "@eka/shared";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Field, Input, Textarea } from "@/components/ui/input";
-import { PageHeader } from "@/components/ui/misc";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage } from "@/lib/api";
 import { cn } from "@/lib/utils";
@@ -18,6 +18,7 @@ import { FormSection, todayInput } from "../developer/editor/fields";
 import { ErrorState } from "../states";
 import { SuccessBurst } from "../SuccessBurst";
 import { useProjectSearch } from "./useProjectSearch";
+import { PageHead } from "../kit";
 
 type Severity = "LOW" | "MEDIUM" | "HIGH";
 type Violation = { key: string; code: string; text: string; severity: Severity; resolved: boolean };
@@ -100,7 +101,7 @@ export function NewInspectionView() {
   if (done) {
     return (
       <div>
-        <PageHeader eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.inspection.title")} />
+        <PageHead icon={ClipboardTick} eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.inspection.title")} />
         <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="mx-auto flex max-w-lg flex-col items-center rounded-3xl border border-line bg-ink-900 px-6 pb-10 pt-4 text-center shadow-card">
           <SuccessBurst size={96} />
           <h2 className="-mt-4 font-display text-3xl font-medium text-stone-100">{t("app.inspector.inspection.success")}</h2>
@@ -124,7 +125,7 @@ export function NewInspectionView() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.inspection.title")} description={t("app.inspector.inspection.subtitle")} />
+      <PageHead icon={ClipboardTick} eyebrow={t("app.shell.sections.inspector")} title={t("app.inspector.inspection.title")} description={t("app.inspector.inspection.subtitle")} />
       <form onSubmit={submit} noValidate className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_380px]">
         <div className="space-y-6">
           <FormSection title={t("app.inspector.inspection.sections.object")}>
@@ -152,7 +153,7 @@ export function NewInspectionView() {
                 />
               </Field>
               <Field label={t("app.inspector.inspection.fields.date")} error={submitted ? errors.date : null} htmlFor="in-date">
-                <Input id="in-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} max={todayInput()} />
+                <DatePicker value={date || null} onChange={(v) => setDate(v ?? "")} max={todayInput()} clearable={false} aria-label={t("app.inspector.inspection.fields.date")} />
               </Field>
               <div className="md:col-span-2">
                 <div className="mb-1.5 text-xs font-semibold tracking-wide text-ink-200">{t("app.inspector.inspection.fields.result")}</div>

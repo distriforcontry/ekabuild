@@ -16,6 +16,10 @@ import { StatsBand } from "@/components/landing/StatsBand";
 import { Testimonials } from "@/components/landing/Testimonials";
 import { Faq } from "@/components/landing/Faq";
 import { ContactStrip, FinalCta } from "@/components/landing/FinalCta";
+import { TrustBanner } from "@/components/marketing/banners/TrustBanner";
+import { ModelBanner } from "@/components/marketing/banners/ModelBanner";
+import { ProgressBanner } from "@/components/marketing/banners/ProgressBanner";
+import { DeveloperBanner } from "@/components/marketing/banners/DeveloperBanner";
 
 export async function generateMetadata(): Promise<Metadata> {
   const { t } = await getI18n();
@@ -33,17 +37,25 @@ export default async function Home() {
     getCurrentUser(),
   ]);
 
+  const projects = asList<ProjectCard>(featured.data);
+  // the 3D banner opens a real project straight on its 3D tab
+  const modelHref = projects[0] ? `/projects/${projects[0].slug}#model` : "/projects";
+
   return (
     <>
       <Hero />
       <TrustMarquee />
       <ProblemSolution />
       <HowItWorks />
+      <TrustBanner stats={stats.data} />
       <VerifySection />
       <FeaturesBento />
-      <FeaturedProjects projects={asList<ProjectCard>(featured.data)} />
+      <ModelBanner href={modelHref} />
+      <FeaturedProjects projects={projects} />
+      <ProgressBanner />
       <AudienceTabs />
       <StatsBand stats={stats.data} />
+      <DeveloperBanner />
       <Testimonials />
       <Faq />
       <FinalCta cabinetHref={user ? homeForRole(user.role) : null} />

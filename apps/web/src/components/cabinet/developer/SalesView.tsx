@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { FingerScan, ReceiptText } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import type { PurchaseItem } from "@/lib/types";
@@ -13,6 +12,7 @@ import { formatPhone } from "@/components/auth/auth-utils";
 import { asList, useApi } from "../hooks";
 import { useFmt } from "../format";
 import { ErrorState } from "../states";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 export function SalesView() {
   const { t, label, tr } = useI18n();
@@ -105,7 +105,7 @@ export function SalesView() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.sections.developer")} title={t("app.developer.sales.title")} description={t("app.developer.sales.subtitle")} />
+      <PageHead icon={ReceiptText} eyebrow={t("app.shell.sections.developer")} title={t("app.developer.sales.title")} description={t("app.developer.sales.subtitle")} />
       {error ? (
         <ErrorState error={error} onRetry={reload} />
       ) : !loading && !(data ?? []).length ? (

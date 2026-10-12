@@ -5,13 +5,13 @@ import { AnimatePresence } from "motion/react";
 import { toast } from "sonner";
 import { Buildings, Heart } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
 import type { ProjectCard } from "@/lib/types";
 import { asList, useApi } from "../hooks";
 import { ProjectMiniCard } from "../ProjectMiniCard";
 import { CardGridSkeleton, ErrorState } from "../states";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 export function FavoritesView() {
   const { t } = useI18n();
@@ -52,7 +52,7 @@ export function FavoritesView() {
 
   return (
     <div>
-      <PageHeader
+      <PageHead icon={Heart}
         eyebrow={t("app.shell.area")}
         title={t("app.favorites.title")}
         description={t("app.favorites.subtitle")}

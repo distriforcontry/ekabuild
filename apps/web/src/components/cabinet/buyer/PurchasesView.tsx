@@ -5,7 +5,6 @@ import { useRouter } from "next/navigation";
 import { Bag2, Buildings } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
 import { DataTable, type Column } from "@/components/ui/data-table";
-import { EmptyState, PageHeader } from "@/components/ui/misc";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import type { PurchaseItem } from "@/lib/types";
@@ -13,6 +12,7 @@ import { asList, useApi } from "../hooks";
 import { useFmt } from "../format";
 import { ErrorState } from "../states";
 import { ProjectCover } from "../ui";
+import { PageHead, PanelEmpty as EmptyState } from "../kit";
 
 export function PurchasesView() {
   const { t, label, tr } = useI18n();
@@ -104,7 +104,7 @@ export function PurchasesView() {
 
   return (
     <div>
-      <PageHeader
+      <PageHead icon={Bag2}
         eyebrow={t("app.shell.area")}
         title={t("app.purchases.title")}
         description={t("app.purchases.subtitle")}

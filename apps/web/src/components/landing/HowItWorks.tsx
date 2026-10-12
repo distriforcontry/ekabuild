@@ -3,7 +3,7 @@ import * as React from "react";
 import { motion, useMotionValueEvent, useReducedMotion, useScroll, useSpring, type MotionValue } from "motion/react";
 import { Buildings2, I3DRotate, PenTool2, SearchNormal1, ShieldTick } from "iconsax-reactjs";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 
@@ -23,9 +23,7 @@ export function HowItWorks() {
     <section id="how" className="relative isolate scroll-mt-24 overflow-hidden border-y border-line bg-ink-900/30 py-24 md:py-32">
       <div aria-hidden className="bg-blueprint pointer-events-none absolute inset-0 -z-10 opacity-60 [mask-image:radial-gradient(ellipse_at_center,black_20%,transparent_70%)]" />
       <div className="mx-auto w-full max-w-7xl px-4 sm:px-6 lg:px-8">
-        <Reveal>
-          <SectionHeading align="center" eyebrow={t("landing.how.eyebrow")} title={t("landing.how.title")} description={t("landing.how.description")} />
-        </Reveal>
+        <RevealHeading align="center" eyebrow={t("landing.how.eyebrow")} title={t("landing.how.title")} description={t("landing.how.description")} />
 
         <ol ref={ref} className="relative mt-16 grid gap-8 lg:mt-20 lg:grid-cols-5 lg:gap-6">
           {/* connecting line — horizontal on desktop, vertical on mobile */}

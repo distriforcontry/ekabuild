@@ -31,11 +31,11 @@
   --color-ink-800: #1c1d22;
   --color-ink-700: #26282e;
   --color-ink-600: #34363d;
-  --color-ink-500: #4a4d56;
-  --color-ink-400: #6b6f7a;
-  --color-ink-300: #9a9ea8;
-  --color-ink-200: #c4c7ce;
-  --color-ink-100: #e4e5e9;
+  --color-ink-500: #5a5751;
+  --color-ink-400: #86827a;
+  --color-ink-300: #a39e94;
+  --color-ink-200: #c9c4ba;
+  --color-ink-100: #e7e3db;
 
   --color-stone-50: #faf8f3;
   --color-stone-100: #f4f1ea;
@@ -53,7 +53,8 @@
   --color-gold-900: #47361e;
 
   --color-fg: #ffffff;
-  --color-onyx: #121214;
+  /* text on gold — a deep warm bronze-graphite, never pure black */
+  --color-onyx: #1f1a12;
 
   --color-success: #3fb68b;
   --color-warning: #e8b04b;
@@ -107,44 +108,45 @@
   }
 }
 
-/* Light theme — warm paper + deeper gold for contrast (WCAG AA on white) */
+/* Light theme — warm paper, warm graphite type (no pure black anywhere) and a deeper gold.
+   Contrast on #fff / page #f7f5f0: stone-100 13.6:1 · ink-100 9.6:1 · ink-300 6.1:1 · ink-400 5.3:1 · gold-400 5.2:1 · gold-300 6.2:1 */
 [data-theme="light"] {
-  --color-ink-950: #f6f4ef;
+  --color-ink-950: #f7f5f0;
   --color-ink-900: #ffffff;
-  --color-ink-850: #f3f0ea;
-  --color-ink-800: #ebe7df;
-  --color-ink-700: #e0dbd1;
-  --color-ink-600: #cdc7bb;
-  --color-ink-500: #a7a296;
-  --color-ink-400: #77736a;
-  --color-ink-300: #5b5850;
-  --color-ink-200: #403e38;
-  --color-ink-100: #2a2924;
+  --color-ink-850: #f4f1eb;
+  --color-ink-800: #ece7de;
+  --color-ink-700: #e2dcd1;
+  --color-ink-600: #cfc8bb;
+  --color-ink-500: #a39c8f;
+  --color-ink-400: #71695c;
+  --color-ink-300: #615a4e;
+  --color-ink-200: #585146;
+  --color-ink-100: #4a443b;
 
-  --color-stone-50: #0e0e0c;
-  --color-stone-100: #171612;
-  --color-stone-200: #2b2a25;
+  --color-stone-50: #2a241d;
+  --color-stone-100: #342d25;
+  --color-stone-200: #4a4237;
 
   --color-gold-50: #3a2c17;
   --color-gold-100: #5a4423;
-  --color-gold-200: #6f542b;
-  --color-gold-300: #806133;
-  --color-gold-400: #94723d;
+  --color-gold-200: #6b512a;
+  --color-gold-300: #7a5c30;
+  --color-gold-400: #876737;
   --color-gold-500: #b08a4e;
 
-  --color-fg: #0b0c0e;
+  --color-fg: #2a2218;
 
   --color-success: #1f8a64;
   --color-warning: #b07812;
   --color-danger: #c9353a;
   --color-info: #2f6fae;
 
-  --color-line: rgb(20 18 12 / 0.09);
-  --color-line-strong: rgb(20 18 12 / 0.16);
+  --color-line: rgb(60 45 25 / 0.1);
+  --color-line-strong: rgb(60 45 25 / 0.17);
 
-  --shadow-card: 0 1px 2px 0 rgb(30 25 15 / 0.05), 0 12px 32px -20px rgb(30 25 15 / 0.25);
+  --shadow-card: 0 1px 2px 0 rgb(60 45 20 / 0.05), 0 12px 32px -20px rgb(60 45 20 / 0.22);
   --shadow-glow: 0 0 0 1px rgb(176 138 78 / 0.3), 0 10px 30px -12px rgb(176 138 78 / 0.45);
-  --shadow-lift: 0 30px 60px -30px rgb(30 25 15 / 0.35);
+  --shadow-lift: 0 30px 60px -30px rgb(60 45 20 / 0.3);
 }
 
 @layer base {
@@ -177,6 +179,7 @@
     *, *::before, *::after {
       animation-duration: 0.01ms !important;
       animation-iteration-count: 1 !important;
+      animation-delay: 0ms !important;
       transition-duration: 0.01ms !important;
       scroll-behavior: auto !important;
     }
@@ -243,6 +246,33 @@
   .prose-eka code { @apply font-mono text-[0.85em] text-gold-200; }
 }
 
+/* ── brand shimmer: light sweeping across the gold logo / wordmark ── */
+@keyframes eka-sheen {
+  0% { transform: translateX(0); }
+  55%, 100% { transform: translateX(300px); }
+}
+.eka-sheen {
+  animation: eka-sheen 5.5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation-delay: 0.8s;
+}
+.group\/logo:hover .eka-sheen { animation-duration: 2.2s; }
+@keyframes gold-shimmer {
+  0% { background-position: 120% 0; }
+  55%, 100% { background-position: -120% 0; }
+}
+.text-gold-shimmer {
+  background: linear-gradient(100deg, #9a7a42 0%, #d8b878 30%, #fff4d6 45%, #d8b878 60%, #9a7a42 100%);
+  background-size: 250% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  animation: gold-shimmer 5.5s cubic-bezier(0.45, 0, 0.2, 1) infinite;
+  animation-delay: 1s;
+}
+[data-theme="light"] .text-gold-shimmer {
+  background-image: linear-gradient(100deg, #6b522d 0%, #a07c45 30%, #e0c285 45%, #a07c45 60%, #6b522d 100%);
+}
+
 @keyframes dialogIn {
   from { opacity: 0; transform: translate(-50%, calc(-50% + 10px)) scale(0.97); }
   to { opacity: 1; transform: translate(-50%, -50%) scale(1); }
@@ -270,3 +300,363 @@
   color: var(--color-ink-100);
   border: 1px solid var(--color-line);
 }
+
+/* ═══════════════════════════ Motion system (public site) ═══════════════════════════
+   Everything here animates transform / opacity only (plus clip-path on tiny splash layers),
+   runs from the first paint without waiting for hydration, and collapses to the final
+   state for prefers-reduced-motion.                                                      */
+
+/* `--gate` delays the landing hero until the intro curtain opens (set on <html> by the splash). */
+html[data-eka-intro] { --gate: 2250ms; }
+
+/* entrance: rise + fade (above-the-fold, CSS-driven) — use style={{"--d": "120ms"}} for staggering */
+@keyframes eka-in-up {
+  from { opacity: 0; transform: translate3d(0, var(--eka-y, 22px), 0); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes eka-in-scale {
+  from { opacity: 0; transform: translate3d(0, 28px, 0) scale(0.955); }
+  to { opacity: 1; transform: none; }
+}
+@keyframes eka-in-fade { from { opacity: 0; } to { opacity: 1; } }
+.eka-in, .eka-in-scale, .eka-in-fade {
+  animation: eka-in-up 1s var(--ease-out-expo) both;
+  animation-delay: calc(var(--gate, 0ms) + var(--d, 0ms));
+}
+.eka-in-scale { animation-name: eka-in-scale; animation-duration: 1.3s; }
+.eka-in-fade { animation-name: eka-in-fade; animation-duration: 1.2s; }
+
+/* headline word mask reveal: <span class="eka-words"><span class="eka-word"><span>Word</span></span> … */
+@keyframes eka-word-up {
+  from { transform: translate3d(0, 108%, 0) rotate(2.5deg); }
+  to { transform: none; }
+}
+.eka-word {
+  display: inline-block;
+  overflow: hidden;
+  vertical-align: top;
+  /* room for descenders / italic overhang inside the mask */
+  padding: 0.04em 0.08em 0.14em;
+  margin: -0.04em -0.08em -0.14em;
+}
+.eka-word > span {
+  display: inline-block;
+  transform-origin: 0 100%;
+  animation: eka-word-up 1.05s var(--ease-out-expo) both;
+  animation-delay: calc(var(--gate, 0ms) + var(--d, 0ms) + var(--i, 0) * 65ms);
+}
+/* in-view variant: paused until an <InView> ancestor flags itself with [data-in] (no --gate) */
+.eka-words-iv .eka-word > span {
+  animation-delay: calc(var(--d, 0ms) + var(--i, 0) * 55ms);
+  animation-play-state: paused;
+}
+[data-in] .eka-words-iv .eka-word > span,
+.eka-words-iv[data-in] .eka-word > span { animation-play-state: running; }
+
+/* in-view entrances (paused until an <InView> ancestor gets [data-in]); stagger with --d */
+.eka-iv-up, .eka-iv-fade, .eka-iv-draw, .eka-iv-scale {
+  animation: eka-in-up 1s var(--ease-out-expo) both;
+  animation-delay: var(--d, 0ms);
+  animation-play-state: paused;
+}
+.eka-iv-fade { animation-name: eka-in-fade; }
+.eka-iv-scale { animation-name: eka-in-scale; animation-duration: 1.2s; }
+.eka-iv-draw { animation-name: eka-draw-x; animation-duration: 1.3s; transform-origin: 0 50%; }
+[data-in] .eka-iv-up, [data-in] .eka-iv-fade, [data-in] .eka-iv-draw, [data-in] .eka-iv-scale,
+[data-in].eka-iv-up, [data-in].eka-iv-fade, [data-in].eka-iv-draw, [data-in].eka-iv-scale { animation-play-state: running; }
+
+/* gold hairline that draws itself */
+@keyframes eka-draw-x { from { transform: scaleX(0); } to { transform: scaleX(1); } }
+.eka-draw-x {
+  transform-origin: 0 50%;
+  animation: eka-draw-x 1.4s var(--ease-out-expo) both;
+  animation-delay: calc(var(--gate, 0ms) + var(--d, 0ms));
+}
+
+/* slow cinematic push-in on renders */
+@keyframes eka-ken {
+  from { transform: scale(1.14); }
+  to { transform: scale(1.02); }
+}
+.eka-ken { animation: eka-ken 16s cubic-bezier(0.2, 0.6, 0.3, 1) both; animation-delay: var(--gate, 0ms); }
+
+/* gentle float for glass proof cards (different phase via --d) */
+@keyframes eka-float {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, -9px, 0); }
+}
+.eka-float { animation: eka-float 7s ease-in-out infinite; animation-delay: var(--fd, 0s); }
+
+/* rotating conic-gradient border (transform only): wrapper .eka-border > .eka-border-spin + content */
+@keyframes eka-spin { to { transform: rotate(1turn); } }
+.eka-border { position: relative; isolation: isolate; overflow: hidden; padding: 1px; }
+.eka-border-spin {
+  position: absolute;
+  inset: -60%;
+  z-index: -1;
+  background: conic-gradient(from 0deg, transparent 0deg, rgb(201 164 100 / 0.05) 40deg, #e9d5a8 95deg, #c9a464 120deg, rgb(201 164 100 / 0.05) 170deg, transparent 200deg, transparent 220deg, rgb(201 164 100 / 0.4) 300deg, transparent 360deg);
+  animation: eka-spin 7s linear infinite;
+}
+[data-theme="light"] .eka-border-spin {
+  background: conic-gradient(from 0deg, transparent 0deg, rgb(176 138 78 / 0.08) 40deg, #b08a4e 95deg, #8e6e3c 120deg, rgb(176 138 78 / 0.08) 170deg, transparent 200deg, transparent 220deg, rgb(176 138 78 / 0.45) 300deg, transparent 360deg);
+}
+
+/* sheen sweep across a surface on hover: put .eka-shine on a `relative overflow-hidden group` element */
+.eka-shine::after {
+  content: "";
+  position: absolute;
+  inset: -20% auto -20% 0;
+  width: 45%;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent, rgb(255 246 222 / 0.32), transparent);
+  transform: translateX(-160%) skewX(-18deg);
+  transition: transform 0.9s var(--ease-out-expo);
+}
+.eka-shine:hover::after, .group:hover > .eka-shine::after, .eka-shine:focus-visible::after { transform: translateX(330%) skewX(-18deg); }
+
+/* gold glow ring that fades in on hover (opacity only) */
+.eka-glow { position: relative; }
+.eka-glow::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
+  pointer-events: none;
+  box-shadow: 0 0 0 1px rgb(212 175 106 / 0.55), 0 24px 70px -24px rgb(201 164 100 / 0.55);
+  opacity: 0;
+  transition: opacity 0.6s var(--ease-out-expo);
+  z-index: 1;
+}
+.eka-glow:hover::before, .eka-glow:focus-within::before { opacity: 1; }
+
+/* QR scan beam */
+@keyframes eka-scan {
+  0%, 100% { transform: translate3d(0, 0, 0); }
+  50% { transform: translate3d(0, var(--scan, 180px), 0); }
+}
+.eka-scan { animation: eka-scan 3.6s cubic-bezier(0.65, 0, 0.35, 1) infinite; }
+
+@keyframes eka-orbit { to { transform: rotate(1turn); } }
+.eka-orbit { animation: eka-orbit 18s linear infinite; }
+.eka-orbit-rev { animation: eka-orbit 26s linear infinite reverse; }
+
+@keyframes eka-pulse-soft {
+  0%, 100% { opacity: 0.55; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.06); }
+}
+.eka-pulse-soft { animation: eka-pulse-soft 3.2s ease-in-out infinite; }
+
+/* marquee that pauses on hover, with a second, slower lane */
+.eka-marquee-slow { animation: marquee 70s linear infinite; }
+.eka-marquee-rev { animation: marquee 55s linear infinite reverse; }
+
+/* image that fades in from a blurred placeholder once decoded */
+.eka-img { opacity: 0; transform: scale(1.035); transition: opacity 0.9s var(--ease-out-expo), transform 1.6s var(--ease-out-expo), scale 1.4s var(--ease-out-expo); }
+.eka-img[data-loaded] { opacity: 1; transform: none; }
+
+/* on-image text (banners sit on dark renders in both themes) */
+.eka-on-image { color: #f4f1ea; }
+.eka-on-image-muted { color: rgb(236 230 218 / 0.78); }
+
+@media (prefers-reduced-motion: reduce) {
+  .eka-in, .eka-in-scale, .eka-in-fade, .eka-word > span, .eka-draw-x, .eka-ken, .eka-img,
+  .eka-iv-up, .eka-iv-fade, .eka-iv-draw, .eka-iv-scale {
+    animation: none !important;
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .eka-border-spin, .eka-float, .eka-scan, .eka-orbit, .eka-orbit-rev, .eka-pulse-soft, .eka-marquee-slow, .eka-marquee-rev { animation: none !important; }
+}
+
+/* ═══════════════════════════ Splash — cinematic brand intro ═══════════════════════════
+   Pure CSS timeline (no hydration needed): plate outline draws → gold fills up → E·K·A rise → tower slides
+   into its slot → light sweep → BUILD letter-spaces in → progress line → curtain splits at ~2.4 s.
+   The inline script in <Splash/> sets <html data-eka-splash>: play → leaving → done, or "off".          */
+#eka-splash { display: none; }
+html[data-eka-splash="play"] #eka-splash,
+html[data-eka-splash="leaving"] #eka-splash {
+  display: block;
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  cursor: pointer;
+  animation: eka-sp-gone 0.01s linear 3.25s forwards;
+}
+html[data-eka-splash="play"] { overflow: hidden; }
+@keyframes eka-sp-gone { to { visibility: hidden; pointer-events: none; } }
+
+#eka-splash .sp-panel {
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 50.5%;
+  background: #0b0b0c;
+  will-change: transform;
+}
+#eka-splash .sp-top { top: 0; animation: eka-sp-top 0.85s cubic-bezier(0.83, 0, 0.17, 1) 2.4s both; }
+#eka-splash .sp-bot { bottom: 0; animation: eka-sp-bot 0.85s cubic-bezier(0.83, 0, 0.17, 1) 2.4s both; }
+@keyframes eka-sp-top { to { transform: translate3d(0, -101%, 0); } }
+@keyframes eka-sp-bot { to { transform: translate3d(0, 101%, 0); } }
+#eka-splash .sp-atmo {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    radial-gradient(42% 38% at 50% 44%, rgb(201 164 100 / 0.2), transparent 70%),
+    radial-gradient(80% 60% at 50% 120%, rgb(201 164 100 / 0.08), transparent 70%);
+  animation: eka-in-fade 1.4s ease-out both, eka-sp-fadeout 0.5s ease-in 2.35s forwards;
+}
+#eka-splash .sp-grid {
+  position: absolute;
+  inset: 0;
+  opacity: 0.55;
+  background-image: linear-gradient(rgb(201 164 100 / 0.07) 1px, transparent 1px), linear-gradient(90deg, rgb(201 164 100 / 0.07) 1px, transparent 1px);
+  background-size: 48px 48px;
+  mask-image: radial-gradient(circle at 50% 45%, black 0%, transparent 55%);
+  animation: eka-sp-fadeout 0.5s ease-in 2.35s forwards;
+}
+@keyframes eka-sp-fadeout { to { opacity: 0; } }
+/* gold seam that flares right before the split */
+#eka-splash .sp-seam {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, #e9d5a8 30%, #fff6dc 50%, #e9d5a8 70%, transparent);
+  box-shadow: 0 0 24px 2px rgb(233 213 168 / 0.6);
+  transform: scaleX(0);
+  opacity: 0;
+  animation: eka-sp-seam 0.75s cubic-bezier(0.65, 0, 0.35, 1) 2.05s both;
+}
+@keyframes eka-sp-seam {
+  0% { transform: scaleX(0); opacity: 0; }
+  45% { transform: scaleX(1); opacity: 1; }
+  100% { transform: scaleX(1); opacity: 0; }
+}
+#eka-splash .sp-stage {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  animation: eka-sp-stage-out 0.42s cubic-bezier(0.4, 0, 1, 1) 2.12s both;
+}
+@keyframes eka-sp-stage-out { to { opacity: 0; transform: translate3d(0, -18px, 0) scale(1.06); } }
+#eka-splash .sp-col { display: flex; flex-direction: column; align-items: center; }
+#eka-splash .sp-mark { position: relative; width: 96px; aspect-ratio: 120 / 200; filter: drop-shadow(0 18px 50px rgb(201 164 100 / 0.35)); }
+@media (min-width: 640px) { #eka-splash .sp-mark { width: 116px; } }
+#eka-splash .sp-mark > * { position: absolute; inset: 0; width: 100%; height: 100%; }
+#eka-splash .sp-outline-rect { stroke-dasharray: 1; stroke-dashoffset: 1; animation: eka-sp-draw 0.75s cubic-bezier(0.65, 0, 0.35, 1) 0.05s both, eka-sp-fadeout 0.4s ease 0.95s forwards; }
+@keyframes eka-sp-draw { to { stroke-dashoffset: 0; } }
+#eka-splash .sp-plate { clip-path: inset(100% 0 0 0); animation: eka-sp-fill 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.32s both; }
+@keyframes eka-sp-fill { to { clip-path: inset(0 0 0 0); } }
+#eka-splash .sp-letter { opacity: 0; animation: eka-sp-letter 0.6s cubic-bezier(0.16, 1, 0.3, 1) both; }
+#eka-splash .sp-l1 { animation-delay: 0.62s; }
+#eka-splash .sp-l2 { animation-delay: 0.75s; }
+#eka-splash .sp-l3 { animation-delay: 0.88s; }
+@keyframes eka-sp-letter {
+  from { opacity: 0; transform: translate3d(0, 9%, 0); }
+  to { opacity: 1; transform: none; }
+}
+#eka-splash .sp-tower-clip { overflow: hidden; }
+#eka-splash .sp-tower { transform: translate3d(0, 102%, 0); animation: eka-sp-tower 0.8s cubic-bezier(0.22, 1, 0.36, 1) 0.92s both; }
+@keyframes eka-sp-tower { to { transform: none; } }
+#eka-splash .sp-sheen-clip { overflow: hidden; mix-blend-mode: overlay; }
+#eka-splash .sp-sheen {
+  position: absolute;
+  top: -25%;
+  bottom: -25%;
+  left: 0;
+  width: 55%;
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.85), transparent);
+  transform: translate3d(-170%, 0, 0) skewX(-18deg);
+  animation: eka-sp-sheen 0.9s cubic-bezier(0.45, 0, 0.25, 1) 1.42s both;
+}
+@keyframes eka-sp-sheen { to { transform: translate3d(330%, 0, 0) skewX(-18deg); } }
+#eka-splash .sp-word {
+  margin-top: 26px;
+  font-family: var(--font-sans);
+  font-weight: 700;
+  font-size: 19px;
+  line-height: 1;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  padding-left: 0.02em;
+  background: linear-gradient(100deg, #9a7a42 0%, #d8b878 30%, #fff4d6 45%, #d8b878 60%, #9a7a42 100%);
+  background-size: 250% 100%;
+  background-position: 120% 0;
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+  opacity: 0;
+  animation: eka-sp-word 1s cubic-bezier(0.16, 1, 0.3, 1) 1.12s both, eka-sp-word-sheen 1.1s ease-in-out 1.6s both;
+}
+@media (min-width: 640px) { #eka-splash .sp-word { font-size: 22px; } }
+@keyframes eka-sp-word {
+  from { opacity: 0; letter-spacing: 0.02em; padding-left: 0.02em; filter: blur(4px); }
+  to { opacity: 1; letter-spacing: 0.5em; padding-left: 0.5em; filter: blur(0); }
+}
+@keyframes eka-sp-word-sheen { to { background-position: -120% 0; } }
+#eka-splash .sp-line {
+  position: relative;
+  margin-top: 22px;
+  width: 168px;
+  height: 1px;
+  background: rgb(201 164 100 / 0.16);
+  overflow: hidden;
+}
+#eka-splash .sp-line > span {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(90deg, #8e6e3c, #e9d5a8 70%, #fff6dc);
+  transform-origin: 0 50%;
+  transform: scaleX(0);
+  animation: eka-sp-progress 2.15s cubic-bezier(0.55, 0.1, 0.25, 1) 0.1s both;
+}
+@keyframes eka-sp-progress { to { transform: scaleX(1); } }
+#eka-splash .sp-tag {
+  margin-top: 16px;
+  font-family: var(--font-sans);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 0.34em;
+  text-transform: uppercase;
+  color: #a39e94;
+  opacity: 0;
+  animation: eka-in-up 0.7s cubic-bezier(0.16, 1, 0.3, 1) 1.5s both;
+}
+#eka-splash .sp-skip {
+  position: absolute;
+  left: 50%;
+  bottom: 30px;
+  translate: -50% 0;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 999px;
+  border: 1px solid rgb(255 255 255 / 0.1);
+  padding: 8px 16px;
+  font-family: var(--font-sans);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #86827a;
+  background: transparent;
+  cursor: pointer;
+  opacity: 0;
+  animation: eka-in-fade 0.5s ease 0.6s both, eka-sp-fadeout 0.3s ease 2.2s forwards;
+  transition: color 0.2s, border-color 0.2s;
+}
+#eka-splash .sp-skip:hover { color: #f4f1ea; border-color: rgb(255 255 255 / 0.22); }
+#eka-splash .sp-skip kbd { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.05em; color: #5a5751; }
+
+/* skipped: open the curtain right now (animations restart from the current, still-closed state) */
+html[data-eka-skip] #eka-splash { animation: eka-sp-gone 0.01s linear 0.8s forwards; }
+html[data-eka-skip] #eka-splash .sp-top { animation: eka-sp-top 0.75s cubic-bezier(0.83, 0, 0.17, 1) both; }
+html[data-eka-skip] #eka-splash .sp-bot { animation: eka-sp-bot 0.75s cubic-bezier(0.83, 0, 0.17, 1) both; }
+html[data-eka-skip] #eka-splash .sp-stage { animation: eka-sp-stage-out 0.35s ease-in both; }
+html[data-eka-skip] #eka-splash .sp-atmo,
+html[data-eka-skip] #eka-splash .sp-grid,
+html[data-eka-skip] #eka-splash .sp-skip { animation: eka-sp-fadeout 0.3s ease both; }
+html[data-eka-skip] #eka-splash .sp-seam { animation: none; opacity: 0; }

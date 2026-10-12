@@ -9,6 +9,7 @@ import { CERTIFICATE_TYPES, type CertificateType } from "@eka/shared";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Field, Input } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage } from "@/lib/api";
@@ -92,10 +93,10 @@ export function CertificatesTab({ projectId, detail, onChanged }: { projectId: s
             <Input id="cert-issuer" value={issuer} onChange={(e) => setIssuer(e.target.value)} aria-invalid={Boolean(submitted && errors.issuer) || undefined} />
           </Field>
           <Field label={F("issuedAt")} error={submitted ? errors.issuedAt : null} htmlFor="cert-issued">
-            <Input id="cert-issued" type="date" value={issuedAt} onChange={(e) => setIssuedAt(e.target.value)} />
+            <DatePicker value={issuedAt || null} onChange={(v) => setIssuedAt(v ?? "")} aria-label={F("issuedAt")} />
           </Field>
           <Field label={F("validUntil")} error={submitted ? errors.validUntil : null} htmlFor="cert-valid">
-            <Input id="cert-valid" type="date" value={validUntil} onChange={(e) => setValidUntil(e.target.value)} />
+            <DatePicker value={validUntil || null} onChange={(v) => setValidUntil(v ?? "")} min={issuedAt || undefined} aria-label={F("validUntil")} />
           </Field>
           <Field label={F("document")} className="sm:col-span-2">
             <Combobox options={docOptions} value={documentId} onChange={setDocumentId} aria-label={F("document")} />

@@ -1,6 +1,6 @@
 import { QuoteUp, Star1 } from "iconsax-reactjs";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { getI18n } from "@/i18n/server";
 import { initials } from "@/lib/utils";
 import { Container } from "@/components/marketing/primitives";
@@ -15,9 +15,7 @@ export async function Testimonials() {
   return (
     <section id="testimonials" className="relative py-24 md:py-32">
       <Container>
-        <Reveal>
-          <SectionHeading align="center" eyebrow={t("landing.testimonials.eyebrow")} title={t("landing.testimonials.title")} />
-        </Reveal>
+        <RevealHeading align="center" eyebrow={t("landing.testimonials.eyebrow")} title={t("landing.testimonials.title")} />
         <div className="mt-14 grid gap-5 md:grid-cols-3">
           {items.map((it, i) => (
             <Reveal key={it.name} delay={i * 0.08} className={i === 1 ? "md:translate-y-8" : undefined}>

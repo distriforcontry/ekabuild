@@ -5,6 +5,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import {
   ArrowRight,
+  Bag2,
   CloseCircle,
   DocumentText,
   ExportSquare,
@@ -33,6 +34,7 @@ import { BackLink, ConfirmDialog, KV, ProjectCover } from "../ui";
 import type { MyFilesGroup } from "./DashboardView";
 import { DocumentRow } from "./DocumentRow";
 import { PurchaseStepper } from "./PurchaseStepper";
+import { PageHead } from "../kit";
 
 export function PurchaseDetailView({ id }: { id: string }) {
   const { t, label, tr } = useI18n();
@@ -92,25 +94,26 @@ export function PurchaseDetailView({ id }: { id: string }) {
     <div>
       <BackLink href="/app/purchases" label={t("app.purchases.detail.back")} />
 
-      {/* header */}
-      <div className="mb-8 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div>
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+      <PageHead
+        crumb={p.number}
+        eyebrow={`${t("app.meta.purchase")} · ${p.number}`}
+        icon={Bag2}
+        title={tr(p.project.name)}
+        description={t("app.purchases.detail.createdAt", { date: fmt.dateTime(p.createdAt) })}
+        meta={
+          <>
             <StatusBadge kind="purchaseStatus" value={p.status} />
             <Badge>{label("purchaseKind", p.kind)}</Badge>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-stone-100 md:text-3xl">
-            {t("app.purchases.detail.title", { number: "" })}
-            <span className="font-mono text-gold-300">{p.number}</span>
-          </h1>
-          <p className="mt-1.5 text-sm text-ink-400">{t("app.purchases.detail.createdAt", { date: fmt.dateTime(p.createdAt) })}</p>
-        </div>
-        {canCancel && (
-          <Button variant="ghost" className="text-danger hover:bg-danger/10 hover:text-danger" onClick={() => setCancelOpen(true)}>
-            <CloseCircle size={18} /> {t("app.purchases.detail.cancel.button")}
-          </Button>
-        )}
-      </div>
+          </>
+        }
+        actions={
+          canCancel && (
+            <Button variant="ghost" className="text-danger hover:bg-danger/10 hover:text-danger" onClick={() => setCancelOpen(true)}>
+              <CloseCircle size={18} /> {t("app.purchases.detail.cancel.button")}
+            </Button>
+          )
+        }
+      />
 
       {/* stepper */}
       <Card className="mb-6 overflow-hidden">

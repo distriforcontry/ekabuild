@@ -2,6 +2,8 @@ import type { Icon as IconType } from "iconsax-reactjs";
 import {
   Award,
   Buildings2,
+  Diagram,
+  Graph,
   Building4,
   Category,
   ClipboardText,
@@ -18,6 +20,8 @@ import type { AdminCounts } from "./context";
 
 export type AdminNavKey =
   | "dashboard"
+  | "analytics"
+  | "systemMap"
   | "organizations"
   | "projects"
   | "certificates"
@@ -41,6 +45,7 @@ export type AdminNavEntry = {
 
 export const ADMIN_NAV: { title: MessageKey; items: AdminNavEntry[] }[] = [
   { title: "admin.nav.general", items: [{ key: "dashboard", href: "/admin", icon: Category, exact: true, keywords: "kpi stats statistika" }] },
+  { title: "admin.nav.insights", items: [{ key: "analytics", href: "/admin/analytics", icon: Graph, keywords: "analytics funnel voronka hisobot report chart" }] },
   {
     title: "admin.nav.moderation",
     items: [
@@ -65,6 +70,7 @@ export const ADMIN_NAV: { title: MessageKey; items: AdminNavEntry[] }[] = [
     items: [
       { key: "users", href: "/admin/users", icon: People, keywords: "user role" },
       { key: "audit", href: "/admin/audit", icon: ShieldSearch, keywords: "log hash chain" },
+      { key: "systemMap", href: "/admin/system", icon: Diagram, keywords: "architecture arxitektura health nginx k8s flow sxema" },
     ],
   },
 ];

@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { ArrowRight, Building, Calendar, DocumentCode, ShieldTick } from "iconsax-reactjs";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
+import { RevealHeading } from "@/components/marketing/text";
 import { getI18n } from "@/i18n/server";
 import { Container } from "@/components/marketing/primitives";
 import { VerifyWidget } from "./VerifyWidget";
@@ -17,9 +17,7 @@ export async function VerifySection() {
       <div aria-hidden className="pointer-events-none absolute right-[-15%] top-1/4 -z-10 size-[640px] rounded-full bg-gold-500 opacity-[0.08] blur-[140px]" />
       <Container className="grid items-start gap-12 lg:grid-cols-12 lg:gap-16">
         <div className="lg:sticky lg:top-28 lg:col-span-5">
-          <Reveal>
-            <SectionHeading eyebrow={t("landing.verify.eyebrow")} title={t("landing.verify.title")} description={t("landing.verify.description")} />
-          </Reveal>
+          <RevealHeading eyebrow={t("landing.verify.eyebrow")} title={t("landing.verify.title")} description={t("landing.verify.description")} />
           <Reveal delay={0.1}>
             <h3 className="mt-10 text-xs font-semibold uppercase tracking-[0.22em] text-ink-400">{t("landing.verify.pointsTitle")}</h3>
             <ul className="mt-5 space-y-4">

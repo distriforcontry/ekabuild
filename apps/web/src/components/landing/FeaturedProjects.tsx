@@ -2,10 +2,11 @@ import Link from "next/link";
 import { ArrowRight, Buildings2 } from "iconsax-reactjs";
 import { Button } from "@/components/ui/button";
 import { Reveal } from "@/components/ui/reveal";
-import { SectionHeading } from "@/components/ui/misc";
 import { getI18n } from "@/i18n/server";
 import type { ProjectCard as ProjectCardData } from "@/lib/types";
 import { Container } from "@/components/marketing/primitives";
+import { Magnetic, Stagger, StaggerItem } from "@/components/marketing/motion";
+import { RevealHeading } from "@/components/marketing/text";
 import { ProjectCard } from "./ProjectCard";
 
 export async function FeaturedProjects({ projects }: { projects: ProjectCardData[] }) {
@@ -15,29 +16,29 @@ export async function FeaturedProjects({ projects }: { projects: ProjectCardData
     <section id="projects" className="relative scroll-mt-24 border-t border-line bg-ink-900/30 py-24 md:py-32">
       <Container>
         <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-          <Reveal>
-            <SectionHeading eyebrow={t("landing.projects.eyebrow")} title={t("landing.projects.title")} description={t("landing.projects.description")} />
-          </Reveal>
+          <RevealHeading eyebrow={t("landing.projects.eyebrow")} title={t("landing.projects.title")} description={t("landing.projects.description")} />
           {projects.length > 0 && (
             <Reveal delay={0.1}>
-              <Button asChild variant="outline" size="lg" className="group shrink-0">
-                <Link href="/projects">
-                  {t("landing.projects.seeAll")}
-                  <ArrowRight className="transition-transform group-hover:translate-x-1" />
-                </Link>
-              </Button>
+              <Magnetic>
+                <Button asChild variant="outline" size="lg" className="group shrink-0">
+                  <Link href="/projects">
+                    {t("landing.projects.seeAll")}
+                    <ArrowRight className="transition-transform group-hover:translate-x-1" />
+                  </Link>
+                </Button>
+              </Magnetic>
             </Reveal>
           )}
         </div>
 
         {projects.length > 0 ? (
-          <div className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          <Stagger className="mt-14 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
             {projects.slice(0, 6).map((p, i) => (
-              <Reveal key={p.id} delay={(i % 3) * 0.08}>
-                <ProjectCard project={p} className="h-full" />
-              </Reveal>
+              <StaggerItem key={p.id} className="h-full">
+                <ProjectCard project={p} pick={i === 0} className="h-full" />
+              </StaggerItem>
             ))}
-          </div>
+          </Stagger>
         ) : (
           <Reveal delay={0.1}>
             <div className="relative mt-14 overflow-hidden rounded-3xl border border-dashed border-line-strong">

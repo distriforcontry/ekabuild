@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Combobox } from "@/components/ui/combobox";
 import { Field, Input, Textarea } from "@/components/ui/input";
+import { DatePicker } from "@/components/ui/date-picker";
 import { useI18n } from "@/i18n/client";
 import { api, errorMessage } from "@/lib/api";
 import type { ProjectDetail } from "@/lib/types";
@@ -85,7 +86,7 @@ export function ProgressTab({ projectId, detail, onChanged }: { projectId: strin
             />
           </Field>
           <Field label={t("app.developer.editor.progress.fields.date")} error={submitted ? errors.date : null} htmlFor="pr-date">
-            <Input id="pr-date" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
+            <DatePicker value={date || null} onChange={(v) => setDate(v ?? "")} clearable={false} aria-label={t("app.developer.editor.progress.fields.date")} />
           </Field>
           <Field label={t("app.developer.editor.progress.fields.title")} error={submitted ? errors.title : null} htmlFor="pr-title" className="sm:col-span-2">
             <Input id="pr-title" value={title} onChange={(e) => setTitle(e.target.value)} placeholder={t("app.developer.editor.progress.placeholders.title")} aria-invalid={Boolean(submitted && errors.title) || undefined} />

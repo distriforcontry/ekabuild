@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { motion } from "motion/react";
-import { Clock, FingerScan, Printer, ShieldTick, TickCircle, Verify } from "iconsax-reactjs";
+import { Clock, DocumentText, FingerScan, Printer, ShieldTick, TickCircle, Verify } from "iconsax-reactjs";
 import type { SignerRole } from "@eka/shared";
 import { LogoMark } from "@/components/brand/Logo";
 import { Badge } from "@/components/ui/badge";
@@ -22,6 +22,7 @@ import { unwrap, useApi } from "../hooks";
 import { useFmt } from "../format";
 import { ErrorState } from "../states";
 import { BackLink, CopyButton, KV } from "../ui";
+import { PageHead } from "../kit";
 
 const SLOTS: SignerRole[] = ["BUYER", "SELLER"];
 
@@ -54,33 +55,41 @@ export function ContractDetailView({ id }: { id: string }) {
     <div>
       <BackLink href={back} label={back === "/app/contracts" ? t("app.contracts.detail.back") : t("app.developer.sales.title")} />
 
-      <div className="mb-6 flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
-        <div className="min-w-0">
-          <div className="mb-2 flex flex-wrap items-center gap-2">
+      <PageHead
+        crumb={c.number}
+        className="mb-6 md:mb-8"
+        eyebrow={`${t("app.meta.contract")} № ${c.number}`}
+        icon={DocumentText}
+        title={tr(c.title)}
+        description={
+          <>
+            {fmt.date(c.createdAt)} ·{" "}
+            <Link href={`/app/purchases/${c.purchase.id}`} className="text-gold-300 underline-offset-4 hover:underline">
+              {t("app.contracts.detail.purchase")} {c.purchase.number}
+            </Link>
+          </>
+        }
+        meta={
+          <>
             <StatusBadge kind="contractStatus" value={c.status} />
             <Badge tone="gold">
               <ShieldTick variant="Bold" /> E-IMZO
             </Badge>
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-stone-100 md:text-3xl">{tr(c.title)}</h1>
-          <p className="mt-1.5 text-sm text-ink-400">
-            <span className="font-mono text-ink-200">№ {c.number}</span> · {fmt.date(c.createdAt)} ·{" "}
-            <Link href={`/app/purchases/${c.purchase.id}`} className="text-gold-300 underline-offset-4 hover:underline">
-              {t("app.contracts.detail.purchase")} {c.purchase.number}
-            </Link>
-          </p>
-        </div>
-        <div className="flex flex-wrap gap-2 print:hidden">
-          <Button variant="secondary" onClick={() => window.print()}>
-            <Printer size={18} /> {t("app.contracts.detail.print")}
-          </Button>
-          {c.canSign && (
-            <Button variant="gold" onClick={() => setSignOpen(true)}>
-              <FingerScan size={18} variant="Bold" /> {t("app.contracts.detail.sign")}
+          </>
+        }
+        actions={
+          <div className="flex flex-wrap gap-2 print:hidden">
+            <Button variant="secondary" onClick={() => window.print()}>
+              <Printer size={18} className="text-gold-300" /> {t("app.contracts.detail.print")}
             </Button>
-          )}
-        </div>
-      </div>
+            {c.canSign && (
+              <Button variant="gold" onClick={() => setSignOpen(true)}>
+                <FingerScan size={18} variant="Bold" /> {t("app.contracts.detail.sign")}
+              </Button>
+            )}
+          </div>
+        }
+      />
 
       {/* status banner */}
       <motion.div

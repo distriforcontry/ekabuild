@@ -74,5 +74,7 @@ const labels: Shape<typeof uz> = {
     DOUBLE_SALE: "Двойная продажа",
     OTHER: "Другое",
   },
+  paymentStatus: { PENDING: "Ожидается", PAID: "Оплачено", OVERDUE: "Просрочено", CANCELLED: "Отменено" },
+  paymentPlan: { FULL: "Полная оплата", INSTALLMENT: "Рассрочка" },
 };
 export default labels;

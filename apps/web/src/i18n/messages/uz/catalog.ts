@@ -14,6 +14,8 @@ const catalog = {
       "Har bir obyektning ruxsatnomasi, kadastr ma'lumoti, inspeksiyalari va qurilish jarayonini sotib olishdan oldin mustaqil tekshiring.",
     found: "{count} ta obyekt",
     foundHint: "Faqat moderatsiyadan o'tgan obyektlar ko'rsatiladi",
+    bandCaption: "Oila kvartali · fotorealistik vizualizatsiya",
+    scrollHint: "Natijalarga o'tish",
     stats: {
       verified: "Tasdiqlangan hujjatlar",
       cadastre: "Kadastr solishtiruvi",

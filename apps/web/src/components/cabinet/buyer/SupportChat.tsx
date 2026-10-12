@@ -5,7 +5,6 @@ import { ArrowDown, Call, Clock, Danger, MessageQuestion, Send2, Timer1, TickCir
 import { LogoMark } from "@/components/brand/Logo";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { PageHeader } from "@/components/ui/misc";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useI18n } from "@/i18n/client";
 import { api } from "@/lib/api";
@@ -15,6 +14,7 @@ import { cn, initials } from "@/lib/utils";
 import { useCabinetUser } from "../CabinetContext";
 import { dayKey, useFmt } from "../format";
 import { ErrorState } from "../states";
+import { PageHead } from "../kit";
 
 type Msg = SupportMessage & { local?: "pending" | "failed" };
 
@@ -214,9 +214,9 @@ export function SupportChat() {
 
   return (
     <div>
-      <PageHeader eyebrow={t("app.shell.area")} title={t("app.support.title")} description={t("app.support.subtitle")} className="mb-6" />
+      <PageHead icon={MessageQuestion} eyebrow={t("app.shell.area")} title={t("app.support.title")} description={t("app.support.subtitle")} className="mb-6" />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
-        <section className="relative flex h-[calc(100dvh-15rem)] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-line bg-ink-900 shadow-card">
+        <section className="relative flex h-[calc(100dvh-15rem-var(--shell-bottom,0px))] min-h-[520px] flex-col overflow-hidden rounded-2xl border border-line bg-ink-900 shadow-card">
           {/* header */}
           <header className="flex items-center gap-3 border-b border-line px-4 py-3 md:px-5">
             <span className="relative grid size-11 place-items-center rounded-full border border-gold-500/30 bg-ink-850">
