@@ -1,5 +1,6 @@
 import type uz from "../uz/app";
 import type { Shape } from "../../types";
+import finance from "./finance";
 
 const app: Shape<typeof uz> = {
   meta: {
@@ -834,5 +835,6 @@ const app: Shape<typeof uz> = {
       noCadastre: "У объекта не указан кадастровый номер",
     },
   },
+  finance,
 };
 export default app;

@@ -1,4 +1,5 @@
 // "admin" namespace — Uzbek (Latin) source of truth. The "oz" (Cyrillic) locale is generated automatically.
+import control from "./control";
 const admin = {
   area: "Admin panel",
   nav: {
@@ -23,6 +24,9 @@ const admin = {
     rules: "Qoidalar",
     users: "Foydalanuvchilar",
     audit: "Audit log",
+    control: "Nazorat",
+    finance: "Moliya",
+    deadlines: "Muddatlar",
   },
   crash: {
     title: "Sahifani ko'rsatib bo'lmadi",
@@ -973,5 +977,6 @@ const admin = {
       },
     },
   },
+  control,
 };
 export default admin;

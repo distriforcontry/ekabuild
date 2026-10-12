@@ -1,5 +1,6 @@
 import type uz from "../uz/admin";
 import type { Shape } from "../../types";
+import control from "./control";
 
 const admin: Shape<typeof uz> = {
   area: "Админ-панель",
@@ -25,6 +26,9 @@ const admin: Shape<typeof uz> = {
     rules: "Нормы и правила",
     users: "Пользователи",
     audit: "Журнал аудита",
+    control: "Контроль",
+    finance: "Финансы",
+    deadlines: "Сроки",
   },
   crash: {
     title: "Не удалось отобразить страницу",
@@ -975,5 +979,6 @@ const admin: Shape<typeof uz> = {
       },
     },
   },
+  control,
 };
 export default admin;

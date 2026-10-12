@@ -1,4 +1,5 @@
 // "app" namespace — Uzbek (Latin) source of truth. The "oz" (Cyrillic) locale is generated automatically.
+import finance from "./finance";
 const app = {
   meta: {
     dashboard: "Bosh panel",
@@ -832,5 +833,6 @@ const app = {
       noCadastre: "Obyektda kadastr raqami ko'rsatilmagan",
     },
   },
+  finance,
 };
 export default app;

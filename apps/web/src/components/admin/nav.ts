@@ -1,6 +1,8 @@
 import type { Icon as IconType } from "iconsax-reactjs";
 import {
   Award,
+  CalendarTick,
+  MoneyRecive,
   Buildings2,
   Diagram,
   Graph,
@@ -32,7 +34,9 @@ export type AdminNavKey =
   | "support"
   | "rules"
   | "users"
-  | "audit";
+  | "audit"
+  | "finance"
+  | "deadlines";
 
 export type AdminNavEntry = {
   key: AdminNavKey;
@@ -61,6 +65,13 @@ export const ADMIN_NAV: { title: MessageKey; items: AdminNavEntry[] }[] = [
     items: [
       { key: "purchases", href: "/admin/purchases", icon: Receipt2, keywords: "purchase sale" },
       { key: "templates", href: "/admin/templates", icon: ClipboardText, keywords: "contract template" },
+    ],
+  },
+  {
+    title: "admin.nav.control",
+    items: [
+      { key: "finance", href: "/admin/finance", icon: MoneyRecive, keywords: "moliya finance payment to'lov tolov hisob-kitob excel debitor overdue финансы платежи" },
+      { key: "deadlines", href: "/admin/deadlines", icon: CalendarTick, keywords: "muddat deadline sroki сроки bron reservation expiry" },
     ],
   },
   { title: "admin.nav.comms", items: [{ key: "support", href: "/admin/support", icon: Messages2, badge: "support", keywords: "chat inbox" }] },
