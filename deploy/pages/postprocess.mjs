@@ -67,8 +67,9 @@ for (const id of ids) {
 // 2 + 3b. rewrite URLs
 // + files Next serves from the app dir at the site root (metadata icons are not basePath-prefixed)
 const entries = [...publicEntries, "icon.svg"].map((e) => e.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")).join("|");
-const PUBLIC_RE = new RegExp(`(["'\`(]|, )/(${entries})(?=[/"'\`)?])`, "g");
-const ORIGIN_RE = new RegExp(`${ORIGIN.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}/(${entries})(?=[/"'\`)?])`, "g");
+// the next character may also be the backslash of an escaped quote inside RSC/JSON payloads (\"/icon.svg\")
+const PUBLIC_RE = new RegExp(`(["'\`(]|, )/(${entries})(?=[/"'\`)?\\\\])`, "g");
+const ORIGIN_RE = new RegExp(`${ORIGIN.replace(/[.*+?^${}()|[\]\\/]/g, "\\$&")}/(${entries})(?=[/"'\`)?\\\\])`, "g");
 let rewritten = 0;
 for (const f of files) {
   const src = await fs.readFile(f, "utf8");
