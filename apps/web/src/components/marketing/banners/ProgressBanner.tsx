@@ -76,8 +76,8 @@ export function ProgressBanner({ className }: { className?: string }) {
             accent={t("landing.banners.progress.accent")}
             description={t("landing.banners.progress.text")}
           />
-          <InView className="eka-iv-up flex shrink-0 items-center gap-3" style={{ "--d": "300ms" } as React.CSSProperties}>
-            <span className="inline-flex items-center gap-2 rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
+          <InView className="eka-iv-up flex shrink-0 flex-wrap items-center gap-3" style={{ "--d": "300ms" } as React.CSSProperties}>
+            <span className="inline-flex items-center gap-2 whitespace-nowrap rounded-full border border-success/30 bg-success/10 px-3 py-1.5 text-xs font-semibold text-success">
               <span className="relative flex size-2">
                 <span className="absolute inset-0 animate-ping rounded-full bg-success opacity-60" />
                 <span className="relative size-2 rounded-full bg-success" />

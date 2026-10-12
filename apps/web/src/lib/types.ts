@@ -362,3 +362,149 @@ export interface SupportMessage {
   body: string;
   createdAt: string;
 }
+
+// ── Finance & control centre (docs/API.md → "Control centre") ──
+export type PaymentStatus = "PENDING" | "PAID" | "OVERDUE" | "CANCELLED";
+export type PaymentPlanType = "FULL" | "INSTALLMENT";
+export type PaymentMethod = "bank" | "cash" | "click" | "payme" | "uzum" | "demo";
+
+/** One row of a deal's payment schedule (seq 0 = down payment / full payment). */
+export interface PaymentItem {
+  id: string;
+  seq: number;
+  dueDate: string;
+  amount: string;
+  status: PaymentStatus;
+  paidAt: string | null;
+  method: PaymentMethod | string | null;
+  reference: string | null;
+}
+
+/** A payment in admin / developer lists, with the deal it belongs to. */
+export interface DuePayment extends Omit<PaymentItem, "paidAt" | "method" | "reference"> {
+  paidAt?: string | null;
+  method?: string | null;
+  reference?: string | null;
+  daysLeft: number;
+  purchase: {
+    id: string;
+    number: string;
+    planType?: PaymentPlanType;
+    projectId?: string;
+    projectName: string;
+    buyerName: string;
+    buyerPhone: string;
+  };
+}
+
+export interface FinanceSummary {
+  totals: {
+    deals: number;
+    contracted: number;
+    collected: number;
+    receivable: number;
+    overdue: number;
+    overdueCount: number;
+    pendingCount: number;
+    /** 0–100 */
+    collectionRate: number;
+  };
+  byPlan: { planType: PaymentPlanType; count: number; amount: number }[];
+  /** past `months` + 6 months ahead */
+  monthly: { month: string; collected: number; scheduled: number; overdue: number }[];
+  byProject: { id: string; name: string; contracted: number; collected: number; overdue: number }[];
+  upcoming: DuePayment[];
+  overdue: DuePayment[];
+}
+
+export interface PaymentsPage {
+  items: DuePayment[];
+  total: number;
+  page: number;
+  pageSize: number;
+  /** sum of `amount` over every row matching the filters */
+  sum: string;
+}
+
+/** GET /purchases/:id/payments */
+export interface PurchasePayments {
+  planType: PaymentPlanType;
+  downPercent: number;
+  months: number;
+  total: string;
+  paid: string;
+  balance: string;
+  /** 0–100 */
+  progress: number;
+  next: Pick<PaymentItem, "id" | "seq" | "dueDate" | "amount" | "status"> | null;
+  overdue: number;
+  items: PaymentItem[];
+}
+
+/** GET /calc/installment */
+export interface InstallmentCalc {
+  total: number;
+  interest: number;
+  down: number;
+  monthly: number;
+  count: number;
+  limits: { minDown: number; maxMonths: number; monthsOptions: number[] };
+  schedule: { seq: number; dueDate: string; amount: number; principal: number; interest: number; balanceAfter: number }[];
+}
+
+export interface AnnexItem {
+  key: string;
+  name: string;
+  version: number;
+}
+
+export type DeadlineKind = "certificate" | "project" | "reservation" | "payment" | "contract" | "complaint" | "document";
+export type DeadlineSeverity = "overdue" | "critical" | "soon";
+
+export interface Deadline {
+  id: string;
+  kind: DeadlineKind;
+  severity: DeadlineSeverity;
+  dueDate: string;
+  daysLeft: number;
+  title: string;
+  subtitle: string;
+  link: string;
+}
+
+export interface DeadlinesResponse {
+  items: Deadline[];
+  summary: Partial<Record<DeadlineSeverity | DeadlineKind, number>>;
+}
+
+/** GET /admin/users/:id/activity */
+export interface UserActivity {
+  user: {
+    id: string;
+    fullName: string;
+    phone: string;
+    email: string | null;
+    role: Role;
+    status: "ACTIVE" | "BLOCKED";
+    blockReason: string | null;
+    createdAt: string;
+    lastLoginAt: string | null;
+    phoneVerifiedAt: string | null;
+    organization: { id: string; name: string; type: OrgType } | null;
+  };
+  lastSeen: string | null;
+  activeDays90: number;
+  totals: { events: number; byType: Record<string, number>; purchases: number; supportThreads: number; favorites: number };
+  daily: { date: string; count: number }[];
+  topProjects: { id: string; name: string; count: number }[];
+  recent: { at: string; kind: "event" | "audit"; type: string; projectName: string | null; entity?: string; ip?: string | null }[];
+  sessions: { id: string; ip: string | null; userAgent: string | null; createdAt: string; expiresAt: string; revokedAt: string | null; active: boolean }[];
+  purchases: { id: string; number: string; status: PurchaseStatus; amount: string; createdAt: string; project: { name: string } }[];
+}
+
+/** Moderation flags carried by admin list rows (organizations, projects, documents, complaints, users). */
+export interface ControlFlags {
+  archivedAt?: string | null;
+  blockedAt?: string | null;
+  blockReason?: string | null;
+}

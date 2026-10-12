@@ -28,11 +28,11 @@ export async function DeveloperBanner({ className }: { className?: string }) {
                 srcSet={img.srcSet}
                 sizes="(min-width: 1024px) 60vw, 100vw"
                 lqip={img.lqip}
-                className="[mask-image:linear-gradient(to_top,transparent,black_45%)] lg:[mask-image:linear-gradient(to_right,transparent,black_42%)]"
+                className="[mask-image:linear-gradient(to_bottom,transparent_35%,black_70%)] lg:[mask-image:linear-gradient(to_right,transparent,black_42%)]"
                 imgStyle={{ objectPosition: "50% 30%" }}
               />
             </Drift>
-            <div className="absolute inset-0 bg-gradient-to-t from-ink-900 via-ink-900/40 to-transparent lg:bg-gradient-to-r lg:from-ink-900 lg:via-ink-900/20 lg:to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-b from-ink-900 via-ink-900/50 to-transparent lg:bg-gradient-to-r lg:from-ink-900 lg:via-ink-900/20 lg:to-transparent" />
           </div>
           <div aria-hidden className="pointer-events-none absolute -left-32 -top-32 -z-10 size-[460px] rounded-full bg-gold-500 opacity-[0.1] blur-[120px]" />
 

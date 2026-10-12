@@ -747,7 +747,7 @@ const app: Shape<typeof uz> = {
         subtitle: "Ваши последние акты проверок",
         subtitleAll: "Все акты на платформе",
         empty: "Проверок пока нет",
-        violations: "{n} открытых нарушений",
+        violations: "нарушений: {n}",
       },
       tabs: { certificates: "Сертификаты", documents: "Документы" },
       emptyCertificates: "В очереди нет сертификатов",

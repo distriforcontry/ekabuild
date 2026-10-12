@@ -29,7 +29,7 @@ import { useI18n } from "@/i18n/client";
 import { cn } from "@/lib/utils";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuSeparator, DropdownMenuTrigger } from "@/components/ui/dropdown";
 import { useStudio, useS } from "./context";
-import { displayName, fmtInt, isAncestor, kindOf, trianglesOf, worldBox, type NodeKind } from "./scene-utils";
+import { displayName, fmtInt, isAncestor, kindOf, materialsOf, trianglesOf, worldBox, type NodeKind } from "./scene-utils";
 import { IconBtn } from "./ui";
 
 const ROW = 28;
@@ -339,6 +339,8 @@ function TreeRow({
   const I = KIND_ICON[r.kind];
   const uuid = r.o.uuid;
   const tris = r.kind === "mesh" || r.kind === "instanced" ? trianglesOf(r.o) : 0;
+  const mats = tris ? materialsOf(r.o) : [];
+  const mat = mats.length === 1 ? mats[0]!.name : mats.length > 1 ? `${mats.length} mat.` : "";
   return (
     <div
       role="treeitem"
@@ -385,6 +387,11 @@ function TreeRow({
       ) : (
         <span className={cn("min-w-0 flex-1 truncate", r.hidden && "line-through decoration-ink-500")} title={r.name}>
           <Highlight text={r.name || `(${t(`studio.outliner.kinds.${r.kind}`)})`} q={query} />
+        </span>
+      )}
+      {tris > 0 && !renaming && mat && (
+        <span className="max-w-[40%] shrink truncate text-[10.5px] text-ink-500 group-hover/row:hidden" title={mat}>
+          {mat}
         </span>
       )}
       {tris > 0 && !renaming && (

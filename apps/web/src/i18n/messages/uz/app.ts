@@ -745,7 +745,7 @@ const app = {
         subtitle: "Siz tuzgan so'nggi dalolatnomalar",
         subtitleAll: "Platformadagi barcha dalolatnomalar",
         empty: "Tekshiruvlar hali yo'q",
-        violations: "{n} ta ochiq qoidabuzarlik",
+        violations: "{n} ta qoidabuzarlik",
       },
       tabs: { certificates: "Sertifikatlar", documents: "Hujjatlar" },
       emptyCertificates: "Navbatda sertifikat yo'q",
