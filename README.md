@@ -23,7 +23,16 @@ chizmalarni tekshiradi; shartnoma E-IMZO bilan imzolanadi, qurilish va topshiril
   chizmalar va qavat rejalari ko'ruvchi, qurilish bosqichlari renderlari
 * **E-IMZO** bilan shartnoma imzolash (PKCS#7, server tomonda tekshiruv), demo rejim
 * **Real-time support chat** (WebSocket, replikalar orasida Redis pub/sub)
-* **3 til:** o'zbek (lotin), ўзбек (кирилл — avtomatik transliteratsiya), русский · **2 tema:** tungi/kunduzgi
+* **Hisob-kitob va nazorat:** to'liq yoki bo'lib to'lash (boshlang'ich to'lov + oylik jadval, kalkulyator), to'lovlar
+  tarixi va muddati o'tganlar, admin/quruvchi moliya paneli, **Excel eksport** (10 tur), shartnoma va ilovalar **Word (DOCX)**
+  formatida (bron kelishuvi, to'lov jadvali, qabul-topshirish dalolatnomasi), **bloklash / arxivlash** (sabab bilan),
+  **muddatlar markazi** (sertifikatlar, topshirish, bron, to'lovlar, imzolar), foydalanuvchi **faollik profili**
+* **Analitika:** voronka, kunlik trendlar, viloyatlar xaritasi, reytinglar, statuslar oqimi; **tizim xaritasi** —
+  arxitektura diagrammasi, jonli holat (kechikish, navbatlar, DLQ, workerlar), qadamma-qadam jarayon animatsiyalari
+* **3D Studio** (`/app/studio`): GLB/glTF/OBJ/STL/PLY ochish, qavatlar, o'lchash, kesim, materiallar, tahrirlash,
+  GLB eksport va loyihaga qayta yuklash
+* **3 til:** o'zbek (lotin), ўзбек (кирилл — avtomatik transliteratsiya), русский — har bir sahifa faqat o'z tili va
+  bo'limi tarjimalarini yuklaydi · **2 tema:** tungi/kunduzgi
 * **RabbitMQ** event bus + worker'lar (SMS, bildirishnomalar, ishonch bali, kadastr, audit arxivi), retry + DLQ
 * **Monitoring:** Prometheus metrikalar, Grafana dashboard, Loki loglar, Alertmanager → Telegram
 * **Deploy:** Docker Compose (nginx load balancer, TLS) yoki **Kubernetes** (HPA, KEDA, PDB, NetworkPolicy)

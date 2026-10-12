@@ -12,8 +12,9 @@ name: ekabuild
 x-api-env: &api-env
   NODE_ENV: production
   PORT: "4000"
-  PUBLIC_URL: ${PUBLIC_URL:-https://ekabuild.uz}
-  COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.ekabuild.uz}
+  PUBLIC_URL: ${PUBLIC_URL:-https://${APP_DOMAIN:-ekabuild.uz}}
+  # shared by ekabuild.uz, cabinet., admin. and api. — follows APP_DOMAIN unless set explicitly
+  COOKIE_DOMAIN: ${COOKIE_DOMAIN:-.${APP_DOMAIN:-ekabuild.uz}}
   DATABASE_URL: mysql://${MYSQL_USER:-eka}:${MYSQL_PASSWORD:?set MYSQL_PASSWORD}@mysql:3306/${MYSQL_DATABASE:-ekabuild}
   REDIS_URL: redis://redis:6379
   RABBITMQ_URL: amqp://${RABBITMQ_USER:-eka}:${RABBITMQ_PASSWORD:?set RABBITMQ_PASSWORD}@rabbitmq:5672
