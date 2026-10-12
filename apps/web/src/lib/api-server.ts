@@ -23,7 +23,8 @@ export async function serverApi<T>(path: string, init: RequestInit & { query?: Q
     : "";
   const cookieHeader = IS_STATIC ? "" : (await cookies()).toString();
   const res = await fetch(`${INTERNAL}/api/v1${path}${qs === "?" ? "" : qs}`, {
-    cache: "no-store",
+    // a static export prerenders from the API once ("no-store" would make the page dynamic and fail the export)
+    cache: IS_STATIC ? "force-cache" : "no-store",
     ...rest,
     headers: { ...(cookieHeader ? { cookie: cookieHeader } : {}), accept: "application/json", ...headers },
   });
