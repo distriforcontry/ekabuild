@@ -75,6 +75,7 @@ export function PaymentsTable({ area, onChanged }: { area: Area; onChanged?: () 
     {
       key: "seq",
       header: t("admin.control.payments.columns.seq"),
+      hideOnMobile: true,
       exportValue: (p) => seqLabel(p.seq, p.purchase.planType),
       cell: (p) => (
         <span className="whitespace-nowrap text-sm text-ink-100" title={p.purchase.planType ? label("paymentPlan", p.purchase.planType) : undefined}>

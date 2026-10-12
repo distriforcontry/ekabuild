@@ -343,7 +343,7 @@ function DueList({
                   <span aria-hidden>·</span>
                   <span className="truncate">{tr(p.purchase.projectName)}</span>
                 </div>
-                <a href={`tel:${p.purchase.buyerPhone}`} className="mt-0.5 inline-flex items-center gap-1 font-mono text-[11px] text-ink-300 transition hover:text-gold-300">
+                <a href={`tel:${p.purchase.buyerPhone}`} className="mt-0.5 inline-flex max-w-full items-center gap-1 whitespace-nowrap font-mono text-[11px] text-ink-300 transition hover:text-gold-300">
                   <Call size={11} variant="Bulk" /> {formatMasked("phone", p.purchase.buyerPhone)}
                 </a>
               </div>

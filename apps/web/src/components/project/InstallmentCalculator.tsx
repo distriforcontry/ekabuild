@@ -57,7 +57,7 @@ function Chip({ active, onClick, children, label }: { active: boolean; onClick: 
       aria-label={label}
       onClick={onClick}
       className={cn(
-        "relative h-9 min-w-12 shrink-0 cursor-pointer rounded-lg border px-2.5 font-mono text-xs font-semibold transition",
+        "relative h-9 min-w-0 cursor-pointer rounded-lg border px-1 font-mono text-xs font-semibold transition",
         active ? "border-gold-400 bg-gold-gradient text-onyx shadow-glow" : "border-line bg-ink-850 text-ink-200 hover:border-gold-500/40 hover:text-stone-100",
       )}
     >
@@ -95,7 +95,7 @@ export function PlanControls({ value, onChange, idPrefix }: { value: PlanChoice;
             className="eka-range absolute inset-0 w-full cursor-pointer appearance-none bg-transparent"
           />
         </div>
-        <div className="mt-2 flex flex-wrap gap-1.5" role="radiogroup" aria-label={t("app.finance.calc.down")}>
+        <div className="mt-2 grid grid-cols-4 gap-1.5" role="radiogroup" aria-label={t("app.finance.calc.down")}>
           {DOWN_CHIPS.map((p) => (
             <Chip key={p} active={value.downPercent === p} onClick={() => onChange({ ...value, downPercent: p })}>
               {p}%
@@ -105,7 +105,7 @@ export function PlanControls({ value, onChange, idPrefix }: { value: PlanChoice;
       </div>
       <div>
         <div className="mb-2 text-xs font-semibold text-ink-200">{t("app.finance.calc.months")}</div>
-        <div className="flex flex-wrap gap-1.5" role="radiogroup" aria-label={t("app.finance.calc.months")}>
+        <div className="grid grid-cols-7 gap-1.5" role="radiogroup" aria-label={t("app.finance.calc.months")}>
           {MONTHS.map((m) => (
             <Chip key={m} active={value.months === m} onClick={() => onChange({ ...value, months: m })} label={t("app.finance.calc.monthsN", { n: m })}>
               {m}
@@ -281,13 +281,13 @@ export function PlanPicker({ amount, currency, value, onChange }: { amount: numb
 export function InstallmentCalculatorCard({
   defaultAmount,
   currency = "UZS",
-  unitLabel,
+  unitHint,
   className,
 }: {
   defaultAmount: number | null;
   currency?: string;
-  /** e.g. "№ 47" when the price came from a selected unit */
-  unitLabel?: string | null;
+  /** where the price came from, e.g. "Tanlangan xonadon: № 47" */
+  unitHint?: string | null;
   className?: string;
 }) {
   const { t } = useI18n();
@@ -316,7 +316,7 @@ export function InstallmentCalculatorCard({
               <label htmlFor="calc-amount" className="text-xs font-semibold text-ink-200">
                 {t("app.finance.calc.amount")}
               </label>
-              {unitLabel && <span className="text-[11px] text-gold-300">{t("app.finance.calc.fromUnit", { n: unitLabel })}</span>}
+              {unitHint && <span className="truncate text-[11px] text-gold-300">{unitHint}</span>}
             </div>
             <MoneyInput id="calc-amount" value={amount} onChange={setAmount} currency={currency} />
           </div>

@@ -261,16 +261,18 @@ function DeadlineRow({ d, index }: { d: Deadline; index: number }) {
       >
         <span aria-hidden className={cn("absolute inset-y-0 left-0 w-[3px]", S.bar)} />
         <div className="min-w-0 flex-1">
-          <div className="flex min-w-0 items-center gap-2">
+          <div className="flex min-w-0 items-center justify-between gap-2 sm:justify-start">
             <span className={cn("shrink-0 rounded-md border px-1.5 py-px text-[9.5px] font-bold uppercase tracking-wider", S.ring)}>{t(`admin.control.deadlines.kinds.${d.kind}`)}</span>
-            <span className="min-w-0 truncate text-sm font-semibold text-stone-100">{tr(d.title)}</span>
+            <span className="hidden min-w-0 truncate text-sm font-semibold text-stone-100 sm:block">{tr(d.title)}</span>
+            <DaysBadge days={d.daysLeft} critical={7} className="sm:hidden" />
           </div>
+          <div className="mt-1 line-clamp-2 text-sm font-semibold text-stone-100 sm:hidden">{tr(d.title)}</div>
           <div className="mt-0.5 truncate text-xs text-ink-400">
             <span className="sm:hidden">{f.date(d.dueDate)} · </span>
             {tr(d.subtitle)}
           </div>
         </div>
-        <div className="flex shrink-0 flex-col items-end gap-1">
+        <div className="hidden shrink-0 flex-col items-end gap-1 sm:flex">
           <DaysBadge days={d.daysLeft} critical={7} />
           <span className="hidden text-[10.5px] text-ink-500 md:block">{f.date(d.dueDate)}</span>
         </div>

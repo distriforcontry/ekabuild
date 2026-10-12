@@ -78,6 +78,7 @@ const finance = {
     error: "Hisoblab bo'lmadi",
     note: "Hisob-kitob taxminiy. Aniq jadval shartnomaga ilova qilinadi.",
     fromUnit: "Tanlangan xonadon: № {n}",
+    cheapest: "Sotuvdagi eng arzoni: № {n}",
     reset: "Boshlang'ich narx",
   },
   plan: {

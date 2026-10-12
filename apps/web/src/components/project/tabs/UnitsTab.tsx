@@ -556,6 +556,7 @@ function PlanSchematic({ rooms, area, note }: { rooms: number; area: number; not
 
 /** Instalment calculator priced from the selected unit, else the cheapest unit on sale (or the project's "from" price). */
 function CalculatorFor({ units, selected, currency, fallback }: { units: UnitItem[]; selected: UnitItem | null; currency: string; fallback: string | null }) {
+  const { t } = useI18n();
   const [picked, setPicked] = React.useState<UnitItem | null>(null);
   React.useEffect(() => {
     if (selected) setPicked(selected);
@@ -567,5 +568,6 @@ function CalculatorFor({ units, selected, currency, fallback }: { units: UnitIte
   const unit = picked ?? cheapest;
   const amount = unit ? Number(unit.price) : fallback ? Number(fallback) : null;
   if (!amount) return null;
-  return <InstallmentCalculatorCard defaultAmount={amount} currency={currency} unitLabel={unit?.number ?? null} className="mt-2" />;
+  const hint = picked ? t("app.finance.calc.fromUnit", { n: picked.number }) : cheapest ? t("app.finance.calc.cheapest", { n: cheapest.number }) : null;
+  return <InstallmentCalculatorCard defaultAmount={amount} currency={currency} unitHint={hint} className="mt-2" />;
 }
